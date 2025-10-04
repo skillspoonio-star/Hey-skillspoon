@@ -4,7 +4,10 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "backend": "nodemon index.js",
+    "frontend": "npm run dev --prefix ../frontend",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\""
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -15,6 +18,8 @@
     "nodemailer": "^6.9.4"
   },
   "devDependencies": {
-    "dotenv": "^16.6.1"
+    "concurrently": "^9.2.1",
+    "dotenv": "^16.6.1",
+    "nodemon": "^3.1.10"
   }
 }
