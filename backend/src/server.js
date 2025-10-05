@@ -3,7 +3,10 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 
 const { connectDB } = require('./config/db');
-const { login, verifyOtp } = require('./controllers/login');
+const authRouter = require('./routes/auth');
+const authTokenRouter = require('./routes/authToken');
+const menuItemsRouter = require('./routes/menuItems');
+  const reviewsRouter = require('./routes/reviews');
 
 function createApp() {
   const app = express();
@@ -11,8 +14,17 @@ function createApp() {
   app.use(bodyParser.json());
 
 
-  app.post('/api/admin/login', login);
-  app.post('/api/admin/verify-otp', verifyOtp);
+  // Mount admin auth routes from routes/auth.js
+  app.use('/api/admin', authRouter);
+
+  // Mount auth token verification routes
+  app.use('/api/auth', authTokenRouter);
+
+  // Menu items CRUD
+  app.use('/api/menu/items', menuItemsRouter);
+
+  // Reviews
+  app.use('/api/reviews', reviewsRouter);
 
   app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 

@@ -25,11 +25,12 @@ export default function AdminLogin() {
     password: "",
     otp: "",
   })
+  const base = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   // Reusable function to request OTP (login)
   const requestOtp = async (adminId: string, password: string) => {
     try {
-      const response = await fetch("http://localhost:3001/api/admin/login", {
+      const response = await fetch(`${base}/api/admin/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -87,7 +88,7 @@ export default function AdminLogin() {
     setError("");
 
     try {
-      const response = await fetch("http://localhost:3001/api/admin/verify-otp", {
+      const response = await fetch(`${base}/api/admin/verify-otp`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

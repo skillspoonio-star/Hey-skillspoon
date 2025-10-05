@@ -59,10 +59,52 @@ export default function RestaurantDashboard() {
   const router = useRouter()
   const { orders, updateOrderStatus, getOrdersByStatus, getAnalytics } = useOrderManager()
 
+  const [authChecked, setAuthChecked] = useState(false)
+
   useEffect(() => {
-    const isAuthenticated = localStorage.getItem("adminAuth")
-    if (!isAuthenticated) {
-      router.push("/admin/login")
+    let mounted = true
+
+    async function verifyToken() {
+      const token = localStorage.getItem("adminAuth")
+      if (!token) {
+        router.push("/admin/login")
+        return
+      }
+
+      try {
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL;
+        console.log("Using backend URL:", base);
+        const res = await fetch(`${base}/api/auth/verify`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        })
+        console.log("Verification response status:", res);
+
+        if (!mounted) return
+
+        if (!res.ok) {
+          // verification failed
+          localStorage.removeItem("adminAuth")
+          router.push("/admin/login")
+          return
+        }
+
+        // token valid
+        setAuthChecked(true)
+      } catch (err) {
+        // network or unexpected error - treat as unauthenticated
+        localStorage.removeItem("adminAuth")
+        router.push("/admin/login")
+      }
+    }
+
+    verifyToken()
+
+    return () => {
+      mounted = false
     }
   }, [router])
 
@@ -108,6 +150,10 @@ export default function RestaurantDashboard() {
   const analytics = getAnalytics()
 
   const liveOrdersBadge = pendingOrders.length + preparingOrders.length
+
+  if (!authChecked) {
+    return null
+  }
 
   return (
     <SidebarProvider>

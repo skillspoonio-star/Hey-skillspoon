@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -26,11 +26,16 @@ import { useRouter } from "next/navigation"
 export default function RestaurantInfoPage() {
   const router = useRouter()
   const [isFavorite, setIsFavorite] = useState(false)
+  
+  // const [reviews, setReviews] = useState([])
+  const [rating, setRating] = useState(0)
+  const [totalReviews, setTotalReviews] = useState(0)
 
   const restaurantData = {
     name: "Spice Garden Restaurant",
-    rating: 4.5,
-    reviews: 1250,
+    rating,
+    reviews: totalReviews,
+
     priceRange: "₹₹",
     cuisine: ["Indian", "North Indian", "Biryani", "Vegetarian"],
     description:
@@ -83,6 +88,32 @@ export default function RestaurantInfoPage() {
   }
 
   const status = getCurrentStatus()
+  const [reviews, setReviews] = useState<any[]>([])
+
+useEffect(() => {
+    async function fetchReviews() {
+      try {
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL;
+        const res = await fetch(`${base}/api/reviews`)
+        if (!res.ok) throw new Error("Failed to fetch reviews")
+        const data = await res.json()
+
+        setReviews(data)
+
+        if (data.length > 0) {
+          const avg = data.reduce((sum: number, r: any) => sum + r.rating, 0) / data.length
+          setRating(parseFloat(avg.toFixed(1)))
+          setTotalReviews(data.length)
+        } else {
+          setRating(0)
+          setTotalReviews(0)
+        }
+      } catch (err) {
+        console.error("Error fetching reviews:", err)
+      }
+    }
+    fetchReviews()
+  }, [])
 
   return (
     <div className="min-h-screen bg-background">
@@ -356,9 +387,8 @@ export default function RestaurantInfoPage() {
                           {[1, 2, 3, 4, 5].map((star) => (
                             <Star
                               key={star}
-                              className={`w-4 h-4 md:w-5 md:h-5 ${
-                                star <= restaurantData.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-                              }`}
+                              className={`w-4 h-4 md:w-5 md:h-5 ${star <= restaurantData.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                                }`}
                             />
                           ))}
                         </div>
@@ -372,20 +402,7 @@ export default function RestaurantInfoPage() {
 
                 {/* Sample Reviews */}
                 <div className="space-y-4">
-                  {[
-                    {
-                      name: "Priya S.",
-                      rating: 5,
-                      date: "2 days ago",
-                      comment: "Amazing food and great service! The biryani was absolutely delicious.",
-                    },
-                    {
-                      name: "Rahul M.",
-                      rating: 4,
-                      date: "1 week ago",
-                      comment: "Good ambiance and tasty food. Will definitely visit again.",
-                    },
-                  ].map((review, index) => (
+                  {reviews.map((review, index) => (
                     <Card key={index} className="shadow-md hover:shadow-lg transition-shadow">
                       <CardContent className="p-4 md:p-6">
                         <div className="flex items-center justify-between mb-2">
@@ -403,9 +420,8 @@ export default function RestaurantInfoPage() {
                           {[1, 2, 3, 4, 5].map((star) => (
                             <Star
                               key={star}
-                              className={`w-3 h-3 md:w-4 md:h-4 ${
-                                star <= review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-                              }`}
+                              className={`w-3 h-3 md:w-4 md:h-4 ${star <= review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                                }`}
                             />
                           ))}
                         </div>
