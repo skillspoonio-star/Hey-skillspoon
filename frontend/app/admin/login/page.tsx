@@ -25,64 +25,122 @@ export default function AdminLogin() {
     password: "",
     otp: "",
   })
+  const base = process.env.NEXT_PUBLIC_BACKEND_URL;
 
+  // Reusable function to request OTP (login)
+  const requestOtp = async (adminId: string, password: string) => {
+    try {
+      const response = await fetch(`${base}/api/admin/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ adminId, password }),
+      });
+      
+
+      const data = await response.json();
+      console.log(data);
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      return data; // backend might return { success: true, message: "...", ... }
+    } catch (err: any) {
+      throw new Error(err.message || "Something went wrong while requesting OTP");
+    }
+  };
+
+  // Handle login -> OTP request
   const handleCredentialsSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    console.log("Requesting OTP for:", credentials.adminId);
 
-    // Simulate API call for credential verification
-    setTimeout(() => {
-      if (credentials.adminId === "admin001" && credentials.password === "admin123") {
-        setStep("otp")
-        // Start OTP timer
-        const timer = setInterval(() => {
-          setOtpTimer((prev) => {
-            if (prev <= 1) {
-              clearInterval(timer)
-              return 30
-            }
-            return prev - 1
-          })
-        }, 1000)
-      } else {
-        setError("Invalid Admin ID or Password")
-      }
-      setLoading(false)
-    }, 1500)
-  }
+    try {
+      await requestOtp(credentials.adminId, credentials.password);
 
+      setStep("otp");
+
+      // Start OTP timer
+      const timer = setInterval(() => {
+        setOtpTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 30;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle OTP verification
   const handleOtpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
-    // Simulate OTP verification
-    setTimeout(() => {
-      if (credentials.otp === "123456") {
+    try {
+      const response = await fetch(`${base}/api/admin/verify-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          adminId: credentials.adminId,
+          otp: credentials.otp,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
         // Store auth token
-        localStorage.setItem("adminAuth", "authenticated")
-        router.push("/dashboard")
-      } else {
-        setError("Invalid OTP. Please try again.")
-      }
-      setLoading(false)
-    }, 1000)
-  }
-
-  const resendOtp = () => {
-    setOtpTimer(30)
-    // Simulate OTP resend
-    const timer = setInterval(() => {
-      setOtpTimer((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer)
-          return 30
+        if (data.token) {
+          localStorage.setItem("adminAuth", data.token);
+        } else {
+          localStorage.setItem("adminAuth", "authenticated");
         }
-        return prev - 1
-      })
-    }, 1000)
-  }
+        router.push("/dashboard");
+      } else {
+        setError(data.message || "Invalid OTP. Please try again.");
+      }
+    } catch (err) {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Resend OTP
+  const resendOtp = async () => {
+    setOtpTimer(30);
+
+    try {
+      await requestOtp(credentials.adminId, credentials.password);
+
+      // Restart timer
+      const timer = setInterval(() => {
+        setOtpTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 30;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-orange-100 to-orange-200 flex items-center justify-center p-4 relative overflow-hidden">

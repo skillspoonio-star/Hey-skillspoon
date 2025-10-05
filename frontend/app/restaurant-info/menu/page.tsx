@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState,useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -29,89 +29,23 @@ export default function RestaurantMenuPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("popular")
 
-  const menuItems: MenuItem[] = [
-    {
-      id: 1,
-      name: "Chicken Biryani",
-      description:
-        "Aromatic basmati rice with tender chicken pieces, saffron, and traditional spices. Served with raita and shorba.",
-      price: 299,
-      image: "/chicken-biryani-rice.jpg",
-      category: "biryani",
-      prepTime: "25 mins",
-      rating: 4.5,
-      isVeg: false,
-      isPopular: true,
-      allergens: ["Dairy"],
-      calories: 650,
-    },
-    {
-      id: 2,
-      name: "Paneer Tikka",
-      description: "Grilled cottage cheese marinated in yogurt and aromatic spices, served with mint chutney.",
-      price: 249,
-      image: "/paneer-tikka-grilled.jpg",
-      category: "starters",
-      prepTime: "15 mins",
-      rating: 4.3,
-      isVeg: true,
-      isPopular: true,
-      allergens: ["Dairy"],
-      calories: 320,
-    },
-    {
-      id: 3,
-      name: "Dal Makhani",
-      description: "Creamy black lentils slow-cooked with butter, cream, and aromatic spices. A true Punjabi delicacy.",
-      price: 199,
-      image: "/dal-makhani-curry.jpg",
-      category: "mains",
-      prepTime: "20 mins",
-      rating: 4.4,
-      isVeg: true,
-      allergens: ["Dairy"],
-      calories: 280,
-    },
-    {
-      id: 4,
-      name: "Butter Naan",
-      description: "Soft and fluffy Indian bread baked in tandoor and brushed with butter.",
-      price: 49,
-      image: "/butter-naan.png",
-      category: "breads",
-      prepTime: "10 mins",
-      rating: 4.2,
-      isVeg: true,
-      allergens: ["Gluten", "Dairy"],
-      calories: 150,
-    },
-    {
-      id: 5,
-      name: "Mango Lassi",
-      description: "Refreshing yogurt drink blended with fresh mango pulp and a touch of cardamom.",
-      price: 89,
-      image: "/mango-lassi.png",
-      category: "beverages",
-      prepTime: "5 mins",
-      rating: 4.6,
-      isVeg: true,
-      allergens: ["Dairy"],
-      calories: 180,
-    },
-    {
-      id: 6,
-      name: "Gulab Jamun",
-      description: "Soft milk dumplings fried to golden perfection and soaked in aromatic sugar syrup.",
-      price: 99,
-      image: "/gulab-jamun-dessert.png",
-      category: "desserts",
-      prepTime: "5 mins",
-      rating: 4.3,
-      isVeg: true,
-      allergens: ["Dairy", "Gluten"],
-      calories: 250,
-    },
-  ]
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  useEffect(() => {
+    async function fetchMenuItems() {
+      try {
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL;
+        const res = await fetch(`${base}/api/menu/items`)
+        if (!res.ok) throw new Error("Failed to fetch menu items")
+        const data = await res.json()
+        setMenuItems(data)
+      } catch (error) {
+        console.error("Error fetching menu items:", error)
+      }
+    }
+
+    fetchMenuItems()
+  }, [])
+
 
   const categories = [
     { id: "popular", name: "Popular", count: menuItems.filter((item) => item.isPopular).length },
