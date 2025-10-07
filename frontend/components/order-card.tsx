@@ -9,8 +9,8 @@ import type { Order } from "@/hooks/use-order-manager"
 
 interface OrderCardProps {
   order: Order
-  onStatusUpdate: (orderId: number, newStatus: Order["status"]) => void
-  onCallWaiter?: (orderId: number, tableNumber: string) => void
+  onStatusUpdate: (orderId: string | number, newStatus: Order["status"]) => void
+  onCallWaiter?: (orderId: string | number, tableNumber: number) => void
 }
 
 export function OrderCard({ order, onStatusUpdate, onCallWaiter }: OrderCardProps) {
@@ -109,7 +109,7 @@ export function OrderCard({ order, onStatusUpdate, onCallWaiter }: OrderCardProp
               {order.status}
             </Badge>
             {order.priority && (
-              <Badge variant={getPriorityColor(order.priority)} size="sm">
+              <Badge variant={getPriorityColor(order.priority)}>
                 {order.priority === "high" && <AlertTriangle className="w-3 h-3 mr-1" />}
                 {order.priority}
               </Badge>
@@ -127,7 +127,7 @@ export function OrderCard({ order, onStatusUpdate, onCallWaiter }: OrderCardProp
             <User className="w-3 h-3" />
             <span>{order.customerName}</span>
             {order.orderType && (
-              <Badge variant="outline" size="sm" className="ml-auto">
+              <Badge variant="outline" className="ml-auto">
                 {order.orderType}
               </Badge>
             )}
@@ -158,7 +158,7 @@ export function OrderCard({ order, onStatusUpdate, onCallWaiter }: OrderCardProp
             <div className="flex items-center gap-2">
               <span>₹{order.total}</span>
               {order.paymentStatus && (
-                <Badge variant={order.paymentStatus === "paid" ? "secondary" : "destructive"} size="sm">
+                <Badge variant={order.paymentStatus === "paid" ? "secondary" : "destructive"}>
                   {order.paymentStatus}
                 </Badge>
               )}
