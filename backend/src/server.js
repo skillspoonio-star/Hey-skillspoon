@@ -8,6 +8,8 @@ const authTokenRouter = require('./routes/authToken');
 const menuItemsRouter = require('./routes/menuItems');
   const reviewsRouter = require('./routes/reviews');
   const ordersRouter = require('./routes/orders');
+  const reservationsRouter = require('./routes/reservations');
+    const tablesRouter = require('./routes/tables');
 
 function createApp() {
   const app = express();
@@ -29,6 +31,12 @@ function createApp() {
 
   // Orders
   app.use('/api/orders', ordersRouter);
+
+  // Table reservations
+  app.use('/api/table-reservation', reservationsRouter);
+
+  // Tables management
+  app.use('/api/tables', tablesRouter);
 
   app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
