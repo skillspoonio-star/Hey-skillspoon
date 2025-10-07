@@ -136,9 +136,9 @@ export default function RestaurantDashboard() {
     router.push("/admin/login")
   }
 
-  const handleOrderStatusUpdate = (orderId: number, newStatus: any) => {
+  const handleOrderStatusUpdate = (orderId: string | number, newStatus: "pending" | "preparing" | "ready" | "served" | "cancelled") => {
     updateOrderStatus(orderId, newStatus)
-    const order = orders.find((o) => o.id === orderId)
+    const order = orders.find((o) => String(o.id) === String(orderId))
     if (order) {
       setNotifications((prev) => [`Table ${order.tableNumber} order marked as ${newStatus}`, ...prev.slice(0, 4)])
     }
@@ -332,7 +332,7 @@ export default function RestaurantDashboard() {
                     </h3>
                     <div className="space-y-4">
                       {pendingOrders.map((order) => (
-                        <OrderCard key={order.id} order={order} onStatusUpdate={handleOrderStatusUpdate} />
+                        <OrderCard key={String(order.id)} order={order} onStatusUpdate={handleOrderStatusUpdate} />
                       ))}
                     </div>
                   </div>
@@ -342,7 +342,7 @@ export default function RestaurantDashboard() {
                     </h3>
                     <div className="space-y-4">
                       {preparingOrders.map((order) => (
-                        <OrderCard key={order.id} order={order} onStatusUpdate={handleOrderStatusUpdate} />
+                        <OrderCard key={String(order.id)} order={order} onStatusUpdate={handleOrderStatusUpdate} />
                       ))}
                     </div>
                   </div>
@@ -352,7 +352,7 @@ export default function RestaurantDashboard() {
                     </h3>
                     <div className="space-y-4">
                       {readyOrders.map((order) => (
-                        <OrderCard key={order.id} order={order} onStatusUpdate={handleOrderStatusUpdate} />
+                        <OrderCard key={String(order.id)} order={order} onStatusUpdate={handleOrderStatusUpdate} />
                       ))}
                     </div>
                   </div>

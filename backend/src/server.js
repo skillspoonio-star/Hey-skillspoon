@@ -7,6 +7,7 @@ const authRouter = require('./routes/auth');
 const authTokenRouter = require('./routes/authToken');
 const menuItemsRouter = require('./routes/menuItems');
   const reviewsRouter = require('./routes/reviews');
+  const ordersRouter = require('./routes/orders');
 
 function createApp() {
   const app = express();
@@ -25,6 +26,9 @@ function createApp() {
 
   // Reviews
   app.use('/api/reviews', reviewsRouter);
+
+  // Orders
+  app.use('/api/orders', ordersRouter);
 
   app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
