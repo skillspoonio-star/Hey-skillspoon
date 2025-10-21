@@ -77,8 +77,7 @@ async function createDelivery(req, res) {
 
     return res.status(201).json({ orderId: order._id, deliveryId: deliveryDoc._id });
   } catch (err) {
-    console.error('Failed to create delivery', err);
-    return res.status(500).json({ error: 'Server error' });
+    return res.status(500).json({ error: err.message || 'Server error' });
   }
 }
 
@@ -88,7 +87,6 @@ async function listDeliveries(req, res) {
   const deliveries = await Delivery.find({}).sort({ createdAt: -1 }).populate('orderId').lean();
   return res.json(deliveries);
   } catch (err) {
-    console.error('Failed to list deliveries', err);
     return res.status(500).json({ error: 'Server error' });
   }
 }

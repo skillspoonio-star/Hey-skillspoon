@@ -9,7 +9,6 @@ async function run() {
   await connectDB();
   try {
     const res = await Table.updateMany({ reservationPrice: { $exists: false } }, { $set: { reservationPrice: 0 } });
-    console.log('Backfill result:', res);
   } catch (err) {
     console.error('Backfill failed:', err);
   } finally {

@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -213,6 +213,34 @@ export function MenuManagement() {
   const [sortBy, setSortBy] = useState<"name" | "price" | "popularity" | "profit">("name")
   const [filterBy, setFilterBy] = useState<"all" | "available" | "unavailable" | "veg" | "non-veg">("all")
 
+  // Fetch menu items from backend and poll for updates
+  React.useEffect(() => {
+    let mounted = true
+    const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+
+    const load = async () => {
+      try {
+  const res = await fetch(`${base}/api/menu/items?all=true`)
+        if (!res.ok) {
+          console.error('Failed to fetch menu items', await res.text())
+          return
+        }
+        const items = await res.json()
+        if (!mounted) return
+        setMenuItems(items)
+      } catch (err) {
+        console.error('Failed to fetch menu items', err)
+      }
+    }
+
+    load()
+    const t = setInterval(load, 5000)
+    return () => {
+      mounted = false
+      clearInterval(t)
+    }
+  }, [])
+
   const filteredItems = menuItems
     .filter((item) => {
       const matchesSearch =
@@ -244,8 +272,30 @@ export function MenuManagement() {
       }
     })
 
-  const toggleAvailability = (id: number) => {
+  // Toggle availability and persist to backend
+  const toggleAvailability = async (id: number) => {
+    // optimistic update
     setMenuItems((prev) => prev.map((item) => (item.id === id ? { ...item, isAvailable: !item.isAvailable } : item)))
+    try {
+      const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+      const token = typeof window !== 'undefined' ? localStorage.getItem('adminAuth') : null
+      const headers: any = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      const res = await fetch(`${base}/api/menu/items/${id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ isAvailable: !(menuItems.find((m) => m.id === id)?.isAvailable) }),
+      })
+      if (!res.ok) {
+        // revert optimistic update on failure
+        setMenuItems((prev) => prev.map((item) => (item.id === id ? { ...item, isAvailable: !item.isAvailable } : item)))
+        console.error('Failed to update availability', await res.text())
+      }
+    } catch (err) {
+      // revert optimistic update
+      setMenuItems((prev) => prev.map((item) => (item.id === id ? { ...item, isAvailable: !item.isAvailable } : item)))
+      console.error('Failed to update availability', err)
+    }
   }
 
   const deleteItem = (id: number) => {
@@ -573,11 +623,11 @@ export function MenuManagement() {
                             <img
                               src={item.image || "/placeholder.svg"}
                               alt={item.name}
-                              className="w-10 h-10 rounded object-cover"
+                              className="w-10 h-10 rounded object-cover flex-shrink-0"
                             />
                           )}
-                          <div>
-                            <div className="font-medium">{item.name}</div>
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">{item.name}</div>
                             <div className="text-sm text-muted-foreground line-clamp-1">{item.description}</div>
                           </div>
                         </div>
@@ -606,22 +656,18 @@ export function MenuManagement() {
                           ) : (
                             <Badge variant="outline">Unavailable</Badge>
                           )}
-                          <Switch
-                            checked={item.isAvailable}
-                            onCheckedChange={() => toggleAvailability(item.id)}
-                            size="sm"
-                          />
+                          <Switch checked={item.isAvailable} onCheckedChange={() => toggleAvailability(item.id)} />
                         </div>
                       </td>
-                      <td className="p-4">
-                        <div className="flex gap-1">
-                          <Button size="sm" variant="ghost" onClick={() => duplicateItem(item)}>
+                      <td className="p-4 text-right whitespace-nowrap">
+                        <div className="flex gap-1 justify-end">
+                          <Button className="flex-shrink-0" size="sm" variant="ghost" onClick={() => duplicateItem(item)}>
                             <Copy className="w-3 h-3" />
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setEditingItem(item)}>
+                          <Button className="flex-shrink-0" size="sm" variant="ghost" onClick={() => setEditingItem(item)}>
                             <Edit className="w-3 h-3" />
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => deleteItem(item.id)}>
+                          <Button className="flex-shrink-0" size="sm" variant="ghost" onClick={() => deleteItem(item.id)}>
                             <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>

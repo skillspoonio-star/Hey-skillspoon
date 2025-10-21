@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -29,6 +30,7 @@ interface Reservation {
 }
 
 export function ReservationManagement() {
+  const router = useRouter()
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -60,7 +62,7 @@ export function ReservationManagement() {
   const fetchReservations = async () => {
     setLoading(true)
     setLoadError(null)
-    console.log('Fetching reservations...')
+  
     try {
       const res = await fetch(`${API_BASE}/api/reservation`)
       if (!res.ok) throw new Error(`Status ${res.status}`)
@@ -211,7 +213,6 @@ export function ReservationManagement() {
   // today's reservations should reflect the selected date filter when it's 'today' or 'tomorrow'
   const todayReservations = reservations.filter((r) => toDateString(new Date(r.date + 'T00:00:00')) === toDateString(today))
   const totalGuests = todayReservations.reduce((sum, r) => sum + r.guests, 0)
-
   return (
     <div className="space-y-6">
       {/* Header Stats */}
@@ -322,7 +323,12 @@ export function ReservationManagement() {
             </Button>
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
               <DialogTrigger asChild>
-                <Button className="bg-orange-500 hover:bg-orange-600">
+                <Button className="bg-orange-500 hover:bg-orange-600" onClick={()=>{
+                  //push to the dashboard/new-reservation
+                  router.push("/dashboard/new-reservation")
+                }}
+                
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Reservation
                 </Button>

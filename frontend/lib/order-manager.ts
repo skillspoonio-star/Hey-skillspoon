@@ -85,7 +85,7 @@ class OrderManager {
 
   // Simulate sending order to restaurant dashboard
   private sendToRestaurant(order: Order) {
-    console.log(`[Order Manager] New order sent to restaurant dashboard:`, order)
+    
 
     // In a real app, this would be an API call to the restaurant system
     // fetch('/api/orders', {
@@ -97,10 +97,7 @@ class OrderManager {
 
   // Simulate customer notification
   private notifyCustomer(order: Order) {
-    console.log(`[Order Manager] Customer notification for Table ${order.tableNumber}:`, {
-      status: order.status,
-      message: this.getStatusMessage(order.status),
-    })
+    
 
     // In a real app, this would send SMS or push notification
     // if (order.customerPhone) {

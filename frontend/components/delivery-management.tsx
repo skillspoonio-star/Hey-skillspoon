@@ -101,7 +101,6 @@ export default function DeliveryManagement() {
 
   const filtered = useMemo(() =>
     orders.filter((o) => {
-      console.log(o);
       const matches =
         o.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         o.phone.includes(searchTerm) ||

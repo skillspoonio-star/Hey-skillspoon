@@ -39,7 +39,6 @@ async function listReviews(req, res) {
 
 async function addReview(req, res) {
   const { name, rating, comment } = req.body;
-  console.log('Adding review:', req.body);
   if (!name || typeof rating === 'undefined' || !comment) {
     return res.status(400).json({ error: 'name, rating and comment are required' });
   }

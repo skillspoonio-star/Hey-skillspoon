@@ -40,7 +40,7 @@ export default function AdminLogin() {
       
 
       const data = await response.json();
-      console.log(data);
+      
 
       if (data.error) {
         throw new Error(data.error);
@@ -57,7 +57,7 @@ export default function AdminLogin() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    console.log("Requesting OTP for:", credentials.adminId);
+    
 
     try {
       await requestOtp(credentials.adminId, credentials.password);

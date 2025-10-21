@@ -11,6 +11,7 @@ const menuItemSchema = new mongoose.Schema({
   rating: { type: Number ,default: 3.5},
   isVeg: { type: Boolean, default: false },
   isPopular: { type: Boolean, default: false },
+  isAvailable: { type: Boolean, default: true },
   allergens: { type: [String], default: [] },
   calories: { type: Number },
 }, { timestamps: true });

@@ -138,7 +138,6 @@ async function getLiveCounterOrders(req, res) {
 }
 
 async function createOrder(req, res) {
-    console.log('Creating order: hereeee');
   const data = req.body;
   const errMsg = validateCreatePayload(data);
   if (errMsg) return res.status(400).json({ error: errMsg });
@@ -153,6 +152,10 @@ async function createOrder(req, res) {
     let calcTotal = 0;
     for (const it of data.items) {
       const mi = menuById.get(it.itemId);
+      // if menu item exists but is not available, reject
+      if (mi && mi.isAvailable === false) {
+        return res.status(409).json({ error: 'One or more items are unavailable', itemId: it.itemId, itemName: mi.name });
+      }
       const price = mi ? Number(mi.price) : 0;
       calcTotal += price * Number(it.quantity);
     }

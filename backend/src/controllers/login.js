@@ -31,14 +31,12 @@ async function login(req, res) {
         if (!admin) return res.status(401).json({ error: 'Invalid credentials' });
 
         const isMatch = await bcrypt.compare(password, admin.password);
-        if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
-        console.log('Admin authenticated:', adminId);
+    if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
         // Generate OTP and store with TTL (configurable via OTP_TTL_SECONDS)
         const otp = generateOtp();
         const ttlSeconds = 300; // default 5 minutes
         const expiresAt = Date.now() + ttlSeconds * 1000;
-        otpStore.set(adminId, { otp, expiresAt });
-        console.log(`Generated OTP for ${adminId}: ${otp} `);
+    otpStore.set(adminId, { otp, expiresAt });
         // Send OTP to admin.email via nodemailer
 
     //     const mailOptions = {

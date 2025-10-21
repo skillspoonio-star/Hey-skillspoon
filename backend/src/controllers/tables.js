@@ -211,7 +211,7 @@ async function listAvailableTables(req, res) {
             if (isNaN(dt.getTime())) return null;
             return dt;
         }
-        console.log('Parsing date/time for availability check');
+        
 
         let windowStart = null;
         // Accept date/time from either request body (POST) or query params (GET)
@@ -274,7 +274,7 @@ async function listAvailableTables(req, res) {
             .filter((t) => !reservedNumbers.has(t.number))
             .map((t) => ({ number: t.number, capacity: t.capacity, reservationPrice: t.reservationPrice || 0 }))
             .sort((a, b) => a.number - b.number);
-        console.log('Available tables:', available);
+        
         // also broadcast availability snapshot (optional)
         try {
             broadcastTablesUpdate({ type: 'tables:availability', tables: available });

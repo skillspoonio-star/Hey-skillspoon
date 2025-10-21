@@ -2,7 +2,10 @@ const MenuItem = require('../models/menuItem');
 
 async function listItems(req, res) {
   try {
-    const items = await MenuItem.find().sort({ id: 1 }).lean();
+    // By default only list currently available items. Pass ?all=true to list everything.
+    const showAll = req.query && String(req.query.all) === 'true'
+    const q = showAll ? {} : { isAvailable: true }
+    const items = await MenuItem.find(q).sort({ id: 1 }).lean();
     return res.json(items);
   } catch (err) {
     console.error(err);
@@ -31,7 +34,6 @@ async function addItem(req, res) {
 
 async function deleteItem(req, res) {
   const id = Number(req.params.id);
-  console.log('Deleting item with id:', id);
   if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
 
   try {
@@ -63,6 +65,7 @@ async function updateItem(req, res) {
       'rating',
       'isVeg',
       'isPopular',
+      'isAvailable',
       'allergens',
       'calories',
     ];

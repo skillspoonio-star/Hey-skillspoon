@@ -127,7 +127,6 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
 
       if (urgentOrders.length > 0) {
         // In a real app, you would play an actual sound here
-        console.log("🔔 Urgent orders detected!")
       }
     }
   }, [orders, currentTime, soundEnabled])
