@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -36,60 +36,69 @@ export function TakeawayManagement() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [dateFilter, setDateFilter] = useState<string>("today")
 
-  // Mock takeaway orders data
-  const [takeawayOrders] = useState<TakeawayOrder[]>([
-    {
-      id: "TK001",
-      customerName: "Rajesh Kumar",
-      phone: "+91 98765 43210",
-      email: "rajesh@email.com",
-      items: [
-        { name: "Chicken Biryani", quantity: 2, price: 350 },
-        { name: "Paneer Tikka", quantity: 1, price: 280 },
-        { name: "Garlic Naan", quantity: 3, price: 60 },
-      ],
-      total: 1040,
-      status: "preparing",
-      orderTime: "2:30 PM",
-      pickupTime: "3:15 PM",
-      paymentMethod: "UPI",
-      paymentStatus: "completed",
-      specialInstructions: "Extra spicy biryani, less oil in paneer",
-    },
-    {
-      id: "TK002",
-      customerName: "Priya Sharma",
-      phone: "+91 87654 32109",
-      email: "priya@email.com",
-      items: [
-        { name: "Dal Makhani", quantity: 1, price: 220 },
-        { name: "Butter Naan", quantity: 2, price: 70 },
-        { name: "Gulab Jamun", quantity: 4, price: 80 },
-      ],
-      total: 370,
-      status: "ready",
-      orderTime: "1:45 PM",
-      pickupTime: "2:30 PM",
-      paymentMethod: "Card",
-      paymentStatus: "completed",
-    },
-    {
-      id: "TK003",
-      customerName: "Amit Patel",
-      phone: "+91 76543 21098",
-      email: "amit@email.com",
-      items: [
-        { name: "Veg Thali", quantity: 2, price: 300 },
-        { name: "Mango Lassi", quantity: 2, price: 120 },
-      ],
-      total: 420,
-      status: "pending",
-      orderTime: "3:00 PM",
-      pickupTime: "3:45 PM",
-      paymentMethod: "Cash",
-      paymentStatus: "pending",
-    },
-  ])
+  const [takeawayOrders, setTakeawayOrders] = useState<TakeawayOrder[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      setLoading(true)
+      try {
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+        const [ordersRes, menuRes] = await Promise.all([
+          fetch(`${base}/api/orders`),
+          fetch(`${base}/api/menu/items`),
+        ])
+        if (!ordersRes.ok) throw new Error('Failed to fetch orders')
+        if (!menuRes.ok) throw new Error('Failed to fetch menu')
+        const ordersData: any[] = await ordersRes.json()
+        const menuData: any[] = await menuRes.json()
+        const menuById = new Map(menuData.map((m: any) => [Number(m.id), m]))
+
+        // Filter take-away orders and map to UI shape
+        const takeaways = ordersData
+          .filter((o: any) => {
+            const t = (o.orderType || '').toString().toLowerCase()
+            return t === 'take-away' || t === 'takeaway' || t === 'take away' || t === 'takeaway'
+          })
+          .map((o: any) => {
+            const sourceItems = o.items || []
+            const items = sourceItems.map((it: any) => {
+              const menuItem = menuById.get(Number(it.itemId))
+              return {
+                name: menuItem ? menuItem.name : (it.name || `Item ${it.itemId}`),
+                quantity: Number(it.quantity || 0),
+                price: menuItem ? Number(menuItem.price) : Number(it.price || 0),
+                specialInstructions: it.specialInstructions || undefined,
+              }
+            })
+
+            return {
+              id: String(o.tableNumber ?? o._id),
+              customerName: o.customerName || o.customer || '',
+              phone: o.customerPhone || o.phone || '',
+              email: o.customerEmail || '',
+              items,
+              total: Number(o.total || items.reduce((s: number, i: any) => s + (i.price || 0) * i.quantity, 0)),
+              status: o.status || 'pending',
+              orderTime: o.timestamp ? new Date(o.timestamp).toLocaleString() : (o.createdAt ? new Date(o.createdAt).toLocaleString() : ''),
+              pickupTime: o.estimatedTime ? `${o.estimatedTime} mins` : '',
+              paymentMethod: o.paymentMethod || 'pending',
+              paymentStatus: o.paymentStatus || 'pending',
+              specialInstructions: o.specialRequests || o.specialInstructions || '',
+            } as TakeawayOrder
+          })
+
+        if (!mounted) return
+        setTakeawayOrders(takeaways)
+      } catch (err) {
+        console.error('Failed to load takeaway orders', err)
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    })()
+    return () => { mounted = false }
+  }, [])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -258,7 +267,7 @@ export function TakeawayManagement() {
           <Card key={order.id} className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">#{order.id}</CardTitle>
+                <CardTitle className="text-lg">#TK {order.id}</CardTitle>
                 <Badge className={getStatusColor(order.status)}>
                   {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                 </Badge>
@@ -311,7 +320,7 @@ export function TakeawayManagement() {
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl">
                     <DialogHeader>
-                      <DialogTitle>Order Details - #{order.id}</DialogTitle>
+                      <DialogTitle>Order Details - #TK {order.id}</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-6">
                       {/* Customer Info */}

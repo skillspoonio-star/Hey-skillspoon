@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,35 +8,58 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { X } from "lucide-react"
 
+interface TableInfo {
+  number: number
+  capacity?: number
+}
+
 interface TableAssignmentModalProps {
   isOpen: boolean
   onClose: () => void
-  onAssign: (tableNumber: number, customerName: string, partySize: number) => void
-  availableTables: Array<{ number: number; capacity: number }>
+  onAssign: (tableNumber: number, customerName: string, mobileNumber: string) => void
+  // parent may pass a preselected table object (or null)
+  selectedTable?: TableInfo | null
 }
 
-export function TableAssignmentModal({ isOpen, onClose, onAssign, availableTables }: TableAssignmentModalProps) {
-  const [selectedTable, setSelectedTable] = useState<string>("")
+export function TableAssignmentModal({ isOpen, onClose, onAssign, selectedTable }: TableAssignmentModalProps) {
   const [customerName, setCustomerName] = useState("")
-  const [partySize, setPartySize] = useState("")
+  const [mobileNumber, setMobileNumber] = useState("")
+  const [availableTables, setAvailableTables] = useState<TableInfo[]>([])
+  const [chosenTable, setChosenTable] = useState<string>(selectedTable ? String(selectedTable.number) : "")
+
+  const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3001'
+
+  useEffect(() => {
+    // when modal opens and no preselected table, fetch available tables
+    if (isOpen && !selectedTable) {
+      let mounted = true
+      ;(async () => {
+        try {
+          const res = await fetch(`${API_BASE}/api/tables`)
+          if (!res.ok) return
+          const data = await res.json()
+          const avail = (Array.isArray(data) ? data : []).filter((t: any) => (t.status || 'available') === 'available').map((t: any) => ({ number: Number(t.number), capacity: Number(t.capacity || 4) }))
+          if (mounted) setAvailableTables(avail)
+        } catch (e) {
+          // ignore fetch errors here; parent page will show overall errors
+        }
+      })()
+      return () => { mounted = false }
+    }
+    // if a selectedTable prop is provided, prefill chosenTable
+    if (selectedTable) setChosenTable(String(selectedTable.number))
+  }, [isOpen, selectedTable, API_BASE])
 
   const handleSubmit = () => {
-    if (selectedTable && customerName && partySize) {
-      const tableNumber = Number.parseInt(selectedTable.split(" ")[1])
-      onAssign(tableNumber, customerName, Number.parseInt(partySize))
+    const tableNum = selectedTable ? selectedTable.number : (chosenTable ? Number.parseInt(chosenTable) : NaN)
+    if (!Number.isFinite(tableNum) || !customerName || !mobileNumber) return
+    onAssign(tableNum, customerName, mobileNumber)
 
-      const tableUrl = `${window.location.origin}/table/${tableNumber}`
-      console.log(`[v0] Generated table URL: ${tableUrl}`)
-
-      // In a real implementation, you would generate a QR code here
-      // and possibly send it to a printer or display it to staff
-
-      // Reset form
-      setSelectedTable("")
-      setCustomerName("")
-      setPartySize("")
-      onClose()
-    }
+    // Reset form
+    setChosenTable("")
+    setCustomerName("")
+    setMobileNumber("")
+    onClose()
   }
 
   return (
@@ -53,24 +76,6 @@ export function TableAssignmentModal({ isOpen, onClose, onAssign, availableTable
 
         <div className="space-y-6 py-4">
           <div className="space-y-2">
-            <Label htmlFor="table-select" className="text-sm font-medium">
-              Select Table
-            </Label>
-            <Select value={selectedTable} onValueChange={setSelectedTable}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a table" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableTables.map((table) => (
-                  <SelectItem key={table.number} value={`Table ${table.number}`}>
-                    Table {table.number} (Capacity: {table.capacity})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="customer-name" className="text-sm font-medium">
               Customer Name
             </Label>
@@ -83,17 +88,15 @@ export function TableAssignmentModal({ isOpen, onClose, onAssign, availableTable
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="party-size" className="text-sm font-medium">
-              Party Size
+            <Label htmlFor="mobile-number" className="text-sm font-medium">
+              Mobile Number
             </Label>
             <Input
-              id="party-size"
-              type="number"
-              placeholder="Number of guests"
-              value={partySize}
-              onChange={(e) => setPartySize(e.target.value)}
-              min="1"
-              max="20"
+              id="mobile-number"
+              type="tel"
+              placeholder="Enter mobile number"
+              value={mobileNumber}
+              onChange={(e) => setMobileNumber(e.target.value)}
             />
           </div>
 
@@ -101,7 +104,7 @@ export function TableAssignmentModal({ isOpen, onClose, onAssign, availableTable
             onClick={handleSubmit}
             className="w-full bg-orange-500 hover:bg-orange-600 text-white"
             size="lg"
-            disabled={!selectedTable || !customerName || !partySize}
+            disabled={!selectedTable || !customerName || !mobileNumber}
           >
             Assign Table & Generate QR Code
           </Button>

@@ -104,7 +104,13 @@ export function OrderCard({ order, onStatusUpdate, onCallWaiter }: OrderCardProp
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h4 className="font-semibold">Table {order.tableNumber}</h4>
+            {(order.orderType=='dine-in')?
+            <h4 className="font-semibold">Table {order.tableNumber}</h4>:
+            (order.orderType=='delivery')?
+            <h4 className="font-semibold">#DLV {order.tableNumber}</h4>
+            :
+            <h4 className="font-semibold">#TK {order.tableNumber}</h4>
+            }
             <Badge variant={getStatusColor(order.status)} className="capitalize">
               {order.status}
             </Badge>

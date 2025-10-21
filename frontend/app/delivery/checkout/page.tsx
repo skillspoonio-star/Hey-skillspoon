@@ -65,12 +65,15 @@ export default function DeliveryCheckoutPage() {
       scheduledTime: slot === "schedule" ? scheduledTime : null,
     }
 
-    await fetch("/api/orders", {
-      method: "POST",
-      body: JSON.stringify({
-        id: Date.now(),
-        orderType: "delivery",
-        items: cart.map((l) => ({ name: l.name, quantity: l.qty, price: l.price })),
+    try {
+      const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+      const payload = {
+        items: cart.map((l: any) => ({ itemId: l.id, quantity: l.qty })),
+        subtotal,
+        tax,
+        deliveryFee,
+        discount,
+        tip,
         total,
         customerName: customerPayload.name,
         customerPhone: customerPayload.phone,
@@ -88,6 +91,7 @@ export default function DeliveryCheckoutPage() {
           contactless,
           instructions,
         },
+        paymentMethod,
         payment: {
           method: paymentMethod,
           promo,
@@ -99,15 +103,57 @@ export default function DeliveryCheckoutPage() {
           upiId: paymentMethod === "UPI" ? upiId : null,
           card: paymentMethod === "Card" ? { cardNumber, cardName, cardExp } : null,
         },
-        status: "pending",
-        timestamp: new Date().toISOString(),
-      }),
-    })
-    if (typeof window !== "undefined") {
-      localStorage.setItem("delivery:latestTotal", String(total))
-      localStorage.setItem("delivery:customer", JSON.stringify(customerPayload))
+        orderType: 'delivery',
+      }
+
+      const res = await fetch(`${base}/api/deliveries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: payload.items,
+          subtotal: payload.subtotal,
+          tax: payload.tax,
+          extraCharge: (payload.tip || 0) + (payload.deliveryFee || 0),
+          discount: payload.discount,
+          total: payload.total,
+          customerName: payload.customerName,
+          customerPhone: payload.customerPhone,
+          address: {
+            address1,
+            address2,
+            landmark,
+            city,
+            state: stateName,
+            pincode,
+          },
+          slot: payload.delivery.slot,
+          scheduledTime: payload.delivery.scheduledTime,
+          contactless: payload.delivery.contactless,
+          instructions: payload.delivery.instructions,
+          paymentMethod: paymentMethod === 'UPI' ? 'upi' : paymentMethod === 'Card' ? 'card' : 'cash',
+          paymentStatus: 'paid',
+        }),
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        console.error('Failed to create delivery order', res.status, text)
+        alert('Failed to place order. Please try again or contact support.')
+        return
+      }
+      const data = await res.json()
+      const orderId = data.orderId || data.id || data._id
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem("delivery:latestTotal", String(total))
+        localStorage.setItem("delivery:customer", JSON.stringify(customerPayload))
+        localStorage.removeItem('delivery:cart')
+      }
+
+      router.push(`/delivery/confirmation?orderId=${orderId}`)
+    } catch (err) {
+      console.error('Error placing delivery order', err)
+      alert('Error placing order. Please try again.')
     }
-    router.push("/delivery/confirmation")
   }
 
   return (

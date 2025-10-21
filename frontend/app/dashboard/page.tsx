@@ -53,7 +53,7 @@ import {
   SidebarInset,
 } from "@/components/ui/sidebar"
 import { InventoryManagement } from "@/components/inventory-management"
-import { DeliveryManagement } from "@/components/delivery-management"
+import DeliveryManagement from "@/components/delivery-management"
 
 export default function RestaurantDashboard() {
   const router = useRouter()
@@ -150,7 +150,6 @@ export default function RestaurantDashboard() {
   const analytics = getAnalytics()
 
   const liveOrdersBadge = pendingOrders.length + preparingOrders.length
-
   if (!authChecked) {
     return null
   }
@@ -381,7 +380,7 @@ export default function RestaurantDashboard() {
 
               <TabsContent value="kitchen" className="space-y-6">
                 <SectionHeader title="Kitchen Display" subtitle="Order queue for the kitchen" />
-                <KitchenDisplay orders={orders} onStatusUpdate={handleOrderStatusUpdate} />
+                <KitchenDisplay orders={[...pendingOrders, ...preparingOrders]} onStatusUpdate={handleOrderStatusUpdate} />
               </TabsContent>
 
               <TabsContent value="tables" className="space-y-6">

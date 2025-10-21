@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -55,7 +56,9 @@ interface Table {
   reservationTime?: Date
   section?: "main" | "patio" | "private" | "bar"
   server?: string
-  activities: TableActivity[]
+  isCleaning: boolean
+  isMaintenance: boolean
+  isSetup: boolean
   lastCleaned?: Date
   nextMaintenance?: Date
 }
@@ -84,93 +87,167 @@ export function TableManagement({ orders }: TableManagementProps) {
     return () => clearInterval(interval)
   }, [])
 
-  const [tables, setTables] = useState<Table[]>(() => {
-    const tableData: Table[] = []
-    const sections = ["main", "patio", "private", "bar"] as const
-    const servers = ["Alice", "Bob", "Charlie", "Diana", "Eve"]
-    const cleaningStaff = ["John", "Mary", "Sam", "Lisa"]
+  const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3001'
+  const [tables, setTables] = useState<Table[]>([])
+  const [tablesLoadError, setTablesLoadError] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; table?: Table | null }>({ open: false, table: null })
 
-    for (let i = 1; i <= 24; i++) {
-      const currentOrder = orders.find((order) => order.tableNumber === i && order.status !== "served")
-      const section = sections[Math.floor((i - 1) / 6)]
-      const isReserved = !currentOrder && Math.random() > 0.8
-      const needsCleaning = Math.random() > 0.7
-      const needsMaintenance = Math.random() > 0.9
+  // Add Table dialog state (inline)
+  const [addOpen, setAddOpen] = useState(false)
+  const [addNumber, setAddNumber] = useState<number | ''>('')
+  const [addCapacity, setAddCapacity] = useState<number | ''>('')
+  const [addSection, setAddSection] = useState<'main' | 'patio' | 'private' | 'bar'>('main')
+  const [addReservationPrice, setAddReservationPrice] = useState<number | ''>('')
+  const [addLoading, setAddLoading] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
 
-      // Generate sample activities
-      const activities: TableActivity[] = []
-      if (needsCleaning) {
-        activities.push({
-          id: `clean-${i}-${Date.now()}`,
-          type: "cleaning",
-          status: Math.random() > 0.5 ? "pending" : "in-progress",
-          assignedTo: cleaningStaff[Math.floor(Math.random() * cleaningStaff.length)],
-          startTime: Math.random() > 0.5 ? new Date(Date.now() - Math.random() * 30 * 60 * 1000) : undefined,
-          estimatedDuration: 15,
-          notes: "Standard table cleaning after customer departure",
-        })
+  // fetch tables from backend on mount
+  useEffect(() => {
+    let mounted = true
+    const fetchTables = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/tables`)
+        if (!res.ok) throw new Error(`Status ${res.status}`)
+        const data = await res.json()
+        // normalize server data into Table[] shape expected by component
+        const normalized: Table[] = (Array.isArray(data) ? data : []).map((t: any) => ({
+          number: Number(t.number),
+          capacity: Number(t.capacity || 4),
+          status: t.status || 'available',
+          currentOrder: t.currentOrder || undefined,
+          estimatedTime: t.estimatedTime || undefined,
+          reservationName: t.reservationName || undefined,
+          reservationPhone: t.reservationPhone || undefined,
+          reservationTime: t.reservationTime ? new Date(t.reservationTime) : undefined,
+          section: t.section || 'main',
+          server: t.server || undefined,
+          isCleaning: t.status === 'cleaning',
+          isMaintenance: t.status === 'maintenance',
+          isSetup: t.status === 'setup',
+          lastCleaned: t.lastCleaned ? new Date(t.lastCleaned) : undefined,
+          nextMaintenance: t.nextMaintenance ? new Date(t.nextMaintenance) : undefined,
+        }))
+        if (!mounted) return
+        setTables(normalized)
+      } catch (err: any) {
+        console.error('Failed to load tables', err)
+        setTablesLoadError(err?.message || 'Failed to load tables')
+        // fallback: keep empty list, UI will still work with generated reservations
       }
-
-      if (needsMaintenance) {
-        activities.push({
-          id: `maint-${i}-${Date.now()}`,
-          type: "maintenance",
-          status: "pending",
-          assignedTo: "Maintenance Team",
-          estimatedDuration: 30,
-          notes: "Weekly table and chair inspection",
-        })
-      }
-
-      const tableStatus = currentOrder
-        ? "occupied"
-        : isReserved
-          ? "reserved"
-          : activities.some((a) => a.type === "cleaning" && a.status !== "completed")
-            ? "cleaning"
-            : activities.some((a) => a.type === "maintenance" && a.status !== "completed")
-              ? "maintenance"
-              : "available"
-
-      tableData.push({
-        number: i,
-        capacity: i <= 8 ? 2 : i <= 16 ? 4 : i <= 20 ? 6 : 8,
-        status: tableStatus as Table["status"],
-        currentOrder,
-        estimatedTime: currentOrder ? Math.floor(Math.random() * 45) + 15 : undefined,
-        section,
-        server: servers[Math.floor(Math.random() * servers.length)],
-        reservationName: isReserved ? `Customer ${i}` : undefined,
-        reservationPhone: isReserved ? `+91 ${Math.floor(Math.random() * 9000000000) + 1000000000}` : undefined,
-        reservationTime: isReserved ? new Date(Date.now() + Math.random() * 3600000) : undefined,
-        activities,
-        lastCleaned: new Date(Date.now() - Math.random() * 4 * 60 * 60 * 1000), // Random time in last 4 hours
-        nextMaintenance: new Date(Date.now() + Math.random() * 7 * 24 * 60 * 60 * 1000), // Random time in next 7 days
-      })
     }
-    return tableData
-  })
+    fetchTables()
+
+    // subscribe to SSE stream for updates
+    let es: EventSource | null = null
+    try {
+      es = new EventSource(`${API_BASE}/api/tables/stream`)
+      es.onmessage = (ev) => {
+        try {
+          const payload = JSON.parse(ev.data)
+          if (payload && payload.tables) {
+            const normalized: Table[] = payload.tables.map((t: any) => ({
+              number: Number(t.number),
+              capacity: Number(t.capacity || 4),
+              status: t.status || 'available',
+              currentOrder: t.currentOrder || undefined,
+              estimatedTime: t.estimatedTime || undefined,
+              reservationName: t.reservationName || undefined,
+              reservationPhone: t.reservationPhone || undefined,
+              reservationTime: t.reservationTime ? new Date(t.reservationTime) : undefined,
+              section: t.section || 'main',
+              server: t.server || undefined,
+              isCleaning: Boolean(t.isCleaning),
+              isMaintenance: Boolean(t.isMaintenance),
+              isSetup: Boolean(t.isSetup),
+              lastCleaned: t.lastCleaned ? new Date(t.lastCleaned) : undefined,
+              nextMaintenance: t.nextMaintenance ? new Date(t.nextMaintenance) : undefined,
+            }))
+            setTables(normalized)
+          }
+        } catch (e) {
+          // ignore non-JSON messages
+        }
+      }
+      es.onerror = () => {
+        // on error, close and retry later (browser will auto-retry for EventSource)
+        if (es) {
+          try { es.close() } catch (e) { }
+        }
+      }
+    } catch (e) {
+      // EventSource not available in this environment (SSR) or blocked; ignore
+    }
+
+    return () => {
+      mounted = false
+      if (es) {
+        try { es.close() } catch (e) { }
+      }
+    }
+  }, [API_BASE])
 
   const updateTableStatus = (tableNumber: number, newStatus: Table["status"]) => {
     setTables((prev) =>
       prev.map((table) => {
         if (table.number === tableNumber) {
-          const updatedTable = { ...table, status: newStatus }
+          return { ...table, status: newStatus }
+        }
+        return table
+      }),
+    )
+  }
 
-          // Auto-create activities based on status change
-          if (
-            newStatus === "cleaning" &&
-            !table.activities.some((a) => a.type === "cleaning" && a.status !== "completed")
-          ) {
-            updatedTable.activities.push({
-              id: `clean-${tableNumber}-${Date.now()}`,
-              type: "cleaning",
-              status: "pending",
-              estimatedDuration: 15,
-              notes: "Table cleaning required",
-            })
+  const toggleTask = async (tableNumber: number, taskType: 'cleaning' | 'maintenance' | 'setup') => {
+    setTables((prev) =>
+      prev.map((table) => {
+        if (table.number === tableNumber) {
+          // Check if another activity is already active
+          const hasActiveActivity = table.isCleaning || table.isMaintenance || table.isSetup
+          const isCurrentActivity = 
+            (taskType === 'cleaning' && table.isCleaning) ||
+            (taskType === 'maintenance' && table.isMaintenance) ||
+            (taskType === 'setup' && table.isSetup)
+          
+          // If trying to start a new activity while another is active
+          if (hasActiveActivity && !isCurrentActivity) {
+            let activeActivity = ''
+                      
+            alert(`Table is under ${activeActivity} right now`)
+            return table
           }
-
+          
+          const updates: Partial<Table> = {}
+          
+          if (taskType === 'cleaning') {
+            const newCleaningState = !table.isCleaning
+            updates.isCleaning = newCleaningState
+            updates.isMaintenance = false
+            updates.isSetup = false
+            updates.status = newCleaningState ? 'cleaning' : 'available'
+          } else if (taskType === 'maintenance') {
+            const newMaintenanceState = !table.isMaintenance
+            updates.isMaintenance = newMaintenanceState
+            updates.isCleaning = false
+            updates.isSetup = false
+            updates.status = newMaintenanceState ? 'maintenance' : 'available'
+          } else if (taskType === 'setup') {
+            const newSetupState = !table.isSetup
+            updates.isSetup = newSetupState
+            updates.isCleaning = false
+            updates.isMaintenance = false
+            updates.status = newSetupState ? 'setup' : 'available'
+          }
+          
+          const updatedTable = { ...table, ...updates }
+          
+          // Update selectedTable if it's the same table
+          if (selectedTable && selectedTable.number === tableNumber) {
+            setSelectedTable(updatedTable)
+          }
+          
+          // Update backend
+          updateTableInBackend(tableNumber, updates, taskType)
+          
           return updatedTable
         }
         return table
@@ -178,63 +255,52 @@ export function TableManagement({ orders }: TableManagementProps) {
     )
   }
 
-  const updateActivity = (tableNumber: number, activityId: string, updates: Partial<TableActivity>) => {
-    setTables((prev) =>
-      prev.map((table) => {
-        if (table.number === tableNumber) {
-          const updatedActivities = table.activities.map((activity) => {
-            if (activity.id === activityId) {
-              const updatedActivity = { ...activity, ...updates }
-
-              // Auto-update timestamps
-              if (updates.status === "in-progress" && !activity.startTime) {
-                updatedActivity.startTime = new Date()
-              }
-              if (updates.status === "completed" && !activity.completedTime) {
-                updatedActivity.completedTime = new Date()
-
-                // Update table status if all activities are completed
-                const allCompleted = table.activities.every((a) =>
-                  a.id === activityId ? true : a.status === "completed",
-                )
-                if (allCompleted && table.status !== "occupied" && table.status !== "reserved") {
-                  return {
-                    ...table,
-                    status: "available" as Table["status"],
-                    activities: table.activities.map((a) => (a.id === activityId ? updatedActivity : a)),
-                  }
-                }
-              }
-
-              return updatedActivity
-            }
-            return activity
-          })
-
-          return { ...table, activities: updatedActivities }
+  const updateTableInBackend = async (tableNumber: number, updates: Partial<Table>, taskType: 'cleaning' | 'maintenance' | 'setup') => {
+    try {
+      // Update table status in backend
+      const res = await fetch(`${API_BASE}/api/tables/${tableNumber}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: updates.status,
+          isCleaning: updates.isCleaning,
+          isMaintenance: updates.isMaintenance,
+          isSetup: updates.isSetup
+        })
+      })
+      
+      if (!res.ok) {
+        const txt = await res.text()
+        throw new Error(`Status ${res.status} ${txt}`)
+      }
+      
+      // If starting a new activity, create activity record
+      if (updates.status && updates.status !== 'available') {
+        const activityData = {
+          type: taskType,
+          status: 'in-progress',
+          estimatedDuration: taskType === 'cleaning' ? 15 : taskType === 'maintenance' ? 30 : 10,
+          notes: `Table ${taskType} started`,
+          startTime: new Date().toISOString()
         }
-        return table
-      }),
-    )
+        
+        const activityRes = await fetch(`${API_BASE}/api/tables/${tableNumber}/activities`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(activityData)
+        })
+        
+        if (!activityRes.ok) {
+          console.error('Failed to create activity:', await activityRes.text())
+        }
+      }
+      
+    } catch (err: any) {
+      console.error('Failed to update table in backend:', err)
+      // Don't show alert to user as frontend state is already updated
+    }
   }
 
-  const addActivity = (tableNumber: number, activity: Omit<TableActivity, "id">) => {
-    setTables((prev) =>
-      prev.map((table) => {
-        if (table.number === tableNumber) {
-          const newActivity: TableActivity = {
-            ...activity,
-            id: `${activity.type}-${tableNumber}-${Date.now()}`,
-          }
-          return {
-            ...table,
-            activities: [...table.activities, newActivity],
-          }
-        }
-        return table
-      }),
-    )
-  }
 
   const getTableStatusColor = (status: Table["status"]) => {
     switch (status) {
@@ -308,11 +374,9 @@ export function TableManagement({ orders }: TableManagementProps) {
   const reservedTables = tables.filter((t) => t.status === "reserved").length
   const cleaningTables = tables.filter((t) => t.status === "cleaning").length
   const setupTables = tables.filter((t) => t.status === "setup").length
-  const allActivities = tables.flatMap((table) =>
-    table.activities.map((activity) => ({ ...activity, tableNumber: table.number })),
-  )
-  const pendingActivities = allActivities.filter((a) => a.status === "pending").length
-  const inProgressActivities = allActivities.filter((a) => a.status === "in-progress").length
+  const cleaningTasks = tables.filter((t) => t.isCleaning).length
+  const maintenanceTasks = tables.filter((t) => t.isMaintenance).length
+  const setupTasks = tables.filter((t) => t.isSetup).length
 
   const totalRevenue = orders.filter((order) => order.status === "served").reduce((sum, order) => sum + order.total, 0)
 
@@ -374,10 +438,10 @@ export function TableManagement({ orders }: TableManagementProps) {
           <CardContent className="p-3 md:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground">Pending Tasks</p>
-                <p className="text-xl md:text-xl font-bold text-orange-600">{pendingActivities}</p>
+                <p className="text-xs text-muted-foreground">Cleaning Tasks</p>
+                <p className="text-xl md:text-xl font-bold text-orange-600">{cleaningTasks}</p>
               </div>
-              <Timer className="w-6 h-6 md:w-8 md:h-8 text-orange-600" />
+              <Sparkles className="w-6 h-6 md:w-8 md:h-8 text-orange-600" />
             </div>
           </CardContent>
         </Card>
@@ -386,10 +450,10 @@ export function TableManagement({ orders }: TableManagementProps) {
           <CardContent className="p-3 md:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground">In Progress</p>
-                <p className="text-xl md:text-xl font-bold text-blue-600">{inProgressActivities}</p>
+                <p className="text-xs text-muted-foreground">Maintenance Tasks</p>
+                <p className="text-xl md:text-xl font-bold text-blue-600">{maintenanceTasks}</p>
               </div>
-              <AlertCircle className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
+              <Wrench className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
@@ -436,111 +500,119 @@ export function TableManagement({ orders }: TableManagementProps) {
           </TabsList>
         </Tabs>
 
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button variant="outline" size="sm" className="w-full sm:w-auto bg-transparent">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Reservation
-          </Button>
-          <Button variant="outline" size="sm" className="w-full sm:w-auto bg-transparent">
-            <Sparkles className="w-4 h-4 mr-2" />
-            Schedule Cleaning
-          </Button>
-          <Button variant="outline" size="sm" className="w-full sm:w-auto bg-transparent">
-            <Edit className="w-4 h-4 mr-2" />
-            Edit Layout
-          </Button>
+  <div className="flex flex-col sm:flex-row gap-2">
+          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-orange-500 hover:bg-orange-600">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Table
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Table</DialogTitle>
+              </DialogHeader>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <Label>Table Number</Label>
+                  <Input value={addNumber} onChange={(e: any) => setAddNumber(Number(e.target.value || ''))} type="number" />
+                </div>
+                <div>
+                  <Label>Capacity</Label>
+                  <Input value={addCapacity} onChange={(e: any) => setAddCapacity(Number(e.target.value || ''))} type="number" />
+                </div>
+                <div>
+                  <Label>Section</Label>
+                  <Select value={addSection} onValueChange={(v: any) => setAddSection(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="main">Main</SelectItem>
+                      <SelectItem value="patio">Patio</SelectItem>
+                      <SelectItem value="private">Private</SelectItem>
+                      <SelectItem value="bar">Bar</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Reservation Price</Label>
+                  <Input value={addReservationPrice} onChange={(e: any) => setAddReservationPrice(Number(e.target.value || ''))} type="number" />
+                </div>
+
+                {addError && <p className="text-sm text-red-600">{addError}</p>}
+
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+                  <Button onClick={async () => {
+                    setAddError(null)
+                    if (!addNumber || !addCapacity || addReservationPrice === '') { setAddError('Please fill required fields'); return }
+                    setAddLoading(true)
+                    try {
+                      const res = await fetch(`${API_BASE}/api/tables`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ number: addNumber, capacity: addCapacity, section: addSection, reservationPrice: addReservationPrice }) })
+                      if (!res.ok) { const txt = await res.text(); throw new Error(`Status ${res.status} ${txt}`) }
+                      const created = await res.json()
+                      setAddOpen(false)
+                      setAddNumber('')
+                      setAddCapacity('')
+                      setAddReservationPrice('')
+                    } catch (err: any) { setAddError(err?.message || 'Failed') } finally { setAddLoading(false) }
+                  }} disabled={addLoading}>{addLoading ? 'Creating...' : 'Create Table'}</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
       {viewMode === "activities" && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
-            <Label className="text-sm">Filter Activities:</Label>
-            <Select value={activityFilter} onValueChange={(value: any) => setActivityFilter(value)}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Activities</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="in-progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="grid gap-4">
-            {allActivities
-              .filter((activity) => activityFilter === "all" || activity.status === activityFilter)
-              .map((activity) => (
-                <Card key={activity.id}>
+            {tables.filter(table => table.isCleaning || table.isMaintenance || table.isSetup).map((table) => (
+              <Card key={table.number}>
                   <CardContent className="p-3 md:p-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-4 w-full sm:w-auto">
                         <div className="flex items-center gap-2">
-                          {getActivityIcon(activity.type)}
-                          <div>
-                            <div className="font-medium capitalize text-sm md:text-base">
-                              {activity.type} - Table {activity.tableNumber}
-                            </div>
-                            <div className="text-xs md:text-sm text-muted-foreground">
-                              {activity.assignedTo && `Assigned to: ${activity.assignedTo}`}
-                            </div>
-                          </div>
-                        </div>
-                        <Badge
-                          variant={
-                            activity.status === "completed"
-                              ? "default"
-                              : activity.status === "in-progress"
-                                ? "secondary"
-                                : "outline"
-                          }
-                          className="text-xs"
-                        >
-                          {activity.status}
+                        <span className="font-medium text-sm md:text-base">Table {table.number}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {table.status}
                         </Badge>
                       </div>
-
-                      <div className="flex items-center gap-4 w-full sm:w-auto">
-                        {activity.status === "in-progress" && (
-                          <div className="flex items-center gap-2 flex-1 sm:flex-none">
-                            <Progress value={getActivityProgress(activity)} className="w-full sm:w-24" />
-                            <span className="text-xs md:text-sm text-muted-foreground whitespace-nowrap">
-                              {getActivityProgress(activity)}%
-                            </span>
                           </div>
-                        )}
 
+                    <div className="flex items-center gap-4 w-full sm:w-auto">
                         <div className="flex gap-2">
-                          {activity.status === "pending" && (
-                            <Button
-                              size="sm"
-                              onClick={() =>
-                                updateActivity(activity.tableNumber, activity.id, { status: "in-progress" })
-                              }
-                            >
-                              Start
-                            </Button>
-                          )}
-                          {activity.status === "in-progress" && (
-                            <Button
-                              size="sm"
-                              onClick={() => updateActivity(activity.tableNumber, activity.id, { status: "completed" })}
-                            >
-                              Complete
-                            </Button>
+                        {table.isCleaning && (
+                          <Badge variant="default" className="text-xs">
+                            <Sparkles className="w-3 h-3 mr-1" />
+                            Cleaning
+                          </Badge>
+                        )}
+                        {table.isMaintenance && (
+                          <Badge variant="default" className="text-xs">
+                            <Wrench className="w-3 h-3 mr-1" />
+                            Maintenance
+                          </Badge>
+                        )}
+                        {table.isSetup && (
+                          <Badge variant="default" className="text-xs">
+                            <QrCode className="w-3 h-3 mr-1" />
+                            Setup
+                          </Badge>
                           )}
                         </div>
                       </div>
                     </div>
-
-                    {activity.notes && (
-                      <div className="mt-2 text-xs md:text-sm text-muted-foreground break-words">{activity.notes}</div>
-                    )}
                   </CardContent>
                 </Card>
               ))}
+            
+            {tables.filter(table => table.isCleaning || table.isMaintenance || table.isSetup).length === 0 && (
+              <div className="text-center text-muted-foreground py-8">
+                No active tasks
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -557,13 +629,13 @@ export function TableManagement({ orders }: TableManagementProps) {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-4">
                   {tables
                     .filter((table) => table.section === section)
-                    .map((table) => (
+                    .map((table, idx) => (
                       <Dialog key={table.number} open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                         <DialogTrigger asChild>
                           <div
                             className={cn(
                               "relative p-3 md:p-4 rounded-lg border-2 transition-all duration-200 hover:shadow-md cursor-pointer",
-                              getTableStatusColor(table.status),
+                              getTableStatusColor(table.status)
                             )}
                             onClick={() => setSelectedTable(table)}
                           >
@@ -572,24 +644,17 @@ export function TableManagement({ orders }: TableManagementProps) {
                               <div className="font-bold text-sm md:text-base dark:text-white">T{table.number}</div>
                               <div className="text-xs opacity-75 dark:text-gray-200">{table.capacity} seats</div>
 
-                              {table.activities.length > 0 && (
+                              {(table.isCleaning || table.isMaintenance || table.isSetup) && (
                                 <div className="mt-2">
                                   <div className="flex justify-center gap-1">
-                                    {table.activities.slice(0, 3).map((activity) => (
-                                      <div
-                                        key={activity.id}
-                                        className={cn(
-                                          "w-2 h-2 rounded-full",
-                                          activity.status === "completed"
-                                            ? "bg-green-500"
-                                            : activity.status === "in-progress"
-                                              ? "bg-blue-500"
-                                              : "bg-orange-500",
-                                        )}
-                                      />
-                                    ))}
-                                    {table.activities.length > 3 && (
-                                      <span className="text-xs dark:text-gray-200">+{table.activities.length - 3}</span>
+                                    {table.isCleaning && (
+                                      <div className="w-2 h-2 rounded-full bg-orange-500" title="Cleaning" />
+                                    )}
+                                    {table.isMaintenance && (
+                                      <div className="w-2 h-2 rounded-full bg-blue-500" title="Maintenance" />
+                                    )}
+                                    {table.isSetup && (
+                                      <div className="w-2 h-2 rounded-full bg-purple-500" title="Setup" />
                                     )}
                                   </div>
                                 </div>
@@ -653,7 +718,48 @@ export function TableManagement({ orders }: TableManagementProps) {
                                 </div>
                                 <div>
                                   <Label className="text-sm text-muted-foreground">Section</Label>
-                                  <p className="font-medium capitalize">{selectedTable.section}</p>
+                                  <Select
+                                    value={selectedTable.section}
+                                    onValueChange={async (value: string) => {
+                                      try {
+                                        const res = await fetch(`${API_BASE}/api/tables/${selectedTable.number}`, {
+                                          method: 'PATCH',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ section: value })
+                                        })
+                                        
+                                        if (!res.ok) {
+                                          const txt = await res.text()
+                                          throw new Error(`Status ${res.status} ${txt}`)
+                                        }
+                                        
+                                        // Update local state
+                                        setTables((prev) =>
+                                          prev.map((table) =>
+                                            table.number === selectedTable.number
+                                              ? { ...table, section: value as Table['section'] }
+                                              : table
+                                          )
+                                        )
+                                        
+                                        // Update selected table
+                                        setSelectedTable({ ...selectedTable, section: value as Table['section'] })
+                                      } catch (err: any) {
+                                        console.error('Failed to update table section:', err)
+                                        alert(`Failed to update section: ${err.message}`)
+                                      }
+                                    }}
+                                  >
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="main">Main</SelectItem>
+                                      <SelectItem value="patio">Patio</SelectItem>
+                                      <SelectItem value="private">Private</SelectItem>
+                                      <SelectItem value="bar">Bar</SelectItem>
+                                    </SelectContent>
+                                  </Select>
                                 </div>
                                 <div>
                                   <Label className="text-sm text-muted-foreground">Server</Label>
@@ -707,104 +813,82 @@ export function TableManagement({ orders }: TableManagementProps) {
                               <div className="border-t pt-4">
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-2">
                                   <Label className="text-base md:text-lg font-medium">Activities & Tasks</Label>
-                                  <Button
-                                    size="sm"
-                                    onClick={() => {
-                                      const newActivity: Omit<TableActivity, "id"> = {
-                                        type: "cleaning",
-                                        status: "pending",
-                                        estimatedDuration: 15,
-                                        notes: "Manual cleaning task",
-                                      }
-                                      addActivity(selectedTable.number, newActivity)
-                                    }}
-                                  >
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    Add Task
-                                  </Button>
-                                </div>
-
-                                <div className="space-y-3 max-h-64 overflow-y-auto">
-                                  {selectedTable.activities.map((activity) => (
-                                    <div
-                                      key={activity.id}
-                                      className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 border rounded-lg gap-3"
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant={selectedTable.isCleaning ? "default" : "outline"}
+                                      onClick={() => toggleTask(selectedTable.number, 'cleaning')}
                                     >
-                                      <div className="flex items-center gap-3">
-                                        {getActivityIcon(activity.type)}
-                                        <div>
-                                          <div className="font-medium capitalize text-sm">{activity.type}</div>
-                                          <div className="text-xs text-muted-foreground">
-                                            {activity.assignedTo && `Assigned to: ${activity.assignedTo}`}
+                                      <Sparkles className="w-4 h-4 mr-2" />
+                                      {selectedTable.isCleaning ? 'Mark Cleaning Done' : 'Start Cleaning'}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant={selectedTable.isMaintenance ? "default" : "outline"}
+                                      onClick={() => toggleTask(selectedTable.number, 'maintenance')}
+                                    >
+                                      <Wrench className="w-4 h-4 mr-2" />
+                                      {selectedTable.isMaintenance ? 'Mark Maintenance Done' : 'Start Maintenance'}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant={selectedTable.isSetup ? "default" : "outline"}
+                                      onClick={() => toggleTask(selectedTable.number, 'setup')}
+                                    >
+                                      <QrCode className="w-4 h-4 mr-2" />
+                                      {selectedTable.isSetup ? 'Mark Setup Done' : 'Start Setup'}
+                                    </Button>
                                           </div>
                                         </div>
-                                        <Badge
-                                          variant={
-                                            activity.status === "completed"
-                                              ? "default"
-                                              : activity.status === "in-progress"
-                                                ? "secondary"
-                                                : "outline"
-                                          }
-                                          className="text-xs"
-                                        >
-                                          {activity.status}
-                                        </Badge>
-                                      </div>
 
-                                      <div className="flex items-center gap-2 w-full sm:w-auto">
-                                        {activity.status === "in-progress" && (
-                                          <Progress value={getActivityProgress(activity)} className="w-full sm:w-16" />
-                                        )}
-
-                                        <Select
-                                          value={activity.status}
-                                          onValueChange={(value: TableActivity["status"]) =>
-                                            updateActivity(selectedTable.number, activity.id, { status: value })
-                                          }
-                                        >
-                                          <SelectTrigger className="w-full sm:w-32">
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="pending">Pending</SelectItem>
-                                            <SelectItem value="in-progress">In Progress</SelectItem>
-                                            <SelectItem value="completed">Completed</SelectItem>
-                                          </SelectContent>
-                                        </Select>
+                                <div className="space-y-3">
+                                  {selectedTable.isCleaning && (
+                                    <div className="p-3 border rounded-lg bg-orange-50 border-orange-200">
+                                      <div className="flex items-center gap-2">
+                                        <Sparkles className="w-4 h-4" />
+                                        <span className="font-medium text-gray-600">Currently Cleaning</span>
+                                        <Badge variant="default">Active</Badge>
                                       </div>
                                     </div>
-                                  ))}
-
-                                  {selectedTable.activities.length === 0 && (
-                                    <div className="text-center text-muted-foreground py-4 text-sm">
-                                      No activities scheduled for this table
+                                  )}
+                                  
+                                  {selectedTable.isMaintenance && (
+                                    <div className="p-3 border rounded-lg bg-blue-50 border-blue-200">
+                                      <div className="flex items-center gap-2">
+                                        <Wrench className="w-4 h-4" />
+                                        <span className="font-medium text-gray-600">Currently Under Maintenance</span>
+                                        <Badge variant="default">Active</Badge>
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {selectedTable.isSetup && (
+                                    <div className="p-3 border rounded-lg bg-purple-50 border-purple-200">
+                                      <div className="flex items-center gap-2">
+                                        <QrCode className="w-4 h-4" />
+                                        <span className="font-medium text-gray-600">Currently Setting Up</span>
+                                        <Badge variant="default">Active</Badge>
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {!selectedTable.isCleaning && !selectedTable.isMaintenance && !selectedTable.isSetup && (
+                                    <div className="p-3 border rounded-lg bg-gray-50 border-gray-200">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium text-gray-600">No active tasks</span>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
                               </div>
 
                               <div className="flex flex-col sm:flex-row gap-2 pt-4">
-                                <Select
-                                  value={selectedTable.status}
-                                  onValueChange={(value: Table["status"]) =>
-                                    updateTableStatus(selectedTable.number, value)
-                                  }
+                                <Button 
+                                  variant="destructive" 
+                                  size="sm"
+                                  onClick={() => setConfirmDelete({ open: true, table: selectedTable })}
                                 >
-                                  <SelectTrigger className="flex-1">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="available">Available</SelectItem>
-                                    <SelectItem value="occupied">Occupied</SelectItem>
-                                    <SelectItem value="reserved">Reserved</SelectItem>
-                                    <SelectItem value="cleaning">Cleaning</SelectItem>
-                                    <SelectItem value="maintenance">Maintenance</SelectItem>
-                                    <SelectItem value="setup">Setup</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <Button variant="outline" size="sm">
-                                  <Edit className="w-4 h-4" />
+                                  Delete Table
                                 </Button>
                               </div>
                             </div>

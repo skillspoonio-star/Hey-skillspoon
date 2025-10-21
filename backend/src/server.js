@@ -10,6 +10,9 @@ const menuItemsRouter = require('./routes/menuItems');
   const ordersRouter = require('./routes/orders');
   const reservationsRouter = require('./routes/reservations');
     const tablesRouter = require('./routes/tables');
+  const sessionsRouter = require('./routes/sessions');
+  const deliveriesRouter = require('./routes/deliveries');
+  const orderCountRouter = require('./routes/orderCount');
 
 function createApp() {
   const app = express();
@@ -33,10 +36,20 @@ function createApp() {
   app.use('/api/orders', ordersRouter);
 
   // Table reservations
-  app.use('/api/table-reservation', reservationsRouter);
+  app.use('/api/reservation', reservationsRouter);
 
   // Tables management
   app.use('/api/tables', tablesRouter);
+
+  // Sessions (table sessions and orders attached to sessions)
+  app.use('/api/sessions', sessionsRouter);
+
+  // Deliveries
+  app.use('/api/deliveries', deliveriesRouter);
+
+  // Order counts
+  app.use('/api/order-count', orderCountRouter);
+
 
   app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 

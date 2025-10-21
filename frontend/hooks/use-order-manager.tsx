@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { realTimeSync } from "@/lib/real-time-sync"
+import { fetchMenuItems, type MenuItem } from "@/lib/menu-data"
 
 export interface OrderItem {
   name: string
@@ -23,7 +24,7 @@ export interface Order {
   estimatedTime?: number
   priority?: "low" | "medium" | "high"
   paymentStatus?: "pending" | "paid" | "failed"
-  orderType?: "dine-in" | "takeaway" | "delivery"
+  orderType?: "dine-in" | "take-away" | "delivery"
 }
 
 export interface Analytics {
@@ -36,6 +37,24 @@ export interface Analytics {
 
 export function useOrderManager() {
   const [orders, setOrders] = useState<Order[]>([])
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+
+  // load menu items first so we can map itemId -> name/price
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const items = await fetchMenuItems()
+        if (!mounted) return
+        setMenuItems(items)
+      } catch (err) {
+        console.error('Failed to load menu items in order manager', err)
+      }
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   // ✅ Fetch live orders from API on mount (using fetch)
   useEffect(() => {
@@ -46,9 +65,19 @@ export function useOrderManager() {
         const data = await res.json()
 
         const formatted = data.map((order: any) => ({
-    id: order._id,
+          id: order._id,
           tableNumber: order.tableNumber,
-          items: order.items,
+          items: (order.items || []).map((it: any) => {
+            const itemId = Number(it.itemId ?? it.id)
+            const menu = menuItems.find((m) => Number(m.id) === itemId)
+            return {
+              name: menu?.name || `Item ${itemId}`,
+              quantity: Number(it.quantity || 1),
+              price: Number(menu?.price ?? it.price ?? 0),
+              category: menu?.category,
+              specialInstructions: it.specialInstructions || undefined,
+            }
+          }),
           total: order.total,
           status: order.status,
           timestamp: new Date(order.timestamp),
@@ -67,20 +96,27 @@ export function useOrderManager() {
     }
 
     fetchOrders()
-  }, [])
+  }, [menuItems])
 
   // ✅ Real-time updates
   useEffect(() => {
+
     const unsubscribe = realTimeSync.onDashboardUpdate((newOrders) => {
       newOrders.forEach((newOrder) => {
+        const mappedItems = (newOrder.items || []).map((it: any) => {
+          const itemId = Number(it.itemId ?? it.id)
+          const menu = menuItems.find((m) => Number(m.id) === itemId)
+          return {
+            name: menu?.name || it.name || `Item ${itemId}`,
+            quantity: Number(it.quantity || 1),
+            price: Number(menu?.price ?? it.price ?? 0),
+          }
+        })
+
         const order: Order = {
-      id: newOrder.id || newOrder._id,
+          id: newOrder.id || newOrder._id,
           tableNumber: newOrder.tableNumber,
-          items: newOrder.items.map((item: any) => ({
-            name: item.item || item.name,
-            quantity: item.quantity,
-            price: item.price,
-          })),
+          items: mappedItems,
           total: newOrder.total,
           status: newOrder.status || "pending",
           timestamp: new Date(newOrder.timestamp),
@@ -208,25 +244,14 @@ export function useOrderManager() {
 
         // Handle items: if backend returned items with name/price use them; otherwise try to preserve local names/prices
         if (Array.isArray(updated.items)) {
-          const currentByItemId: Record<string, any> = {}
-          orders.forEach((o) => {
-            if (String(o.id) === String(orderId)) {
-              (o.items || []).forEach((it, idx) => {
-                // use item name as key if available, otherwise fallback to index
-                const key = it.name ? String(it.name) : `idx_${idx}`
-                currentByItemId[key] = it
-              })
-            }
-          })
-
           const mappedItems = updated.items.map((it: any) => {
-            if (it.name && typeof it.name === 'string') {
-              return { name: it.name, quantity: it.quantity, price: it.price || 0 }
+            const itemId = Number(it.itemId ?? it.id)
+            const menu = menuItems.find((m) => Number(m.id) === itemId)
+            return {
+              name: menu?.name || it.name || `Item ${itemId}`,
+              quantity: Number(it.quantity || 1),
+              price: Number(menu?.price ?? it.price ?? 0),
             }
-            // fallback: find by name in local items
-            const local = Object.values(currentByItemId).find((li: any) => String(li.name) === String(it.name))
-            if (local) return { name: local.name || `item-${it.itemId}`, quantity: it.quantity, price: local.price || it.price || 0 }
-            return { name: `item-${it.itemId}`, quantity: it.quantity, price: it.price || 0 }
           })
 
           formatted.items = mappedItems as any

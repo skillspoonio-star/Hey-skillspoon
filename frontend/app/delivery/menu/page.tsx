@@ -5,10 +5,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, Plus, Minus } from "lucide-react"
-import { menuItems } from "@/lib/menu-data"
+import { fetchMenuItems, type MenuItem } from "@/lib/menu-data"
 import { useRouter } from "next/navigation"
 
 type CartLine = { id: number; name: string; price: number; qty: number }
+
+type MenuCartItem = MenuItem & { quantity?: number }
 
 export default function DeliveryMenuPage() {
   const router = useRouter()
@@ -16,23 +18,33 @@ export default function DeliveryMenuPage() {
   const [cart, setCart] = useState<CartLine[]>([])
   const [vegOnly, setVegOnly] = useState(false)
   const [category, setCategory] = useState<string>("all")
+  const [itemsLoaded, setItemsLoaded] = useState<MenuItem[]>([])
 
   useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const items = await fetchMenuItems()
+        if (!mounted) return
+        setItemsLoaded(items)
+      } catch (err) {
+        console.error('Failed to load menu items', err)
+      }
+    })()
+
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("delivery:cart")
       if (saved) setCart(JSON.parse(saved))
     }
-  }, [])
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("delivery:cart", JSON.stringify(cart))
+    return () => {
+      mounted = false
     }
-  }, [cart])
+  }, [])
 
   const items = useMemo(
     () =>
-      menuItems.filter((m) => {
+      itemsLoaded.filter((m) => {
         const s = query.toLowerCase()
         const matchesSearch =
           m.name.toLowerCase().includes(s) ||
@@ -46,7 +58,7 @@ export default function DeliveryMenuPage() {
   )
 
   const add = (id: number) => {
-    const m = menuItems.find((x) => x.id === id)!
+  const m = itemsLoaded.find((x) => x.id === id)!
     setCart((prev) => {
       const idx = prev.findIndex((l) => l.id === id)
       if (idx >= 0) {
@@ -62,6 +74,12 @@ export default function DeliveryMenuPage() {
   }
 
   const subtotal = cart.reduce((s, l) => s + l.price * l.qty, 0)
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("delivery:cart", JSON.stringify(cart))
+    }
+  }, [cart])
 
   return (
     <div className="min-h-screen bg-background">
@@ -84,7 +102,7 @@ export default function DeliveryMenuPage() {
               aria-label="Filter by category"
             >
               <option value="all">All categories</option>
-              {Array.from(new Set(menuItems.map((m) => m.category))).map((c) => (
+              {Array.from(new Set(itemsLoaded.map((m: MenuItem) => m.category))).map((c: string) => (
                 <option key={c} value={c}>
                   {c}
                 </option>

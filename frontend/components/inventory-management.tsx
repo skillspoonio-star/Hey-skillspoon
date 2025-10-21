@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Search, Plus, Minus, Package, AlertTriangle } from "lucide-react"
-import { menuItems as masterMenu } from "@/lib/menu-data"
 
 type InvItem = {
   id: number
@@ -17,6 +16,7 @@ type InvItem = {
 }
 
 export function InventoryManagement() {
+  const [masterMenu, setMasterMenu] = useState<InvItem[]>([])
   const base = useMemo(
     () =>
       masterMenu.map((m) => ({
@@ -32,10 +32,23 @@ export function InventoryManagement() {
   const [search, setSearch] = useState("")
 
   useEffect(() => {
+    async function fetchMenuItems() {
+      try {
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL;
+        const res = await fetch(`${base}/api/menu/items`)
+        if (!res.ok) throw new Error("Failed to fetch menu items")
+        const data = await res.json()
+        setMasterMenu(data)
+      } catch (error) {
+        console.error("Error fetching menu items:", error)
+      }
+    }
+
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("inventory:items")
       if (saved) setItems(JSON.parse(saved))
     }
+    fetchMenuItems()
   }, [])
 
   useEffect(() => {

@@ -98,7 +98,7 @@ function verifyOtp(req, res) {
     const token = jwt.sign(
         { adminId },            // payload
         JWT_SECRET,             // secret key
-        { expiresIn: "1h" }     // token expiry (adjust as needed)
+        { expiresIn: "1d" }     // token expiry (adjust as needed)
     );
 
     return res.json({ 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -9,96 +9,33 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search, Plus, Minus, ShoppingCart, Clock, Star, Leaf } from "lucide-react"
 import { useRouter } from "next/navigation"
 
-interface MenuItem {
-  id: number
-  name: string
-  description: string
-  price: number
-  image: string
-  category: string
-  prepTime: string
-  rating: number
-  isVeg: boolean
-  isPopular?: boolean
-  quantity?: number
-}
+
+import { fetchMenuItems, type MenuItem } from '@/lib/menu-data'
+
+type CartItem = MenuItem & { quantity?: number }
 
 export default function TakeawayMenuPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
-  const [cart, setCart] = useState<MenuItem[]>([])
+  const [cart, setCart] = useState<CartItem[]>([])
   const [selectedCategory, setSelectedCategory] = useState("popular")
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
 
-  const menuItems: MenuItem[] = [
-    {
-      id: 1,
-      name: "Chicken Biryani",
-      description: "Aromatic basmati rice with tender chicken pieces and traditional spices",
-      price: 299,
-      image: "/chicken-biryani-rice.jpg",
-      category: "biryani",
-      prepTime: "25 mins",
-      rating: 4.5,
-      isVeg: false,
-      isPopular: true,
-    },
-    {
-      id: 2,
-      name: "Paneer Tikka",
-      description: "Grilled cottage cheese marinated in yogurt and spices",
-      price: 249,
-      image: "/paneer-tikka-grilled.jpg",
-      category: "starters",
-      prepTime: "15 mins",
-      rating: 4.3,
-      isVeg: true,
-      isPopular: true,
-    },
-    {
-      id: 3,
-      name: "Dal Makhani",
-      description: "Creamy black lentils slow-cooked with butter and cream",
-      price: 199,
-      image: "/dal-makhani-curry.jpg",
-      category: "mains",
-      prepTime: "20 mins",
-      rating: 4.4,
-      isVeg: true,
-    },
-    {
-      id: 4,
-      name: "Butter Naan",
-      description: "Soft and fluffy Indian bread brushed with butter",
-      price: 49,
-      image: "/butter-naan.png",
-      category: "breads",
-      prepTime: "10 mins",
-      rating: 4.2,
-      isVeg: true,
-    },
-    {
-      id: 5,
-      name: "Mango Lassi",
-      description: "Refreshing yogurt drink with fresh mango pulp",
-      price: 89,
-      image: "/mango-lassi.png",
-      category: "beverages",
-      prepTime: "5 mins",
-      rating: 4.6,
-      isVeg: true,
-    },
-    {
-      id: 6,
-      name: "Gulab Jamun",
-      description: "Soft milk dumplings in sugar syrup",
-      price: 99,
-      image: "/gulab-jamun-dessert.png",
-      category: "desserts",
-      prepTime: "5 mins",
-      rating: 4.3,
-      isVeg: true,
-    },
-  ]
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const items = await fetchMenuItems()
+        if (!mounted) return
+        setMenuItems(items)
+      } catch (err) {
+        console.error('Failed to load menu items', err)
+      }
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const categories = [
     { id: "popular", name: "Popular", count: menuItems.filter((item) => item.isPopular).length },
@@ -155,6 +92,18 @@ export default function TakeawayMenuPage() {
 
   const getTotalPrice = () => {
     return cart.reduce((total, item) => total + item.price * (item.quantity || 0), 0)
+  }
+
+  // Persist cart to localStorage before routing to checkout
+  const proceedToCheckout = () => {
+    try {
+      if (cart.length === 0) return
+      localStorage.setItem('takeaway_cart', JSON.stringify(cart))
+      // navigate
+      router.push('/takeaway/checkout')
+    } catch (err) {
+      console.error('Failed to persist cart', err)
+    }
   }
 
   return (
@@ -238,8 +187,13 @@ export default function TakeawayMenuPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-1">
-                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                        <span className="text-xs text-muted-foreground">{item.rating}</span>
+                        {/* rating is optional on server menu, guard access */}
+                        {'rating' in item ? (
+                          <>
+                            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                            <span className="text-xs text-muted-foreground">{(item as any).rating}</span>
+                          </>
+                        ) : null}
                       </div>
                     </div>
 
@@ -251,7 +205,7 @@ export default function TakeawayMenuPage() {
                         <p className="font-bold text-lg text-foreground">₹{item.price}</p>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Clock className="w-3 h-3" />
-                          <span>{item.prepTime}</span>
+                          <span>{(item as any).prepTime ?? item.preparationTime ?? ''}</span>
                         </div>
                       </div>
 
@@ -301,10 +255,10 @@ export default function TakeawayMenuPage() {
       </main>
 
       {/* Cart Footer */}
-      {getTotalItems() > 0 && (
+          {getTotalItems() > 0 && (
         <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 z-50">
           <div className="max-w-md mx-auto">
-            <Button className="w-full h-12 text-base font-medium" onClick={() => router.push("/takeaway/checkout")}>
+            <Button className="w-full h-12 text-base font-medium" onClick={proceedToCheckout}>
               <ShoppingCart className="w-4 h-4 mr-2" />
               Proceed to Checkout • {getTotalItems()} items • ₹{getTotalPrice()}
             </Button>
