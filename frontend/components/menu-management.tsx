@@ -51,6 +51,7 @@ interface MenuItem {
   isAvailable: boolean
   isVeg: boolean
   isSpicy: boolean
+  isPopular?: boolean
   prepTime: string
   image?: string
   ingredients?: string[]
@@ -71,128 +72,7 @@ interface MenuCategory {
   sortOrder: number
 }
 
-const initialMenuItems: MenuItem[] = [
-  {
-    id: 1,
-    name: "Butter Naan",
-    description: "Soft, fluffy bread brushed with butter and garnished with fresh coriander",
-    price: 45,
-    category: "Breads",
-    isAvailable: true,
-    isVeg: true,
-    isSpicy: false,
-    prepTime: "10 min",
-    image: "/butter-naan.png",
-    ingredients: ["All-purpose flour", "Yogurt", "Butter", "Baking powder", "Salt"],
-    allergens: ["Gluten", "Dairy"],
-    calories: 280,
-    rating: 4.5,
-    popularity: 85,
-    cost: 15,
-    profit: 30,
-    tags: ["Popular", "Quick"],
-  },
-  {
-    id: 2,
-    name: "Paneer Tikka",
-    description: "Grilled cottage cheese marinated in aromatic spices and yogurt",
-    price: 280,
-    category: "Starters",
-    isAvailable: true,
-    isVeg: true,
-    isSpicy: true,
-    prepTime: "15 min",
-    image: "/paneer-tikka-grilled.jpg",
-    ingredients: ["Paneer", "Yogurt", "Garam masala", "Ginger-garlic paste", "Bell peppers"],
-    allergens: ["Dairy"],
-    calories: 320,
-    rating: 4.7,
-    popularity: 92,
-    cost: 120,
-    profit: 160,
-    tags: ["Bestseller", "Protein Rich"],
-  },
-  {
-    id: 3,
-    name: "Mango Lassi",
-    description: "Refreshing yogurt drink blended with fresh mango pulp and cardamom",
-    price: 120,
-    category: "Beverages",
-    isAvailable: true,
-    isVeg: true,
-    isSpicy: false,
-    prepTime: "5 min",
-    image: "/mango-lassi.png",
-    ingredients: ["Fresh mango", "Yogurt", "Sugar", "Cardamom", "Ice"],
-    allergens: ["Dairy"],
-    calories: 180,
-    rating: 4.3,
-    popularity: 78,
-    cost: 40,
-    profit: 80,
-    tags: ["Refreshing", "Summer Special"],
-  },
-  {
-    id: 4,
-    name: "Chicken Biryani",
-    description: "Aromatic basmati rice layered with tender chicken and exotic spices",
-    price: 350,
-    category: "Main Course",
-    isAvailable: true,
-    isVeg: false,
-    isSpicy: true,
-    prepTime: "25 min",
-    image: "/chicken-biryani-rice.jpg",
-    ingredients: ["Basmati rice", "Chicken", "Onions", "Saffron", "Biryani masala"],
-    allergens: ["None"],
-    calories: 520,
-    rating: 4.8,
-    popularity: 95,
-    cost: 180,
-    profit: 170,
-    tags: ["Signature", "Most Popular"],
-  },
-  {
-    id: 5,
-    name: "Dal Makhani",
-    description: "Creamy black lentils slow-cooked with butter, cream and aromatic spices",
-    price: 220,
-    category: "Main Course",
-    isAvailable: true,
-    isVeg: true,
-    isSpicy: false,
-    prepTime: "20 min",
-    image: "/dal-makhani-curry.jpg",
-    ingredients: ["Black lentils", "Kidney beans", "Butter", "Cream", "Tomatoes"],
-    allergens: ["Dairy"],
-    calories: 280,
-    rating: 4.6,
-    popularity: 88,
-    cost: 80,
-    profit: 140,
-    tags: ["Comfort Food", "Rich"],
-  },
-  {
-    id: 6,
-    name: "Gulab Jamun",
-    description: "Golden milk dumplings soaked in cardamom-flavored sugar syrup",
-    price: 80,
-    category: "Desserts",
-    isAvailable: false,
-    isVeg: true,
-    isSpicy: false,
-    prepTime: "5 min",
-    image: "/gulab-jamun-dessert.png",
-    ingredients: ["Milk powder", "All-purpose flour", "Sugar", "Cardamom", "Rose water"],
-    allergens: ["Gluten", "Dairy"],
-    calories: 150,
-    rating: 4.4,
-    popularity: 70,
-    cost: 25,
-    profit: 55,
-    tags: ["Traditional", "Sweet"],
-  },
-]
+const initialMenuItems: MenuItem[] = []
 
 const initialCategories: MenuCategory[] = [
   { id: "starters", name: "Starters", description: "Appetizers and small plates", isActive: true, sortOrder: 1 },
@@ -208,6 +88,7 @@ export function MenuManagement() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null)
+  const [editingFormData, setEditingFormData] = useState<MenuItem | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [viewMode, setViewMode] = useState<"grid" | "list" | "analytics">("grid")
   const [sortBy, setSortBy] = useState<"name" | "price" | "popularity" | "profit">("name")
@@ -298,7 +179,21 @@ export function MenuManagement() {
     }
   }
 
-  const deleteItem = (id: number) => {
+  const deleteItem = async (id: number) => {
+    // attempt server delete, then update local state
+    const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+    const token = typeof window !== 'undefined' ? localStorage.getItem('adminAuth') : null
+    const headers: any = { 'Content-Type': 'application/json' }
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    try {
+      const res = await fetch(`${base}/api/menu/items/${id}`, { method: 'DELETE', headers })
+      if (!res.ok) {
+        console.error('Failed to delete item', await res.text())
+        // still remove locally to keep UI responsive, optionally you can keep it
+      }
+    } catch (err) {
+      console.error('Failed to delete item', err)
+    }
     setMenuItems((prev) => prev.filter((item) => item.id !== id))
   }
 
@@ -307,13 +202,72 @@ export function MenuManagement() {
     setMenuItems((prev) => [...prev, newItem])
   }
 
-  const saveItem = (item: MenuItem) => {
+  // Toggle popularity flag and persist it
+  const togglePopular = async (id: number) => {
+    setMenuItems((prev) => prev.map((item) => (item.id === id ? { ...item, isPopular: !item.isPopular } : item)))
+    try {
+      const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+      const token = typeof window !== 'undefined' ? localStorage.getItem('adminAuth') : null
+      const headers: any = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      const res = await fetch(`${base}/api/menu/items/${id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ isPopular: !(menuItems.find((m) => m.id === id)?.isPopular) }),
+      })
+      if (!res.ok) {
+        setMenuItems((prev) => prev.map((item) => (item.id === id ? { ...item, isPopular: !item.isPopular } : item)))
+        console.error('Failed to update popularity', await res.text())
+      }
+    } catch (err) {
+      setMenuItems((prev) => prev.map((item) => (item.id === id ? { ...item, isPopular: !item.isPopular } : item)))
+      console.error('Failed to update popularity', err)
+    }
+  }
+
+  const saveItem = async (item: MenuItem) => {
+    const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+    const token = typeof window !== 'undefined' ? localStorage.getItem('adminAuth') : null
+    const headers: any = { 'Content-Type': 'application/json' }
+    if (token) headers['Authorization'] = `Bearer ${token}`
+
     if (editingItem) {
-      setMenuItems((prev) => prev.map((i) => (i.id === item.id ? item : i)))
-      setEditingItem(null)
+      // update existing item on server
+      try {
+        const res = await fetch(`${base}/api/menu/items/${item.id}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify(item),
+        })
+        if (!res.ok) {
+          console.error('Failed to update item', await res.text())
+          return
+        }
+        const updated = await res.json()
+        setMenuItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
+        setEditingItem(null)
+      } catch (err) {
+        console.error('Failed to update item', err)
+      }
     } else {
-      setMenuItems((prev) => [...prev, { ...item, id: Date.now() }])
-      setShowAddForm(false)
+      // create new item on server - ensure a client id if none provided
+      const payload = { ...item, id: item.id && item.id !== 0 ? item.id : Date.now() }
+      try {
+        const res = await fetch(`${base}/api/menu/items`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(payload),
+        })
+        if (!res.ok) {
+          console.error('Failed to create item', await res.text())
+          return
+        }
+        const created = await res.json()
+        setMenuItems((prev) => [...prev, created])
+        setShowAddForm(false)
+      } catch (err) {
+        console.error('Failed to create item', err)
+      }
     }
   }
 
@@ -477,7 +431,7 @@ export function MenuManagement() {
       {viewMode === "grid" && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredItems.map((item) => (
-            <Card key={item.id} className={!item.isAvailable ? "opacity-60" : ""}>
+            <Card key={item.id} className={` ${!item.isAvailable ? "opacity-60" : ""} cursor-pointer`} onClick={() => setEditingItem(item)}>
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -492,42 +446,25 @@ export function MenuManagement() {
                     </div>
                     <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
                   </div>
-                  <div className="flex gap-1 ml-2">
-                    <Button size="sm" variant="ghost" onClick={() => duplicateItem(item)}>
-                      <Copy className="w-3 h-3" />
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setEditingItem(item)}>
-                      <Edit className="w-3 h-3" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button size="sm" variant="ghost">
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Menu Item</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete "{item.name}"? This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteItem(item.id)}>Delete</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                  <div className="flex gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-2">
+                      {item.isPopular && (
+                        <Badge variant="secondary" className="text-xs">
+                          Popular
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 {item.image && (
-                  <div className="aspect-video bg-muted rounded-lg overflow-hidden">
+                  <div className="aspect-video bg-muted rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
                     <img
                       src={item.image || "/placeholder.svg"}
                       alt={item.name}
                       className="w-full h-full object-cover"
+                      onClick={(e) => e.stopPropagation()}
                     />
                   </div>
                 )}
@@ -585,11 +522,14 @@ export function MenuManagement() {
                   <Label htmlFor={`available-${item.id}`} className="text-sm">
                     Available
                   </Label>
-                  <Switch
-                    id={`available-${item.id}`}
-                    checked={item.isAvailable}
-                    onCheckedChange={() => toggleAvailability(item.id)}
-                  />
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id={`available-${item.id}`}
+                      checked={item.isAvailable}
+                      onCheckedChange={(v) => { v; toggleAvailability(item.id); }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -616,7 +556,7 @@ export function MenuManagement() {
                 </thead>
                 <tbody>
                   {filteredItems.map((item) => (
-                    <tr key={item.id} className="border-b hover:bg-muted/50">
+                    <tr key={item.id} className="border-b hover:bg-muted/50 cursor-pointer" onClick={() => setEditingItem(item)}>
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           {item.image && (
@@ -661,13 +601,10 @@ export function MenuManagement() {
                       </td>
                       <td className="p-4 text-right whitespace-nowrap">
                         <div className="flex gap-1 justify-end">
-                          <Button className="flex-shrink-0" size="sm" variant="ghost" onClick={() => duplicateItem(item)}>
+                          <Button className="flex-shrink-0" size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); duplicateItem(item); }}>
                             <Copy className="w-3 h-3" />
                           </Button>
-                          <Button className="flex-shrink-0" size="sm" variant="ghost" onClick={() => setEditingItem(item)}>
-                            <Edit className="w-3 h-3" />
-                          </Button>
-                          <Button className="flex-shrink-0" size="sm" variant="ghost" onClick={() => deleteItem(item.id)}>
+                          <Button className="flex-shrink-0" size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}>
                             <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>
@@ -761,15 +698,38 @@ export function MenuManagement() {
           <DialogHeader>
             <DialogTitle>{editingItem ? "Edit Menu Item" : "Add New Menu Item"}</DialogTitle>
           </DialogHeader>
-          <MenuItemForm
-            item={editingItem}
-            categories={categories}
-            onSave={saveItem}
-            onCancel={() => {
-              setEditingItem(null)
-              setShowAddForm(false)
-            }}
-          />
+          <div>
+            <MenuItemForm
+              item={editingItem}
+              categories={categories}
+              onSave={saveItem}
+              onCancel={() => {
+                setEditingItem(null)
+                setShowAddForm(false)
+              }}
+              onChange={(data) => setEditingFormData(data)}
+            />
+
+            {/* Dialog footer: Delete (left) and Confirm (right) */}
+            <div className="flex items-center justify-between mt-4">
+              <div>
+                {editingItem && (
+                  <Button variant="destructive" onClick={() => { if (editingItem) { deleteItem(editingItem.id); setEditingItem(null); } }}>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </Button>
+                )}
+              </div>
+              <div>
+                <Button onClick={async () => {
+                  if (!editingFormData) return
+                  await saveItem(editingFormData)
+                }}>
+                  {editingItem ? 'Confirm update' : 'Add item'}
+                </Button>
+              </div>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
@@ -781,11 +741,13 @@ function MenuItemForm({
   categories,
   onSave,
   onCancel,
+  onChange,
 }: {
   item: MenuItem | null
   categories: MenuCategory[]
   onSave: (item: MenuItem) => void
   onCancel: () => void
+  onChange?: (item: MenuItem) => void
 }) {
   const [formData, setFormData] = useState<MenuItem>(
     item || {
@@ -796,6 +758,7 @@ function MenuItemForm({
       category: "Main Course",
       isAvailable: true,
       isVeg: true,
+  isPopular: false,
       isSpicy: false,
       prepTime: "15 min",
       ingredients: [],
@@ -817,6 +780,10 @@ function MenuItemForm({
     }
     onSave(formData)
   }
+
+  React.useEffect(() => {
+    if (onChange) onChange(formData)
+  }, [formData, onChange])
 
   const addIngredient = (ingredient: string) => {
     if (ingredient && !formData.ingredients?.includes(ingredient)) {
@@ -936,11 +903,11 @@ function MenuItemForm({
           />
         </div>
         <div className="flex items-center justify-between">
-          <Label htmlFor="isAvailable">Available</Label>
+          <Label htmlFor="isPopular">Popular</Label>
           <Switch
-            id="isAvailable"
-            checked={formData.isAvailable}
-            onCheckedChange={(checked) => setFormData({ ...formData, isAvailable: checked })}
+            id="isPopular"
+            checked={formData.isPopular}
+            onCheckedChange={(checked) => setFormData({ ...formData, isPopular: checked })}
           />
         </div>
       </div>
@@ -973,14 +940,6 @@ function MenuItemForm({
         </div>
       </div>
 
-      <div className="flex gap-2 pt-4">
-        <Button type="submit" className="flex-1">
-          {item ? "Update" : "Add"} Item
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel} className="flex-1 bg-transparent">
-          Cancel
-        </Button>
-      </div>
     </form>
   )
 }

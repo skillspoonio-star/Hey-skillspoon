@@ -50,9 +50,9 @@ export default function RestaurantMenuPage() {
   const categories = [
     { id: "popular", name: "Popular", count: menuItems.filter((item) => item.isPopular).length },
     { id: "starters", name: "Starters", count: menuItems.filter((item) => item.category === "starters").length },
-    { id: "mains", name: "Main Course", count: menuItems.filter((item) => item.category === "mains").length },
+    { id: "mains", name: "Main Course", count: menuItems.filter((item) => (item.category === "mains" || item.category==="Main Course")).length },
     { id: "biryani", name: "Biryani", count: menuItems.filter((item) => item.category === "biryani").length },
-    { id: "breads", name: "Breads", count: menuItems.filter((item) => item.category === "breads").length },
+    { id: "breads", name: "Breads", count: menuItems.filter((item) => item.category === "Breads").length },
     { id: "beverages", name: "Beverages", count: menuItems.filter((item) => item.category === "beverages").length },
     { id: "desserts", name: "Desserts", count: menuItems.filter((item) => item.category === "desserts").length },
   ]
@@ -106,7 +106,7 @@ export default function RestaurantMenuPage() {
             <TabsTrigger value="starters" className="text-xs">
               Starters
             </TabsTrigger>
-            <TabsTrigger value="mains" className="text-xs">
+            <TabsTrigger value="Main Course" className="text-xs">
               Mains
             </TabsTrigger>
             <TabsTrigger value="biryani" className="text-xs">
@@ -118,9 +118,9 @@ export default function RestaurantMenuPage() {
             {categories.slice(4).map((category) => (
               <Button
                 key={category.id}
-                variant={selectedCategory === category.id ? "default" : "outline"}
+                variant={selectedCategory === category.name ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedCategory(category.id)}
+                onClick={() => setSelectedCategory(category.name)}
                 className="whitespace-nowrap text-xs"
               >
                 {category.name} ({category.count})
