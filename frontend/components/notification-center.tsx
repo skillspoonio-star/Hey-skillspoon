@@ -208,7 +208,15 @@ export function NotificationCenter() {
         "Payment failed for Table {table}",
         "Refund processed: ₹{amount}",
       ],
+      inventory: [
+        "Low stock: {item} has {count} left",
+        "Inventory restocked: {item} now has {count}",
+      ],
       system: ["System backup completed successfully", "Network connectivity restored", "Software update available"],
+      maintenance: [
+        "Table {table} scheduled for maintenance",
+        "Maintenance reminder for {name} - inspect table {table}",
+      ],
     }
 
     const messages = templates[type]
@@ -236,7 +244,7 @@ export function NotificationCenter() {
 
   const playNotificationSound = (priority: Notification["priority"]) => {
     // In a real app, you'd play different sounds based on priority
-    console.log(`Playing ${priority} priority notification sound`)
+    
   }
 
   const showDesktopNotification = (notification: Notification) => {

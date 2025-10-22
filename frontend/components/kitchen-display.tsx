@@ -44,7 +44,7 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [stationView, setStationView] = useState(false)
-  const [orderTypeFilter, setOrderTypeFilter] = useState<"all" | "dine-in" | "takeaway" | "delivery">("all")
+  const [orderTypeFilter, setOrderTypeFilter] = useState<"all" | "dine-in" | "take-away" | "delivery">("all")
 
   const kitchenStations: StationStatus[] = [
     {
@@ -127,7 +127,6 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
 
       if (urgentOrders.length > 0) {
         // In a real app, you would play an actual sound here
-        console.log("🔔 Urgent orders detected!")
       }
     }
   }, [orders, currentTime, soundEnabled])
@@ -141,11 +140,23 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
 
   const getOrderPriority = (order: Order) => {
     const minutesElapsed = Math.floor((currentTime.getTime() - order.timestamp.getTime()) / (1000 * 60))
-
-    if (minutesElapsed > 25) return "urgent"
-    if (minutesElapsed > 15) return "high"
-    if (minutesElapsed > 8) return "medium"
+    if (minutesElapsed > 65) return "urgent"
+    if (minutesElapsed > 35) return "high"
+    if (minutesElapsed > 15) return "medium"
     return "low"
+  }
+
+  const getOrderDisplay = (order: Order) => {
+    const type = (order.orderType || 'dine-in')
+    if (type === 'take-away') return `#TK${order.tableNumber}`
+    if (type === 'delivery') return `#DLV${order.tableNumber}`
+    return `Table ${order.tableNumber}`
+  }
+
+  const getOrderNumericId = (order: Order) => {
+    if (typeof order.id === 'number') return order.id
+    const parsed = parseInt(String(order.id || ''), 10)
+    return Number.isFinite(parsed) ? parsed : 0
   }
 
   const formatElapsedTime = (timestamp: Date) => {
@@ -214,6 +225,8 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
   const pendingCount = orders.filter((o) => o.status === "pending").length
   const preparingCount = orders.filter((o) => o.status === "preparing").length
   const urgentCount = orders.filter((o) => getOrderPriority(o) === "urgent").length
+  // Active tables should count only unique table numbers for dine-in orders
+  const activeDineInTables = new Set(activeOrders.filter((o) => (o.orderType || 'dine-in') === 'dine-in').map((o) => o.tableNumber)).size
 
   return (
     <div className="space-y-6">
@@ -277,7 +290,7 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="dine-in">Dine-in</SelectItem>
-                <SelectItem value="takeaway">Takeaway</SelectItem>
+                <SelectItem value="take-away">Takeaway</SelectItem>
                 <SelectItem value="delivery">Delivery</SelectItem>
               </SelectContent>
             </Select>
@@ -329,7 +342,7 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
               <div>
                 <p className="text-xs md:text-sm text-muted-foreground">Active Tables</p>
                 <p className="text-xl md:text-2xl font-bold text-chart-2">
-                  {new Set(activeOrders.map((o) => o.tableNumber)).size}
+                  {activeDineInTables}
                 </p>
               </div>
               <Users className="w-6 h-6 md:w-8 md:h-8 text-chart-2" />
@@ -452,7 +465,7 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
                   <CardHeader className="pb-3 p-4 md:p-6">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-base md:text-lg text-foreground">Table {order.tableNumber}</h3>
+                        <h3 className="font-bold text-base md:text-lg text-foreground">{getOrderDisplay(order)}</h3>
                         <Badge
                           variant={order.status === "pending" ? "destructive" : "default"}
                           className="capitalize text-xs"
@@ -465,7 +478,7 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
                           {order.orderType || "dine-in"}
                         </Badge>
                         <Badge variant="secondary" className="text-xs">
-                          #{order.id}
+                          {getOrderDisplay(order).startsWith('Table') ? `#${order.id}` : getOrderDisplay(order)}
                         </Badge>
                         {priority === "urgent" && <AlertTriangle className="w-4 h-4 text-destructive animate-bounce" />}
                         {priority === "high" && <AlertTriangle className="w-4 h-4 text-destructive" />}
@@ -543,7 +556,7 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
                         <Button
                           onClick={(e) => {
                             e.stopPropagation()
-                            onStatusUpdate(order.id, "preparing")
+                            onStatusUpdate(getOrderNumericId(order), "preparing")
                           }}
                           className="flex-1"
                           size="sm"
@@ -557,7 +570,7 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
                         <Button
                           onClick={(e) => {
                             e.stopPropagation()
-                            onStatusUpdate(order.id, "ready")
+                            onStatusUpdate(getOrderNumericId(order), "ready")
                           }}
                           className="flex-1"
                           size="sm"
@@ -585,7 +598,11 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
                   <CardHeader>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                       <CardTitle className="text-base md:text-lg text-foreground">
-                        Table {selectedOrder.tableNumber} - Order #{selectedOrder.id}
+                        {selectedOrder.orderType && selectedOrder.orderType !== 'dine-in' ? (
+                          <>{getOrderDisplay(selectedOrder)} - Order #{selectedOrder.id}</>
+                        ) : (
+                          <>Table {selectedOrder.tableNumber} - Order #{selectedOrder.id}</>
+                        )}
                       </CardTitle>
                       <Badge variant={selectedOrder.status === "pending" ? "destructive" : "default"}>
                         {selectedOrder.status}
@@ -653,14 +670,14 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
 
                     <div className="flex flex-col sm:flex-row gap-2">
                       {selectedOrder.status === "pending" && (
-                        <Button onClick={() => onStatusUpdate(selectedOrder.id, "preparing")} className="flex-1">
+                        <Button onClick={() => onStatusUpdate(getOrderNumericId(selectedOrder), "preparing")} className="flex-1">
                           <ChefHat className="w-4 h-4 mr-2" />
                           Start Cooking
                         </Button>
                       )}
                       {selectedOrder.status === "preparing" && (
                         <Button
-                          onClick={() => onStatusUpdate(selectedOrder.id, "ready")}
+                          onClick={() => onStatusUpdate(getOrderNumericId(selectedOrder), "ready")}
                           className="flex-1"
                           variant="secondary"
                         >
@@ -698,7 +715,7 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center p-3 bg-muted rounded-lg">
                       <p className="text-2xl font-bold text-primary">
-                        {orders.filter((o) => o.status === "completed").length}
+                        {orders.filter((o) => o.status === "served").length}
                       </p>
                       <p className="text-sm text-muted-foreground">Completed Today</p>
                     </div>
@@ -706,13 +723,13 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
                       <p className="text-2xl font-bold text-chart-2">
                         {Math.round(
                           orders
-                            .filter((o) => o.status === "completed")
+                            .filter((o) => o.status === "served")
                             .reduce((acc, order) => {
                               const elapsed = Math.floor(
                                 (new Date().getTime() - order.timestamp.getTime()) / (1000 * 60),
                               )
                               return acc + elapsed
-                            }, 0) / Math.max(orders.filter((o) => o.status === "completed").length, 1),
+                            }, 0) / Math.max(orders.filter((o) => o.status === "served").length, 1),
                         )}
                         m
                       </p>
@@ -762,6 +779,9 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="text-center">
+                        {
+                          order.orderType ==="dine-in"
+                        }
                         <div className="font-bold text-lg text-foreground">Table {order.tableNumber}</div>
                         <div className="text-xs text-muted-foreground">{elapsedTime}</div>
                       </div>
@@ -788,13 +808,13 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-foreground">₹{order.total}</span>
                       {order.status === "pending" && (
-                        <Button onClick={() => onStatusUpdate(order.id, "preparing")} size="sm">
+                        <Button onClick={() => onStatusUpdate(getOrderNumericId(order), "preparing")} size="sm">
                           <ChefHat className="w-4 h-4 mr-2" />
                           Start
                         </Button>
                       )}
                       {order.status === "preparing" && (
-                        <Button onClick={() => onStatusUpdate(order.id, "ready")} size="sm" variant="secondary">
+                        <Button onClick={() => onStatusUpdate(getOrderNumericId(order), "ready")} size="sm" variant="secondary">
                           <CheckCircle className="w-4 h-4 mr-2" />
                           Ready
                         </Button>

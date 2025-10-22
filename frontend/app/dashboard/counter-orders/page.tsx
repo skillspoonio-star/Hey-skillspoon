@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -23,7 +23,7 @@ import {
   Users,
   ArrowLeft,
 } from "lucide-react"
-import { menuItems, categories, type MenuItem } from "@/lib/menu-data"
+import { fetchMenuItems, categories, type MenuItem } from "@/lib/menu-data"
 import Link from "next/link"
 
 interface CartItem extends MenuItem {
@@ -58,6 +58,7 @@ const tables = Array.from({ length: 20 }, (_, i) => ({
 export default function CounterOrdersPage() {
   const [activeOrders, setActiveOrders] = useState<CounterOrder[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [selectedTable, setSelectedTable] = useState<number | null>(null)
   const [customerName, setCustomerName] = useState("")
   const [customerPhone, setCustomerPhone] = useState("")
@@ -65,6 +66,20 @@ export default function CounterOrdersPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [showCreateOrder, setShowCreateOrder] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const items = await fetchMenuItems()
+        if (!mounted) return
+        setMenuItems(items)
+      } catch (err) {
+        console.warn('Failed to load menu items', err)
+      }
+    })()
+    return () => { mounted = false }
+  }, [])
 
   const filteredMenuItems = menuItems.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -270,7 +285,7 @@ export default function CounterOrdersPage() {
                                     <Badge variant={item.isVeg ? "secondary" : "destructive"} className="text-xs">
                                       {item.isVeg ? "🟢 Veg" : "🔴 Non-Veg"}
                                     </Badge>
-                                    {item.spiceLevel && (
+                                    {(item as any).spiceLevel && (
                                       <div className="flex items-center gap-1">
                                         <span className="text-xs text-muted-foreground">Spice:</span>
                                         <div className="flex">
@@ -278,7 +293,7 @@ export default function CounterOrdersPage() {
                                             <div
                                               key={i}
                                               className={`w-2 h-2 rounded-full mr-0.5 ${
-                                                i < item.spiceLevel! ? "bg-red-500" : "bg-muted"
+                                                i < (item as any).spiceLevel! ? "bg-red-500" : "bg-muted"
                                               }`}
                                             />
                                           ))}

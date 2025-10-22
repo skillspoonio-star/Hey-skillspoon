@@ -18,15 +18,14 @@ export class SMSService {
   // In a real application, this would integrate with an SMS API like Twilio, AWS SNS, etc.
   async sendBill(billData: BillData): Promise<boolean> {
     try {
-      console.log("[v0] Sending bill via SMS to:", billData.phoneNumber)
-      console.log("[v0] Bill details:", billData)
+      
 
       // Simulate SMS sending delay
       await new Promise((resolve) => setTimeout(resolve, 1500))
 
       // Format bill message
       const message = this.formatBillMessage(billData)
-      console.log("[v0] SMS Message:", message)
+      
 
       // In production, you would call your SMS API here
       // Example: await twilioClient.messages.create({ to: billData.phoneNumber, body: message })

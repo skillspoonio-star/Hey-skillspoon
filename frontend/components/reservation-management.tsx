@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -20,6 +21,7 @@ interface Reservation {
   time: string
   guests: number
   tableNumber?: number
+  tableNumbers?: number[]
   status: "pending" | "confirmed" | "seated" | "completed" | "cancelled" | "no-show"
   specialRequests?: string
   occasion?: string
@@ -28,69 +30,112 @@ interface Reservation {
 }
 
 export function ReservationManagement() {
+  const router = useRouter()
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [dateFilter, setDateFilter] = useState<string>("today")
   const [showAddDialog, setShowAddDialog] = useState(false)
 
-  // Mock reservations data
-  const [reservations] = useState<Reservation[]>([
-    {
-      id: "RES001",
-      customerName: "Arjun Mehta",
-      phone: "+91 98765 43210",
-      email: "arjun@email.com",
-      date: "2024-01-15",
-      time: "7:30 PM",
-      guests: 4,
-      tableNumber: 12,
-      status: "confirmed",
-      specialRequests: "Window seat preferred, celebrating anniversary",
-      occasion: "Anniversary",
-      createdAt: "2024-01-10 10:30 AM",
-      notes: "VIP customer, regular visitor",
-    },
-    {
-      id: "RES002",
-      customerName: "Sneha Patel",
-      phone: "+91 87654 32109",
-      email: "sneha@email.com",
-      date: "2024-01-15",
-      time: "8:00 PM",
-      guests: 2,
-      status: "pending",
-      specialRequests: "Vegetarian menu only",
-      createdAt: "2024-01-14 2:15 PM",
-    },
-    {
-      id: "RES003",
-      customerName: "Vikram Singh",
-      phone: "+91 76543 21098",
-      email: "vikram@email.com",
-      date: "2024-01-15",
-      time: "6:45 PM",
-      guests: 6,
-      tableNumber: 8,
-      status: "seated",
-      occasion: "Business Meeting",
-      createdAt: "2024-01-12 4:45 PM",
-      notes: "Corporate client, needs quiet area",
-    },
-    {
-      id: "RES004",
-      customerName: "Kavya Sharma",
-      phone: "+91 65432 10987",
-      email: "kavya@email.com",
-      date: "2024-01-16",
-      time: "7:00 PM",
-      guests: 8,
-      status: "confirmed",
-      specialRequests: "Birthday celebration, need cake arrangement",
-      occasion: "Birthday",
-      createdAt: "2024-01-13 11:20 AM",
-    },
-  ])
+  // new-reservation state for the Add Reservation dialog
+  const [newDate, setNewDate] = useState<string>('')
+  const [newTime, setNewTime] = useState<string>('')
+  const [availableTables, setAvailableTables] = useState<any[]>([])
+  const [selectedTables, setSelectedTables] = useState<number[]>([])
+  const [newCustomerName, setNewCustomerName] = useState<string>('')
+  const [newPhone, setNewPhone] = useState<string>('')
+  const [newEmail, setNewEmail] = useState<string>('')
+  const [newSpecialRequests, setNewSpecialRequests] = useState<string>('')
+  const [creating, setCreating] = useState<boolean>(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+
+  const [reservations, setReservations] = useState<Reservation[]>([])
+  const [loading, setLoading] = useState<boolean>(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3001'
+
+  const [dialogOpen, setDialogOpen] = useState<boolean>(false)
+  const [selectedReservationDetail, setSelectedReservationDetail] = useState<any | null>(null)
+  const [detailLoading, setDetailLoading] = useState<boolean>(false)
+  const [detailError, setDetailError] = useState<string | null>(null)
+
+  const fetchReservations = async () => {
+    setLoading(true)
+    setLoadError(null)
+  
+    try {
+      const res = await fetch(`${API_BASE}/api/reservation`)
+      if (!res.ok) throw new Error(`Status ${res.status}`)
+      const data = await res.json()
+      // Map backend reservation shape to front-end Reservation interface
+      const mapped = (Array.isArray(data) ? data : []).map((r: any) => {
+        // compute createdAt safely: prefer r.createdAt; if missing and _id looks like ObjectId, extract timestamp
+        let createdAt = ''
+        if (r.createdAt) createdAt = r.createdAt
+        else if (r._id && typeof r._id === 'string' && /^[0-9a-fA-F]{24}$/.test(r._id)) {
+          try {
+            const ts = parseInt(r._id.substring(0, 8), 16) * 1000
+            const d = new Date(ts)
+            if (!isNaN(d.getTime())) createdAt = d.toISOString()
+          } catch (e) {
+            createdAt = ''
+          }
+        }
+        return {
+          id: r.id || r._id || '',
+          customerName: r.customerName || '',
+          phone: r.phone || '',
+          email: r.email || '',
+          date: r.date || '',
+          time: r.time || '',
+          guests: Number(r.guests || 0),
+          // keep tableNumber for compatibility (first table) and map tableNumbers fully
+          tableNumbers: Array.isArray(r.tableNumbers) ? r.tableNumbers.map((n: any) => Number(n)) : (r.tableNumber ? [Number(r.tableNumber)] : []),
+          tableNumber: Array.isArray(r.tableNumbers) && r.tableNumbers.length ? Number(r.tableNumbers[0]) : (r.tableNumber ? Number(r.tableNumber) : undefined),
+          status: r.status || 'pending',
+          specialRequests: r.specialRequests || undefined,
+          occasion: r.occasion || undefined,
+          createdAt,
+          notes: r.notes || undefined,
+        }
+      })
+      setReservations(mapped)
+    } catch (err: any) {
+      console.error('Failed to load reservations', err)
+      setLoadError(err?.message || 'Failed to load')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { fetchReservations() }, [])
+
+  const openDetails = async (publicId: string) => {
+    setDialogOpen(true)
+    setSelectedReservationDetail(null)
+    setDetailLoading(true)
+    setDetailError(null)
+    try {
+      const res = await fetch(`${API_BASE}/api/reservation/${publicId}`)
+      if (!res.ok) throw new Error(`Status ${res.status}`)
+      const data = await res.json()
+      setSelectedReservationDetail(data)
+    } catch (err: any) {
+      console.error('Failed to load reservation detail', err)
+      setDetailError(err?.message || 'Failed to load')
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  const formatCurrency = (n: number | undefined | null) => {
+    if (n === null || typeof n === 'undefined') return '-';
+    try {
+      return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n);
+    } catch (e) {
+      return String(n);
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -111,13 +156,50 @@ export function ReservationManagement() {
     }
   }
 
+  // compute date range based on dateFilter
+  const toDateString = (d: Date) => d.toISOString().substring(0, 10)
+  const today = new Date()
+  const tomorrow = new Date(today)
+  tomorrow.setDate(today.getDate() + 1)
+
+  const startOfWeek = new Date(today)
+  startOfWeek.setDate(today.getDate() - today.getDay()) // Sunday start
+  startOfWeek.setHours(0, 0, 0, 0)
+
+  const endOfWeek = new Date(startOfWeek)
+  endOfWeek.setDate(startOfWeek.getDate() + 6)
+  endOfWeek.setHours(23, 59, 59, 999)
+
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+  startOfMonth.setHours(0, 0, 0, 0)
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+  endOfMonth.setHours(23, 59, 59, 999)
+
+  const matchesDateFilter = (resDateStr: string) => {
+    if (!resDateStr) return false
+    const resDate = new Date(resDateStr + 'T00:00:00')
+    switch (dateFilter) {
+      case 'today':
+        return toDateString(resDate) === toDateString(today)
+      case 'tomorrow':
+        return toDateString(resDate) === toDateString(tomorrow)
+      case 'week':
+        return resDate >= startOfWeek && resDate <= endOfWeek
+      case 'month':
+        return resDate >= startOfMonth && resDate <= endOfMonth
+      default:
+        return true
+    }
+  }
+
   const filteredReservations = reservations.filter((reservation) => {
     const matchesSearch =
       reservation.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       reservation.phone.includes(searchTerm) ||
       reservation.id.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || reservation.status === statusFilter
-    return matchesSearch && matchesStatus
+    const matchesDate = matchesDateFilter(reservation.date)
+    return matchesSearch && matchesStatus && matchesDate
   })
 
   const reservationsByStatus = {
@@ -128,9 +210,9 @@ export function ReservationManagement() {
     cancelled: filteredReservations.filter((r) => r.status === "cancelled").length,
   }
 
-  const todayReservations = reservations.filter((r) => r.date === "2024-01-15")
+  // today's reservations should reflect the selected date filter when it's 'today' or 'tomorrow'
+  const todayReservations = reservations.filter((r) => toDateString(new Date(r.date + 'T00:00:00')) === toDateString(today))
   const totalGuests = todayReservations.reduce((sum, r) => sum + r.guests, 0)
-
   return (
     <div className="space-y-6">
       {/* Header Stats */}
@@ -237,79 +319,204 @@ export function ReservationManagement() {
               </SelectContent>
             </Select>
             <Button variant="outline" size="icon">
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className="w-4 h-4" onClick={() => fetchReservations()} />
             </Button>
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
               <DialogTrigger asChild>
-                <Button className="bg-orange-500 hover:bg-orange-600">
+                <Button className="bg-orange-500 hover:bg-orange-600" onClick={()=>{
+                  //push to the dashboard/new-reservation
+                  router.push("/dashboard/new-reservation")
+                }}
+                
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Reservation
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-6xl">
                 <DialogHeader>
                   <DialogTitle>Add New Reservation</DialogTitle>
                 </DialogHeader>
+
+                {/* Date & Time first */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Customer Name</Label>
-                    <Input placeholder="Enter customer name" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Phone Number</Label>
-                    <Input placeholder="Enter phone number" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input placeholder="Enter email address" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Number of Guests</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select guests" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                          <SelectItem key={num} value={num.toString()}>
-                            {num} Guest{num > 1 ? "s" : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Date</Label>
-                    <Input type="date" />
+                    <Label htmlFor="add-reservation-date">Date</Label>
+                    <input
+                      id="add-reservation-date"
+                      type="date"
+                      className="w-full border rounded-md px-3 py-2 mt-1 cursor-pointer"
+                      value={newDate}
+                      min={tomorrow.toISOString().substring(0, 10)}
+                      onClick={() => {
+                        const el = document.getElementById('add-reservation-date') as HTMLInputElement | null
+                        if (el && typeof (el as any).showPicker === 'function') {
+                          ;(el as any).showPicker()
+                          return
+                        }
+                        el?.focus()
+                      }}
+                      onChange={(e: any) => { setNewDate(e.target.value); setSelectedTables([]); setAvailableTables([]); }}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Time</Label>
-                    <Select>
+                    <Select value={newTime} onValueChange={(v) => { setNewTime(v); setSelectedTables([]); setAvailableTables([]); }}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select time" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="6:00">6:00 PM</SelectItem>
-                        <SelectItem value="6:30">6:30 PM</SelectItem>
-                        <SelectItem value="7:00">7:00 PM</SelectItem>
-                        <SelectItem value="7:30">7:30 PM</SelectItem>
-                        <SelectItem value="8:00">8:00 PM</SelectItem>
-                        <SelectItem value="8:30">8:30 PM</SelectItem>
-                        <SelectItem value="9:00">9:00 PM</SelectItem>
+                        <SelectItem value="18:00">6:00 PM</SelectItem>
+                        <SelectItem value="18:30">6:30 PM</SelectItem>
+                        <SelectItem value="19:00">7:00 PM</SelectItem>
+                        <SelectItem value="19:30">7:30 PM</SelectItem>
+                        <SelectItem value="20:00">8:00 PM</SelectItem>
+                        <SelectItem value="20:30">8:30 PM</SelectItem>
+                        <SelectItem value="21:00">9:00 PM</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Availability / Table selection */}
+                  <div className="col-span-2">
+                    <Label>Available Tables</Label>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" onClick={async () => {
+                        // fetch available tables for the selected date/time
+                        if (!newDate || !newTime) return
+                        try {
+                          const qs = `?date=${encodeURIComponent(newDate)}&time=${encodeURIComponent(newTime)}&duration=60`
+                          const res = await fetch(`${API_BASE}/api/tables/available${qs}`)
+                          if (!res.ok) throw new Error(`Status ${res.status}`)
+                          const data = await res.json()
+                          // normalize: backend might return array of numbers or objects
+                          const normalized = Array.isArray(data) ? data.map((t: any) => (typeof t === 'number' ? { tableNumber: t } : t)) : []
+                          setAvailableTables(normalized)
+                        } catch (err: any) {
+                          console.error('Failed to fetch available tables', err)
+                          setAvailableTables([])
+                        }
+                      }}>Check Availability</Button>
+                      {availableTables.length === 0 && <span className="text-sm text-muted-foreground">No availability checked yet</span>}
+                    </div>
+                    {availableTables.length > 0 && (
+                      <div className="mt-3">
+                        <Label className="text-sm">Select Tables</Label>
+                        <Select
+                          value={selectedTables.map(String).join(',')}
+                          onValueChange={(v) => {
+                            // v will be the clicked item's value (string) — toggle it
+                            const num = Number(v)
+                            if (Number.isNaN(num)) return
+                            setSelectedTables((prev) => (prev.includes(num) ? prev.filter((x) => x !== num) : [...prev, num]))
+                          }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder={
+                              selectedTables.length ? `Table ${selectedTables.join(',')}` : 'Select tables'
+                            } />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableTables.map((t: any) => {
+                              const tn = Number(t.tableNumber ?? t.number ?? t.table)
+                              const cap = Number(t.capacity ?? t.seats ?? t.maxGuests ?? 0)
+                              return (
+                                <SelectItem key={tn} value={String(tn)}>
+                                  {`Table ${tn} (${cap} seats)`}
+                                </SelectItem>
+                              )
+                            })}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Customer details after table selection */}
+                  <div className="space-y-2">
+                    <Label>Customer Name</Label>
+                    <Input placeholder="Enter customer name" value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Phone Number</Label>
+                    <Input placeholder="Enter phone number" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input placeholder="Enter email address" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+                  </div>
                   <div className="col-span-2 space-y-2">
                     <Label>Special Requests</Label>
-                    <Textarea placeholder="Any special requests or notes..." />
+                    <Textarea placeholder="Any special requests or notes..." value={newSpecialRequests} onChange={(e) => setNewSpecialRequests(e.target.value)} />
                   </div>
                 </div>
+
+                  <div className="mt-3 text-sm text-muted-foreground">Selected capacity: {selectedTables.reduce((acc, tn) => {
+                    const tableObj = availableTables.find((x: any) => Number(x.tableNumber ?? x.number ?? x.table) === tn)
+                    return acc + (Number(tableObj?.capacity ?? tableObj?.seats ?? tableObj?.maxGuests ?? 0) || 0)
+                  }, 0)} seats</div>
+
                 <div className="flex justify-end gap-2 mt-4">
-                  <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+                  <Button variant="outline" onClick={() => { setShowAddDialog(false); }}>
                     Cancel
                   </Button>
-                  <Button className="bg-orange-500 hover:bg-orange-600">Create Reservation</Button>
+                  <Button className="bg-orange-500 hover:bg-orange-600" onClick={async () => {
+                    setCreateError(null)
+                    if (!newDate || !newTime || selectedTables.length === 0) {
+                      setCreateError('Please select date, time and at least one table')
+                      return
+                    }
+                    setCreating(true)
+                    try {
+                      const token = typeof window !== 'undefined' ? localStorage.getItem('adminAuth') : null
+                      const payload: any = {
+                        date: newDate,
+                        time: newTime,
+                        tableNumbers: selectedTables,
+                        customerName: newCustomerName,
+                        phone: newPhone,
+                        email: newEmail,
+                        specialRequests: newSpecialRequests,
+                        guests: selectedTables.reduce((acc, tn) => {
+                          const tableObj = availableTables.find((x: any) => Number(x.tableNumber ?? x.number ?? x.table) === tn)
+                          return acc + (Number(tableObj?.capacity ?? tableObj?.seats ?? tableObj?.maxGuests ?? 0) || 0)
+                        }, 0)
+                      }
+                      const res = await fetch(`${API_BASE}/api/reservation`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                        },
+                        body: JSON.stringify(payload),
+                      })
+                      if (!res.ok) {
+                        const txt = await res.text()
+                        throw new Error(`Status ${res.status} ${txt}`)
+                      }
+                      // success - refresh
+                      await fetchReservations()
+                      setShowAddDialog(false)
+                      // reset form
+                      setNewDate('')
+                      setNewTime('')
+                      setAvailableTables([])
+                      setSelectedTables([])
+                      setNewCustomerName('')
+                      setNewPhone('')
+                      setNewEmail('')
+                      setNewSpecialRequests('')
+                    } catch (err: any) {
+                      console.error('Failed to create reservation', err)
+                      setCreateError(err?.message || 'Failed to create')
+                    } finally {
+                      setCreating(false)
+                    }
+                  }}>
+                    {creating ? 'Creating...' : 'Create Reservation'}
+                  </Button>
                 </div>
+                {createError && <p className="text-sm text-red-600 mt-2">{createError}</p>}
               </DialogContent>
             </Dialog>
           </div>
@@ -350,7 +557,15 @@ export function ReservationManagement() {
                 <div className="flex items-center gap-2 text-sm">
                   <Users className="w-4 h-4 text-muted-foreground" />
                   <span>{reservation.guests} guests</span>
-                  {reservation.tableNumber && <Badge variant="outline">Table {reservation.tableNumber}</Badge>}
+                  {reservation.tableNumbers && reservation.tableNumbers.length > 0 ? (
+                    <div className="flex flex-wrap items-center gap-2 max-w-full ml-2">
+                      {reservation.tableNumbers.map((tn) => (
+                        <Badge key={tn} variant="outline" className="whitespace-nowrap">Table {tn}</Badge>
+                      ))}
+                    </div>
+                  ) : reservation.tableNumber ? (
+                    <Badge variant="outline" className="ml-2">Table {reservation.tableNumber}</Badge>
+                  ) : null}
                 </div>
               </div>
 
@@ -362,7 +577,7 @@ export function ReservationManagement() {
 
               {reservation.specialRequests && (
                 <div className="p-2 bg-yellow-50 rounded border-l-4 border-yellow-400">
-                  <p className="text-xs text-yellow-800">
+                  <p className="text-xs text-black">
                     {reservation.specialRequests.length > 50
                       ? `${reservation.specialRequests.substring(0, 50)}...`
                       : reservation.specialRequests}
@@ -371,92 +586,10 @@ export function ReservationManagement() {
               )}
 
               <div className="flex gap-2 pt-2">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex-1 bg-transparent">
-                      <Eye className="w-4 h-4 mr-2" />
-                      View Details
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>Reservation Details - #{reservation.id}</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-6">
-                      {/* Customer Info */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label className="text-sm font-medium">Customer Information</Label>
-                          <p className="text-sm mt-1">{reservation.customerName}</p>
-                          <p className="text-sm text-muted-foreground">{reservation.phone}</p>
-                          <p className="text-sm text-muted-foreground">{reservation.email}</p>
-                        </div>
-                        <div>
-                          <Label className="text-sm font-medium">Reservation Details</Label>
-                          <p className="text-sm mt-1">Date: {reservation.date}</p>
-                          <p className="text-sm">Time: {reservation.time}</p>
-                          <p className="text-sm">Guests: {reservation.guests}</p>
-                          {reservation.tableNumber && <p className="text-sm">Table: {reservation.tableNumber}</p>}
-                          <div className="flex items-center gap-2 mt-2">
-                            <Badge className={getStatusColor(reservation.status)}>
-                              {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Occasion */}
-                      {reservation.occasion && (
-                        <div>
-                          <Label className="text-sm font-medium">Occasion</Label>
-                          <p className="text-sm mt-1 p-2 bg-blue-50 rounded border-l-4 border-blue-400">
-                            {reservation.occasion}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Special Requests */}
-                      {reservation.specialRequests && (
-                        <div>
-                          <Label className="text-sm font-medium">Special Requests</Label>
-                          <p className="text-sm mt-1 p-2 bg-yellow-50 rounded border-l-4 border-yellow-400">
-                            {reservation.specialRequests}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Notes */}
-                      {reservation.notes && (
-                        <div>
-                          <Label className="text-sm font-medium">Internal Notes</Label>
-                          <p className="text-sm mt-1 p-2 bg-gray-50 rounded border-l-4 border-gray-400">
-                            {reservation.notes}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Booking Info */}
-                      <div className="pt-4 border-t">
-                        <Label className="text-sm font-medium">Booking Information</Label>
-                        <p className="text-sm mt-1 text-muted-foreground">Created: {reservation.createdAt}</p>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex gap-2 pt-4 border-t">
-                        <Button variant="outline" className="flex-1 bg-transparent">
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit Reservation
-                        </Button>
-                        <Button variant="outline" className="flex-1 bg-transparent">
-                          Confirm
-                        </Button>
-                        <Button variant="outline" className="flex-1 bg-transparent">
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <Button variant="outline" size="sm" className="flex-1 bg-transparent" onClick={() => openDetails(reservation.id)}>
+                  <Eye className="w-4 h-4 mr-2" />
+                  View Details
+                </Button>
                 <Button size="sm" variant="outline">
                   <Edit className="w-4 h-4 mr-2" />
                   Edit
@@ -480,6 +613,103 @@ export function ReservationManagement() {
           </CardContent>
         </Card>
       )}
+      {/* Centralized Details Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Reservation Details {selectedReservationDetail ? `- #${selectedReservationDetail.id || selectedReservationDetail._id}` : ''}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            {detailLoading && <p>Loading...</p>}
+            {detailError && <p className="text-red-600">{detailError}</p>}
+            {!detailLoading && selectedReservationDetail && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2 space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium">Customer</Label>
+                    <p className="font-medium">{selectedReservationDetail.customerName}</p>
+                    <p className="text-sm text-muted-foreground">{selectedReservationDetail.phone} · {selectedReservationDetail.email}</p>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium">Booking</Label>
+                    <div className="mt-1 text-sm">
+                      <p>Date: <span className="font-medium">{selectedReservationDetail.date}</span></p>
+                      <p>Time: <span className="font-medium">{selectedReservationDetail.time}</span></p>
+                      <p>Guests: <span className="font-medium">{selectedReservationDetail.guests}</span></p>
+                      {selectedReservationDetail.tableNumbers && selectedReservationDetail.tableNumbers.length ? (
+                        <p>Tables: <span className="font-medium">{selectedReservationDetail.tableNumbers.join(', ')}</span></p>
+                      ) : selectedReservationDetail.tableNumber ? (
+                        <p>Table: <span className="font-medium">{selectedReservationDetail.tableNumber}</span></p>
+                      ) : null}
+                      <div className="mt-2">
+                        <Badge className={getStatusColor(selectedReservationDetail.status)}>{(selectedReservationDetail.status || '').toString().charAt(0).toUpperCase() + (selectedReservationDetail.status || '').toString().slice(1)}</Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedReservationDetail.specialRequests && (
+                    <div>
+                      <Label className="text-sm font-medium">Special Requests</Label>
+                      <p className="mt-1 p-2 bg-yellow-50 rounded border-l-4 border-yellow-400 text-sm text-black">{selectedReservationDetail.specialRequests}</p>
+                    </div>
+                  )}
+
+                  {selectedReservationDetail.notes && (
+                    <div>
+                      <Label className="text-sm font-medium">Internal Notes</Label>
+                      <p className="mt-1 p-2 bg-gray-50 rounded border-l-4 border-gray-400 text-sm">{selectedReservationDetail.notes}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="md:col-span-1 p-4 bg-gray-50 rounded border text-black">
+                  <Label className="text-sm font-medium">Payment Summary</Label>
+                  <div className="mt-3 text-sm">
+                    {!selectedReservationDetail.payment ? (
+                      <div className="py-6 text-center text-sm text-muted-foreground">
+                        <p className="font-medium">No payment information</p>
+                        <p className="text-xs mt-1">Payment details will appear here after the reservation is billed.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Subtotal</span>
+                          <span className="font-medium">{formatCurrency(selectedReservationDetail.payment.subtotal)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Tax</span>
+                          <span className="font-medium">{formatCurrency(selectedReservationDetail.payment.tax)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Discount</span>
+                          <span className="font-medium">{formatCurrency(selectedReservationDetail.payment.discount)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Extra Charge</span>
+                          <span className="font-medium">{formatCurrency(selectedReservationDetail.payment.extraCharge)}</span>
+                        </div>
+                        <div className="border-t pt-2 flex justify-between font-bold">
+                          <span>Total</span>
+                          <span>{formatCurrency(selectedReservationDetail.payment.total)} {selectedReservationDetail.payment.currency ?? ''}</span>
+                        </div>
+                        <div className="mt-3">
+                          <Label className="text-sm">Status</Label>
+                          <p className="font-medium">{selectedReservationDetail.payment.paymentStatus}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Close</Button>
+            <Button className="bg-green-600 text-white">Mark as Paid</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

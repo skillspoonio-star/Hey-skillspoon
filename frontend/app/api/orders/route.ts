@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     // 3. Send SMS to customer
     // 4. Update real-time dashboard via WebSocket/SSE
 
-    console.log("[API] New order received:", newOrder)
+    
 
     return NextResponse.json({
       success: true,
@@ -57,7 +57,7 @@ export async function PUT(request: NextRequest) {
     // 2. Send notification to customer
     // 3. Update real-time dashboard
 
-    console.log("[API] Order status updated:", orders[orderIndex])
+    
 
     return NextResponse.json({
       success: true,

@@ -1,13 +1,13 @@
 export interface OrderUpdate {
-  id: number
-  status: "pending" | "preparing" | "ready" | "served"
+  id: string | number
+  status: "pending" | "preparing" | "ready" | "served" | "cancelled"
   timestamp: Date
   tableNumber: number
   customerPhone?: string
 }
 
 export interface CustomerNotification {
-  orderId: number
+  orderId: string | number
   message: string
   type: "status_update" | "payment_confirmed" | "order_ready"
   timestamp: Date
@@ -15,7 +15,7 @@ export interface CustomerNotification {
 }
 
 export interface CashPaymentRequest {
-  id: number
+  id: string | number
   tableNumber: number
   customerPhone: string
   total: number
@@ -99,7 +99,7 @@ class RealTimeSync {
   }
 
   // Emit payment confirmation
-  emitPaymentConfirmation(orderId: number, customerPhone: string, tableNumber: number) {
+  emitPaymentConfirmation(orderId: string | number, customerPhone: string, tableNumber: number) {
     const notification: CustomerNotification = {
       orderId,
       message: "Payment confirmed! Your order is being prepared.",

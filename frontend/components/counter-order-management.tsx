@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -23,12 +23,12 @@ import {
   Users,
   Search,
 } from "lucide-react"
-import { menuItems, categories, type MenuItem } from "@/lib/menu-data"
+import { fetchMenuItems, categories, type MenuItem } from "@/lib/menu-data"
+import { fetchAvailableTables, SimpleTable } from "@/lib/tables"
 
 interface CartItem extends MenuItem {
   quantity: number
-  specialInstructions?: string
-  customizations?: string[]
+  itemId:number
 }
 
 interface CounterOrder {
@@ -41,19 +41,12 @@ interface CounterOrder {
   tax: number
   discount: number
   total: number
-  status: "pending" | "confirmed" | "preparing" | "ready" | "served" | "paid"
+  status: "pending" | "confirmed" | "preparing" | "ready" | "served" | "paid" | "cancelled"
   paymentMethod: "cash" | "card" | "upi" | "pending"
   orderTime: Date
   specialRequests?: string
   waiterId?: string
 }
-
-const tables = Array.from({ length: 20 }, (_, i) => ({
-  number: i + 1,
-  capacity: i < 10 ? 4 : i < 15 ? 6 : 8,
-  status: Math.random() > 0.7 ? "occupied" : "available",
-}))
-
 export function CounterOrderManagement() {
   const [activeOrders, setActiveOrders] = useState<CounterOrder[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
@@ -66,7 +59,77 @@ export function CounterOrderManagement() {
   const [showCreateOrder, setShowCreateOrder] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedOrder, setSelectedOrder] = useState<CounterOrder | null>(null)
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [tables, setTables] = useState<SimpleTable[]>([])
 
+  // ...existing code...
+useEffect(() => {
+  ;(async () => {
+    try {
+      // 1) load menu items to resolve itemId -> name/price
+      let menu: MenuItem[] = []
+      try {
+        menu = await fetchMenuItems()
+        setMenuItems(menu)
+      } catch (err) {
+        console.error('Failed to load menu items', err)
+      }
+
+      // 2) load available tables 
+      try {
+        const avail = await fetchAvailableTables()
+        setTables(avail)
+      } catch (err) {
+        console.error('Failed to load available tables', err)
+      }
+      // 3) Fetch counter orders and map itemIds to menu data
+      const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+      const res = await fetch(`${base}/api/orders/counter`)
+      if (!res.ok) {
+        const text = await res.text()
+        console.error('Failed to fetch counter orders', res.status, text)
+        return
+      }
+      const liveOrders = await res.json()
+      if (!Array.isArray(liveOrders)) return
+
+      const mapped: CounterOrder[] = liveOrders.map((o: any) => ({
+        id: String(o._id || o.id || `CO${Date.now()}`),
+        tableNumber: o.tableNumber,
+        customerName: o.customerName || o.customer || '',
+        customerPhone: o.customerPhone || o.phone || '',
+        items: (o.items || []).map((it: any) => {
+          const itemId = Number(it.itemId ?? it.id ?? 0)
+          const menuItem = menu.find((m) => Number(m.id) === itemId)
+          return {
+            id: itemId,
+            itemId,
+            name: menuItem?.name || it.name || `Item ${itemId}`,
+            price: Number(menuItem?.price ?? it.price ?? 0),
+            description: menuItem?.description ?? it.description ?? '',
+            image: menuItem?.image ?? it.image ?? '',
+            category: menuItem?.category ?? it.category ?? 'Misc',
+            isVeg: menuItem?.isVeg ?? it.isVeg ?? true,
+            quantity: Number(it.quantity || 1),
+          }
+        }),
+        subtotal: Number(o.subtotal || 0),
+        tax: Number(o.tax || 0),
+        discount: Number(o.discount || 0),
+        total: Number(o.total || 0),
+        status: (o.status as CounterOrder['status']) || 'pending',
+        paymentMethod: (o.paymentMethod as CounterOrder['paymentMethod']) || 'pending',
+        orderTime: o.timestamp ? new Date(o.timestamp) : o.createdAt ? new Date(o.createdAt) : new Date(),
+        specialRequests: o.specialRequests || undefined,
+      }))
+
+      setActiveOrders(mapped)
+    } catch (err) {
+      console.error('Error fetching live orders', err)
+    }
+  })()
+}, [])
+// ...existing code...
   const filteredMenuItems = menuItems.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesCategory = selectedCategory === "All" || item.category === selectedCategory
@@ -80,7 +143,7 @@ export function CounterOrderManagement() {
         cart.map((cartItem) => (cartItem.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem)),
       )
     } else {
-      setCart([...cart, { ...item, quantity: 1 }])
+      setCart([...cart, { ...item, itemId:item.id,quantity: 1 }])
     }
   }
 
@@ -100,48 +163,147 @@ export function CounterOrderManagement() {
     const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
     const tax = subtotal * 0.18
     const discount = 0
-    return { subtotal, tax, discount, total: subtotal + tax - discount }
+    return {subtotal,tax,discount,total:subtotal + tax - discount}
   }
 
-  const createOrder = () => {
+  const createOrder = async () => {
     if (!selectedTable || !customerName || cart.length === 0) return
 
-    const { subtotal, tax, discount, total } = calculateTotal()
-    const newOrder: CounterOrder = {
-      id: `CO${Date.now()}`,
+    const {subtotal,tax,discount,total} = calculateTotal()
+
+    const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+    const url = `${base}/api/orders`
+
+    const payload = {
       tableNumber: selectedTable,
       customerName,
       customerPhone,
-      items: [...cart],
+      items: cart.map((c) => ({ itemId: c.itemId ?? c.id, quantity: c.quantity })),
+      total,
       subtotal,
       tax,
       discount,
-      total,
-      status: "pending",
-      paymentMethod: "pending",
-      orderTime: new Date(),
       specialRequests: specialRequests || undefined,
+      orderType: 'dine-in',
     }
 
-    setActiveOrders([newOrder, ...activeOrders])
-    setCart([])
-    setSelectedTable(null)
-    setCustomerName("")
-    setCustomerPhone("")
-    setSpecialRequests("")
-    setShowCreateOrder(false)
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        console.error('Failed to create order', res.status, text)
+        return
+      }
+      const data = await res.json()
+      const orderId = data && (data.orderId || data.orderID || data.id)
+      const newOrder: CounterOrder = {
+        id: String(orderId || `CO${Date.now()}`),
+        tableNumber: selectedTable,
+        customerName,
+        customerPhone,
+        items: [...cart],
+        subtotal,
+        tax,
+        discount,
+        total,
+        status: 'pending',
+        paymentMethod: 'cash',
+        orderTime: new Date(),
+        specialRequests: specialRequests || undefined,
+      }
+
+      setActiveOrders([newOrder, ...activeOrders])
+      setCart([])
+      setSelectedTable(null)
+      setCustomerName('')
+      setCustomerPhone('')
+      setSpecialRequests('')
+      setShowCreateOrder(false)
+
+      // remove the table from available list locally (backend will mark it occupied)
+      setTables((prev) => prev.filter((t) => t.number !== selectedTable))
+    } catch (err) {
+      console.error('Create order failed', err)
+    }
   }
 
   const updateOrderStatus = (orderId: string, status: CounterOrder["status"]) => {
+    // Optimistically update UI
     setActiveOrders((orders) => orders.map((order) => (order.id === orderId ? { ...order, status } : order)))
+
+    ;(async () => {
+      try {
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+        const res = await fetch(`${base}/api/orders/${orderId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status }),
+        })
+        if (!res.ok) {
+          const text = await res.text()
+          console.error('Failed to update order status', res.status, text)
+          return
+        }
+        const updated = await res.json()
+        // sync with server response if provided
+        setActiveOrders((orders) => orders.map((order) => (order.id === orderId ? { ...order, status: updated.status ?? status } : order)))
+      } catch (err) {
+        console.error('Error updating order status', err)
+      }
+    })()
   }
 
   const updatePaymentMethod = (orderId: string, paymentMethod: CounterOrder["paymentMethod"]) => {
     setActiveOrders((orders) => orders.map((order) => (order.id === orderId ? { ...order, paymentMethod } : order)))
+
+    ;(async () => {
+      try {
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+        const res = await fetch(`${base}/api/orders/${orderId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentMethod }),
+        })
+        if (!res.ok) {
+          const text = await res.text()
+          console.error('Failed to update payment method', res.status, text)
+          return
+        }
+        const updated = await res.json()
+        setActiveOrders((orders) => orders.map((order) => (order.id === orderId ? { ...order, paymentMethod: updated.paymentMethod ?? paymentMethod } : order)))
+      } catch (err) {
+        console.error('Error updating payment method', err)
+      }
+    })()
   }
 
   const deleteOrder = (orderId: string) => {
-    setActiveOrders((orders) => orders.filter((order) => order.id !== orderId))
+  // set status to 'cancelled' locally and on server
+  setActiveOrders((orders) => orders.map((order) => (order.id === orderId ? { ...order, status: 'cancelled' } : order)))
+
+    ;(async () => {
+      try {
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+        const res = await fetch(`${base}/api/orders/${orderId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'cancelled' }),
+        })
+        if (!res.ok) {
+          const text = await res.text()
+          console.error('Failed to cancel order', res.status, text)
+          return
+        }
+        const updated = await res.json()
+        setActiveOrders((orders) => orders.map((order) => (order.id === orderId ? { ...order, status: updated.status ?? 'cancelled' } : order)))
+      } catch (err) {
+        console.error('Error cancelling order', err)
+      }
+    })()
   }
 
   const getStatusColor = (status: CounterOrder["status"]) => {
@@ -319,7 +481,6 @@ export function CounterOrderManagement() {
                       </SelectTrigger>
                       <SelectContent>
                         {tables
-                          .filter((table) => table.status === "available")
                           .map((table) => (
                             <SelectItem key={table.number} value={table.number.toString()}>
                               <div className="flex items-center gap-2">
@@ -483,7 +644,7 @@ export function CounterOrderManagement() {
               <div>
                 <p className="text-sm text-muted-foreground">Available Tables</p>
                 <p className="text-2xl lg:text-3xl font-bold text-green-600">
-                  {tables.filter((t) => t.status === "available").length}
+                  {tables.length}
                 </p>
               </div>
               <Users className="w-8 h-8 lg:w-10 lg:h-10 text-green-600" />
@@ -576,8 +737,8 @@ export function CounterOrderManagement() {
             <Card key={order.id} className="hover:shadow-xl transition-all border-2 hover:border-orange-300">
               <CardHeader className="pb-4 bg-gradient-to-r from-muted/50 to-muted/30 border-b">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-xl">Table {order.tableNumber}</CardTitle>
+                  <div>{
+                    <CardTitle className="text-xl">Table {order.tableNumber}</CardTitle>}
                     <p className="text-base text-muted-foreground font-medium mt-1">{order.customerName}</p>
                   </div>
                   <Badge className={`${getStatusColor(order.status)} font-medium text-sm px-3 py-1 border`}>

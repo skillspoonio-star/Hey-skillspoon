@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,13 +20,18 @@ export default function TakeawayCheckoutPage() {
   })
   const [paymentMethod, setPaymentMethod] = useState("upi")
   const [isProcessing, setIsProcessing] = useState(false)
+  const [cartItems, setCartItems] = useState<Array<any>>([])
 
-  // Mock cart data - in real app, this would come from state management
-  const cartItems = [
-    { id: 1, name: "Chicken Biryani", price: 299, quantity: 1 },
-    { id: 2, name: "Paneer Tikka", price: 249, quantity: 1 },
-    { id: 4, name: "Butter Naan", price: 49, quantity: 2 },
-  ]
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('takeaway_cart')
+      if (raw) setCartItems(JSON.parse(raw))
+    } catch (err) {
+      console.error('Failed to load cart from localStorage', err)
+    }
+  }, [])
+
+  // cartItems loaded from localStorage
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const taxes = Math.round(subtotal * 0.05) // 5% tax
@@ -41,9 +46,47 @@ export default function TakeawayCheckoutPage() {
 
     setIsProcessing(true)
 
-    // Simulate payment processing
-    setTimeout(() => {
-      router.push("/takeaway/confirmation")
+    // Simulate payment processing delay
+    setTimeout(async () => {
+      try {
+        // build order payload expected by backend: items as { itemId, quantity }
+        const payload = {
+          items: cartItems.map((it: any) => ({ itemId: it.id, quantity: it.quantity })),
+          subtotal: cartItems.reduce((s: number, it: any) => s + it.price * it.quantity, 0),
+          tax: Math.round(cartItems.reduce((s: number, it: any) => s + it.price * it.quantity, 0) * 0.05)+20,
+          discount: 0,
+          total: cartItems.reduce((s: number, it: any) => s + it.price * it.quantity, 0) + Math.round(cartItems.reduce((s: number, it: any) => s + it.price * it.quantity, 0) * 0.05) + 20,
+          customerName: customerInfo.name,
+          customerPhone: customerInfo.phone,
+          customerEmail: customerInfo.email,
+          paymentStatus: "paid",
+          paymentMethod,
+          orderType: 'take-away',
+        }
+
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+        const res = await fetch(`${base}/api/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        if (!res.ok) {
+          const text = await res.text()
+          console.error('Failed to create takeaway order', res.status, text)
+          setIsProcessing(false)
+          alert('Payment succeeded but order creation failed. Please contact support.')
+          return
+        }
+        const data = await res.json()
+        const orderId = data.orderId || data.id || data._id
+
+        // clear cart and navigate to confirmation with order id
+        localStorage.removeItem('takeaway_cart')
+        router.push(`/takeaway/confirmation?orderId=${orderId}`)
+      } catch (err) {
+        console.error('Error creating takeaway order', err)
+        setIsProcessing(false)
+      }
     }, 2000)
   }
 
@@ -232,7 +275,7 @@ export default function TakeawayCheckoutPage() {
         </Card>
 
         {/* Pay Button */}
-        <Button className="w-full h-12 text-base font-medium" onClick={handlePayment} disabled={isProcessing}>
+                <Button className="w-full h-12 text-base font-medium" onClick={handlePayment} disabled={isProcessing || cartItems.length===0}>
           {isProcessing ? "Processing Payment..." : `Pay ₹${total}`}
         </Button>
       </main>

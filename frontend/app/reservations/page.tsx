@@ -49,7 +49,7 @@ export default function ReservationsPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     // Handle reservation submission
-    console.log("Reservation submitted:", { ...formData, date })
+    
     alert("Reservation request submitted! We will confirm shortly.")
   }
 

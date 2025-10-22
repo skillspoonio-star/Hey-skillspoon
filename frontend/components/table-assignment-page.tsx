@@ -23,82 +23,137 @@ interface Table {
 export function TableAssignmentPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [showQRCode, setShowQRCode] = useState<number | null>(null)
-  const [tables, setTables] = useState<Table[]>([
-    { number: 1, capacity: 2, status: "available" },
-    { number: 2, capacity: 4, status: "available" },
-    { number: 3, capacity: 6, status: "available" },
-    { number: 4, capacity: 4, status: "cleaning" },
-    { number: 5, capacity: 2, status: "available" },
-    { number: 6, capacity: 8, status: "reserved" },
-  ])
+  const [selectedTableForModal, setSelectedTableForModal] = useState<Table | null>(null)
+  const [tables, setTables] = useState<Table[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
+  const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3001'
 
   useEffect(() => {
-    const activeSessions = sessionManager.getActiveSessions()
+    const fetchTables = async () => {
+      try {
+        setLoading(true)
+        const res = await fetch(`${API_BASE}/api/tables`)
+        if (!res.ok) throw new Error(`Status ${res.status}`)
+        const data = await res.json()
+        
+        // Normalize server data into Table[] shape expected by component
+        const normalized: Table[] = (Array.isArray(data) ? data : []).map((t: any) => ({
+          number: Number(t.number),
+          capacity: Number(t.capacity || 4),
+          status: t.status || 'available',
+          customerName: t.customerName || undefined,
+          guestCount: t.guestCount || undefined,
+          sessionTime: t.sessionTime || undefined,
+          orderCount: t.orderCount || undefined,
+          amount: t.amount || undefined,
+          sessionId: t.sessionId || undefined,
+        }))
+        
+        setTables(normalized)
+        setError(null)
+      } catch (err: any) {
+        console.error('Failed to load tables', err)
+        setError(err?.message || 'Failed to load tables')
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchTables()
+  }, [API_BASE])
 
-    setTables((prev) =>
-      prev.map((table) => {
-        const session = activeSessions.find((s) => s.tableNumber === table.number)
+  const handleAssignTable = async (tableNumber: number, customerName: string, mobileNumber: string) => {
+    try {
+      // Create a session on the server (this will mark the table occupied and attach sessionId)
+      const sRes = await fetch(`${API_BASE}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tableNumber, customerName, mobile: mobileNumber }),
+      })
 
-        if (session) {
-          return {
-            ...table,
-            status: "occupied" as const,
-            customerName: session.customerName,
-            guestCount: session.guestCount,
-            sessionTime: new Date(session.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            orderCount: session.orders.length,
-            amount: session.totalAmount,
-            sessionId: session.sessionId,
-          }
-        }
+      if (!sRes.ok) {
+        const txt = await sRes.text()
+        throw new Error(`Status ${sRes.status} ${txt}`)
+      }
 
-        return table
-      }),
-    )
-  }, [])
+      const session = await sRes.json()
 
-  const handleAssignTable = (tableNumber: number, customerName: string, partySize: number) => {
-    const session = sessionManager.createSession(tableNumber, customerName, partySize)
+      // Update local state using returned session.sessionId
+      setTables((prev) =>
+        prev.map((table) =>
+          table.number === tableNumber
+            ? {
+                ...table,
+                status: "occupied" as const,
+                customerName,
+                sessionTime: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                orderCount: 0,
+                amount: 0,
+                sessionId: session.sessionId,
+              }
+            : table,
+        ),
+      )
 
-    setTables((prev) =>
-      prev.map((table) =>
-        table.number === tableNumber
-          ? {
-              ...table,
-              status: "occupied" as const,
-              customerName,
-              guestCount: partySize,
-              sessionTime: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-              orderCount: 0,
-              amount: 0,
-              sessionId: session.sessionId,
-            }
-          : table,
-      ),
-    )
-
-    setShowQRCode(tableNumber)
+      setShowQRCode(tableNumber)
+    } catch (err: any) {
+      console.error('Failed to assign table:', err)
+      alert(`Failed to assign table: ${err.message}`)
+    }
   }
 
-  const handleEndSession = (tableNumber: number) => {
-    sessionManager.endSession(tableNumber)
+  const handleEndSession = async (tableNumber: number) => {
+    try {
+      // Find active session for this table
+      const lookup = await fetch(`${API_BASE}/api/sessions/table/${tableNumber}`)
+      if (!lookup.ok) {
+        const txt = await lookup.text()
+        throw new Error(`Status ${lookup.status} ${txt}`)
+      }
+      const session = await lookup.json()
 
-    setTables((prev) =>
-      prev.map((table) =>
-        table.number === tableNumber
-          ? {
-              ...table,
-              status: "cleaning" as const,
-              customerName: undefined,
-              guestCount: undefined,
-              sessionTime: undefined,
-              orderCount: undefined,
-              amount: undefined,
-              sessionId: undefined,
-            }
-          : table,
-      ),
-    )
+      // End session by sessionId
+      const sessionRes = await fetch(`${API_BASE}/api/sessions/${session.sessionId}`, { method: 'DELETE' })
+      if (!sessionRes.ok) {
+        const txt = await sessionRes.text()
+        throw new Error(`Status ${sessionRes.status} ${txt}`)
+      }
+
+      // Server will update table status to 'cleaning', but patch locally for immediate feedback
+      const tableRes = await fetch(`${API_BASE}/api/tables/${tableNumber}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'cleaning', customerName: null, sessionId: null }),
+      })
+
+      if (!tableRes.ok) {
+        const txt = await tableRes.text()
+        throw new Error(`Status ${tableRes.status} ${txt}`)
+      }
+      
+      // Update local state
+      setTables((prev) =>
+        prev.map((table) =>
+          table.number === tableNumber
+            ? {
+                ...table,
+                status: "cleaning" as const,
+                customerName: undefined,
+                guestCount: undefined,
+                sessionTime: undefined,
+                orderCount: undefined,
+                amount: undefined,
+                sessionId: undefined,
+              }
+            : table,
+        ),
+      )
+    } catch (err: any) {
+      console.error('Failed to end session:', err)
+      alert(`Failed to end session: ${err.message}`)
+    }
   }
 
   const openTableUrl = (tableNumber: number) => {
@@ -171,9 +226,28 @@ export function TableAssignmentPage() {
         </div>
       )}
 
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading tables...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+          <p className="text-destructive font-medium">Error loading tables</p>
+          <p className="text-sm text-muted-foreground mt-1">{error}</p>
+        </div>
+      )}
+
       {/* Tables Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 lg:gap-8">
-        {tables.map((table) => (
+      {!loading && !error && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 lg:gap-8">
+          {tables.map((table) => (
           <Card key={table.number} className={`${getStatusColor(table.status)} border-2 min-h-[400px] flex flex-col`}>
             <CardContent className="p-6 lg:p-8 flex-1 flex flex-col">
               <div className="space-y-5 flex-1 flex flex-col">
@@ -194,7 +268,10 @@ export function TableAssignmentPage() {
                   <div className="space-y-4 flex-1 flex flex-col justify-center">
                     <p className="text-center text-muted-foreground py-4">Ready for new customers</p>
                     <Button
-                      onClick={() => setIsModalOpen(true)}
+                      onClick={() => {
+                        setSelectedTableForModal(table)
+                        setIsModalOpen(true)
+                      }}
                       className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold shadow-lg"
                     >
                       Assign Customer
@@ -271,14 +348,18 @@ export function TableAssignmentPage() {
             </CardContent>
           </Card>
         ))}
-      </div>
+        </div>
+      )}
 
       {/* Table Assignment Modal */}
       <TableAssignmentModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedTableForModal(null)
+        }}
         onAssign={handleAssignTable}
-        availableTables={availableTables}
+        selectedTable={selectedTableForModal}
       />
     </div>
   )

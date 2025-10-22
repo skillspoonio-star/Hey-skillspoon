@@ -9,8 +9,8 @@ import type { Order } from "@/hooks/use-order-manager"
 
 interface OrderCardProps {
   order: Order
-  onStatusUpdate: (orderId: number, newStatus: Order["status"]) => void
-  onCallWaiter?: (orderId: number, tableNumber: string) => void
+  onStatusUpdate: (orderId: string | number, newStatus: Order["status"]) => void
+  onCallWaiter?: (orderId: string | number, tableNumber: number) => void
 }
 
 export function OrderCard({ order, onStatusUpdate, onCallWaiter }: OrderCardProps) {
@@ -102,32 +102,38 @@ export function OrderCard({ order, onStatusUpdate, onCallWaiter }: OrderCardProp
       )}
     >
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h4 className="font-semibold">Table {order.tableNumber}</h4>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0 flex-wrap">
+            {(order.orderType=='dine-in')?
+            <h4 className="font-semibold truncate max-w-[10rem] sm:max-w-[14rem]">Table {order.tableNumber}</h4>:
+            (order.orderType=='delivery')?
+            <h4 className="font-semibold truncate max-w-[10rem] sm:max-w-[14rem]">#DLV {order.tableNumber}</h4>
+            :
+            <h4 className="font-semibold truncate max-w-[10rem] sm:max-w-[14rem]">#TK {order.tableNumber}</h4>
+            }
             <Badge variant={getStatusColor(order.status)} className="capitalize">
               {order.status}
             </Badge>
             {order.priority && (
-              <Badge variant={getPriorityColor(order.priority)} size="sm">
+              <Badge variant={getPriorityColor(order.priority)}>
                 {order.priority === "high" && <AlertTriangle className="w-3 h-3 mr-1" />}
                 {order.priority}
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 sm:mt-0">
             <Clock className="w-3 h-3" />
-            {formatTime(order.timestamp)}
+            <span className="break-words">{formatTime(order.timestamp)}</span>
           </div>
         </div>
 
         {/* Customer Info */}
         {order.customerName && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0 flex-wrap">
             <User className="w-3 h-3" />
-            <span>{order.customerName}</span>
+            <span className="truncate">{order.customerName}</span>
             {order.orderType && (
-              <Badge variant="outline" size="sm" className="ml-auto">
+              <Badge variant="outline" className="ml-2 mt-1 sm:mt-0 flex-shrink-0">
                 {order.orderType}
               </Badge>
             )}
@@ -158,7 +164,7 @@ export function OrderCard({ order, onStatusUpdate, onCallWaiter }: OrderCardProp
             <div className="flex items-center gap-2">
               <span>₹{order.total}</span>
               {order.paymentStatus && (
-                <Badge variant={order.paymentStatus === "paid" ? "secondary" : "destructive"} size="sm">
+                <Badge variant={order.paymentStatus === "paid" ? "secondary" : "destructive"}>
                   {order.paymentStatus}
                 </Badge>
               )}
