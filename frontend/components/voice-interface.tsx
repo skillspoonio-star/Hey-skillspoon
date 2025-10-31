@@ -6,12 +6,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Mic, MicOff, Volume2, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type SpeechRecognition from "speech-recognition"
+// SpeechRecognition typing removed — use any for browser API refs
 import { useOrderManager } from "@/hooks/use-order-manager" // Fixed import path to use correct hook file
 
 interface VoiceInterfaceProps {
   onOrderUpdate: (order: any) => void
   orders: any[]
+  tableNumber?: number
 }
 
 type VoiceState = "idle" | "listening" | "processing" | "speaking"
@@ -21,8 +22,8 @@ export function VoiceInterface({ onOrderUpdate, orders }: VoiceInterfaceProps) {
   const [transcript, setTranscript] = useState("")
   const [response, setResponse] = useState("")
   const [isSupported, setIsSupported] = useState(false)
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
-  const synthRef = useRef<SpeechSynthesis | null>(null)
+  const recognitionRef = useRef<any | null>(null)
+  const synthRef = useRef<any | null>(null)
 
   const { addOrder } = useOrderManager()
 
@@ -47,7 +48,7 @@ export function VoiceInterface({ onOrderUpdate, orders }: VoiceInterfaceProps) {
           setTranscript("")
         }
 
-        recognitionRef.current.onresult = (event) => {
+  recognitionRef.current.onresult = (event: any) => {
           const current = event.resultIndex
           const transcript = event.results[current][0].transcript
           setTranscript(transcript)
@@ -57,7 +58,7 @@ export function VoiceInterface({ onOrderUpdate, orders }: VoiceInterfaceProps) {
           }
         }
 
-        recognitionRef.current.onerror = (event) => {
+  recognitionRef.current.onerror = (event: any) => {
           console.error("Speech recognition error:", event.error)
           setVoiceState("idle")
         }

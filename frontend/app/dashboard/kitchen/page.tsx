@@ -9,7 +9,6 @@ export default function DashboardKitchen() {
   const preparing = getOrdersByStatus('preparing')
   return (
     <div>
-      <h2 className="text-2xl font-semibold mb-4">Kitchen Display</h2>
       <KitchenDisplay orders={[...pending, ...preparing]} onStatusUpdate={updateOrderStatus} />
     </div>
   )

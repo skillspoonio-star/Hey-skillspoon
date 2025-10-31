@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -33,92 +33,163 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
   const [timeRange, setTimeRange] = useState<"today" | "week" | "month">("today")
   const [selectedMetric, setSelectedMetric] = useState<"revenue" | "orders" | "customers">("revenue")
 
-  // Calculate analytics data
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0)
-  const totalOrders = orders.length
-  const avgOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0
-  const voiceOrders = Math.floor(totalOrders * 0.72) // 72% voice orders
-  const uniqueCustomers = new Set(orders.map((o) => o.customerPhone)).size
+  const [analytics, setAnalytics] = useState<any | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [ordersData, setOrdersData] = useState<Order[] | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    const range = timeRange === 'today' ? '24h' : timeRange
+    const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+
+    // fetch analytics overview and recent orders in parallel. orders endpoint returns expanded item data.
+    Promise.all([
+      fetch(`${base}/api/analytics/overview?range=${range}`).then((r) => r.ok ? r.json() : null).catch(() => null),
+      fetch(`${base}/api/orders`).then((r) => r.ok ? r.json() : []).catch(() => []),
+    ])
+      .then(([analyticsRes, ordersRes]) => {
+        if (!mounted) return
+        if (analyticsRes) setAnalytics(analyticsRes)
+        if (Array.isArray(ordersRes)) setOrdersData(ordersRes)
+      })
+      .catch((err) => console.error('Failed to load analytics or orders', err))
+      .finally(() => mounted && setLoading(false))
+
+    return () => {
+      mounted = false
+    }
+  }, [timeRange])
+
+  // Calculate analytics data (use backend analytics when available; fall back to orders prop or fetched orders)
+  const sourceOrders = ordersData ?? orders
+  const totalRevenue = analytics && typeof analytics.totalRevenue !== 'undefined' ? analytics.totalRevenue : sourceOrders.reduce((sum, order) => sum + (order.total || 0), 0)
+  const totalOrders = analytics && typeof analytics.totalOrders !== 'undefined' ? analytics.totalOrders : sourceOrders.length
+  const avgOrderValue = analytics && typeof analytics.avgOrder !== 'undefined' ? Math.round(analytics.avgOrder || 0) : (totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0)
+  // voiceOrders: prefer analytics.voiceOrders, otherwise try to infer from orders (order.source==='voice' or order.isVoice)
+  const voiceOrders = analytics && typeof analytics.voiceOrders !== 'undefined' ? analytics.voiceOrders : sourceOrders.filter((o: any) => o.source === 'voice' || o.isVoice === true || o.orderSource === 'voice').length || 0
+  const uniqueCustomers = analytics && typeof analytics.uniqueCustomers !== 'undefined' ? analytics.uniqueCustomers : new Set(sourceOrders.map((o) => o.customerPhone)).size
 
   // Calculate growth metrics (mock data for demo)
   const revenueGrowth = 12.5
   const orderGrowth = 8.3
   const customerGrowth = 15.2
 
-  // Popular items analysis
-  const itemCounts = orders.reduce(
-    (acc, order) => {
-      order.items.forEach((item) => {
-        acc[item.name] = (acc[item.name] || 0) + item.quantity
+  // Helper to format hour numbers -> e.g. 13 -> "1 PM"
+  // Convert a UTC hour bucket (0-23) to a localized hour label in IST.
+  // We format the center of the bucket (hour:30) in 'Asia/Kolkata' so
+  // that buckets like UTC 11 (which map to 16:30-17:29 IST) display as '5 PM'.
+  const formatHourLabel = (h: number) => {
+    const hour = Number(h);
+    if (Number.isNaN(hour)) return String(h);
+    const date = new Date(Date.UTC(2020, 0, 1, hour, 30, 0)); // center of the UTC hour
+    return date.toLocaleTimeString(undefined, { hour: 'numeric', hour12: true, timeZone: 'Asia/Kolkata' });
+  }
+
+  const parseRangeStart = (range: string) => {
+    const now = new Date();
+    if (!range || range === '24h' || range === 'today') return new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    if (range === 'week') return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    if (range === 'month') return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    return new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  }
+
+  // Derived datasets (prefer analytics; fall back to orders fetched from /api/orders)
+  const ordersForAnalysis = (sourceOrders || []) as any[]
+
+  // hourly: prefer analytics.hourly (which returns 24 buckets), otherwise derive from orders
+  const hourlyData = analytics && analytics.hourly && Array.isArray(analytics.hourly)
+    ? analytics.hourly.map((h: any) => {
+        // backend uses hour like "9:00" — extract leading number
+        const raw = String(h.hour || '0');
+        const hourNum = parseInt(raw.split(':')[0], 10);
+        return { hour: formatHourLabel(hourNum), revenue: h.revenue || 0, orders: h.orders || 0, customers: h.customers || 0 }
       })
-      return acc
-    },
-    {} as Record<string, number>,
-  )
+    : (() => {
+        // derive hourly buckets from orders
+        const buckets: Record<number, { revenue: number; orders: number; customersSet: Set<string> }> = {};
+        for (let i = 0; i < 24; i++) buckets[i] = { revenue: 0, orders: 0, customersSet: new Set() };
+        for (const o of ordersForAnalysis) {
+          const d = new Date((o as any).timestamp || (o as any).createdAt || Date.now());
+          // Use UTC hour to match backend aggregation (Mongo $hour uses UTC by default)
+          const h = d.getUTCHours();
+          buckets[h].revenue += Number(o.total || 0);
+          buckets[h].orders += 1;
+          if (o.customerPhone) buckets[h].customersSet.add(String(o.customerPhone));
+        }
+        return Object.keys(buckets).map((k) => ({ hour: formatHourLabel(Number(k)), revenue: buckets[Number(k)].revenue, orders: buckets[Number(k)].orders, customers: buckets[Number(k)].customersSet.size }));
+      })()
 
-  const popularItems = Object.entries(itemCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 8)
-    .map(([name, count]) => ({ name, count, revenue: count * 250 })) // Estimated revenue per item
+  // weekly/daily trend: if analytics doesn't provide daily data, derive from orders
+  const weeklyData = (() => {
+    if (timeRange === 'today') return hourlyData;
+    // create map of day names (Mon..Sun) for last 7 days
+    const start = parseRangeStart(timeRange === 'month' ? 'month' : 'week');
+    const dayMap: Record<string, { revenue: number; orders: number; customersSet: Set<string> }> = {};
+    const dayLabels: string[] = [];
+    for (let i = 0; i < (timeRange === 'month' ? 30 : 7); i++) {
+      const d = new Date(start.getTime() + i * 24 * 60 * 60 * 1000);
+      // Use UTC weekday to align with server-side aggregation
+      const label = d.toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' });
+      dayLabels.push(label);
+      dayMap[label] = { revenue: 0, orders: 0, customersSet: new Set() };
+    }
+    for (const o of ordersForAnalysis) {
+      const t = new Date((o as any).timestamp || (o as any).createdAt || Date.now());
+      if (t < start) continue;
+      const label = t.toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' });
+      if (!dayMap[label]) continue;
+      dayMap[label].revenue += Number(o.total || 0);
+      dayMap[label].orders += 1;
+      if (o.customerPhone) dayMap[label].customersSet.add(String(o.customerPhone));
+    }
+    return dayLabels.map((l) => ({ day: l, revenue: dayMap[l].revenue, orders: dayMap[l].orders, customers: dayMap[l].customersSet.size }));
+  })()
 
-  // Revenue by hour with realistic data
-  const hourlyData = [
-    { hour: "9 AM", revenue: 450, orders: 3, customers: 8 },
-    { hour: "10 AM", revenue: 680, orders: 5, customers: 12 },
-    { hour: "11 AM", revenue: 920, orders: 7, customers: 18 },
-    { hour: "12 PM", revenue: 1850, orders: 12, customers: 28 },
-    { hour: "1 PM", revenue: 2400, orders: 16, customers: 35 },
-    { hour: "2 PM", revenue: 2100, orders: 14, customers: 32 },
-    { hour: "3 PM", revenue: 1200, orders: 8, customers: 20 },
-    { hour: "4 PM", revenue: 800, orders: 5, customers: 15 },
-    { hour: "5 PM", revenue: 1600, orders: 10, customers: 25 },
-    { hour: "6 PM", revenue: 2800, orders: 18, customers: 42 },
-    { hour: "7 PM", revenue: 3500, orders: 22, customers: 48 },
-    { hour: "8 PM", revenue: 3200, orders: 20, customers: 45 },
-    { hour: "9 PM", revenue: 2600, orders: 16, customers: 38 },
-    { hour: "10 PM", revenue: 1800, orders: 11, customers: 25 },
-  ]
+  // status distribution
+  const statusColors: Record<string, string> = { served: '#60b246', ready: '#fc8019', preparing: '#f97316', pending: '#e23744' };
+  const statusData = analytics && analytics.statusCounts
+    ? Object.entries(analytics.statusCounts).map(([name, value]) => ({ name, value, color: statusColors[name] || '#686b78' }))
+    : [
+        { name: 'Served', value: ordersForAnalysis.filter((o: any) => o.status === 'served').length, color: statusColors.served },
+        { name: 'Ready', value: ordersForAnalysis.filter((o: any) => o.status === 'ready').length, color: statusColors.ready },
+        { name: 'Preparing', value: ordersForAnalysis.filter((o: any) => o.status === 'preparing').length, color: statusColors.preparing },
+        { name: 'Pending', value: ordersForAnalysis.filter((o: any) => o.status === 'pending').length, color: statusColors.pending },
+      ]
 
-  // Weekly trend data
-  const weeklyData = [
-    { day: "Mon", revenue: 15200, orders: 85, customers: 180 },
-    { day: "Tue", revenue: 18400, orders: 102, customers: 220 },
-    { day: "Wed", revenue: 16800, orders: 94, customers: 195 },
-    { day: "Thu", revenue: 21200, orders: 118, customers: 250 },
-    { day: "Fri", revenue: 28500, orders: 156, customers: 320 },
-    { day: "Sat", revenue: 32100, orders: 175, customers: 380 },
-    { day: "Sun", revenue: 26800, orders: 148, customers: 295 },
-  ]
+  // payment methods
+  const paymentColors: string[] = ['#fc8019', '#60b246', '#e23744', '#686b78'];
+  const paymentData = analytics && analytics.paymentMethods
+    ? Object.entries(analytics.paymentMethods).map(([name, value], i) => ({ name, value, color: paymentColors[i % paymentColors.length] }))
+    : []
 
-  // Order status distribution
-  const statusData = [
-    { name: "Served", value: orders.filter((o) => o.status === "served").length, color: "#60b246" },
-    { name: "Ready", value: orders.filter((o) => o.status === "ready").length, color: "#fc8019" },
-    { name: "Preparing", value: orders.filter((o) => o.status === "preparing").length, color: "#f97316" },
-    { name: "Pending", value: orders.filter((o) => o.status === "pending").length, color: "#e23744" },
-  ]
+  // popular items
+  const popularItems = analytics && Array.isArray(analytics.popular) && analytics.popular.length
+    ? analytics.popular.map((p: any) => ({ name: p.name || `item-${p.itemId}`, count: p.quantity || 0, revenue: (p.price || 0) * (p.quantity || 0) }))
+    : (() => {
+        // derive from orders (orders endpoint expands item names)
+        const counts: Record<string, { count: number; price: number }> = {};
+        for (const o of ordersForAnalysis) {
+      for (const it of o.items || []) {
+        const item = it as any
+        const name = item.name || `item-${item.itemId}`;
+        counts[name] = counts[name] || { count: 0, price: item.price || 0 };
+        counts[name].count += Number(item.quantity || 0);
+        if (!counts[name].price && item.price) counts[name].price = item.price;
+          }
+        }
+        return Object.entries(counts).sort(([, a], [, b]) => b.count - a.count).slice(0, 8).map(([name, c]) => ({ name, count: c.count, revenue: c.count * (c.price || 0) }));
+      })()
 
-  // Payment method distribution
-  const paymentData = [
-    { name: "Digital Wallet", value: 45, color: "#fc8019" },
-    { name: "Card", value: 30, color: "#60b246" },
-    { name: "Cash", value: 20, color: "#e23744" },
-    { name: "UPI", value: 5, color: "#686b78" },
-  ]
-
-  // Order type distribution
   const orderTypeData = [
-    { name: "Voice Orders", value: voiceOrders, color: "#fc8019" },
-    { name: "Manual Orders", value: totalOrders - voiceOrders, color: "#60b246" },
+    { name: 'Voice Orders', value: voiceOrders, color: '#fc8019' },
+    { name: 'Manual Orders', value: Math.max(0, totalOrders - voiceOrders), color: '#60b246' },
   ]
 
-  // Peak hours analysis
-  const peakHours = hourlyData
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 3)
-    .map((hour) => hour.hour)
+  // Peak hours
+  const peakHours = (hourlyData || []).slice().sort((a: any, b: any) => b.revenue - a.revenue).slice(0, 3).map((h: any) => h.hour)
 
-  const currentData = timeRange === "today" ? hourlyData : weeklyData
+  const currentData = timeRange === 'today' ? hourlyData : weeklyData
 
   return (
     <div className="space-y-6">
@@ -442,7 +513,7 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {popularItems.map((item, index) => (
+                  {popularItems.map((item: any, index: number) => (
                     <div key={item.name} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <Badge variant="outline" className="w-8 h-8 rounded-full p-0 flex items-center justify-center">
@@ -475,8 +546,8 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {peakHours.map((hour, index) => {
-                    const hourData = hourlyData.find((h) => h.hour === hour)
+                  {peakHours.map((hour: string, index: number) => {
+                    const hourData = (hourlyData as any[]).find((h: any) => h.hour === hour)
                     return (
                       <div key={hour} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center gap-3">
@@ -568,7 +639,7 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
                     <p className="text-sm text-muted-foreground mb-2">
                       Increase staff during 7-8 PM peak hours to handle 22+ orders efficiently.
                     </p>
-                    <Badge variant="secondary" size="sm">
+                    <Badge variant="secondary" className="px-2 py-1 text-xs">
                       High Impact
                     </Badge>
                   </div>
@@ -578,7 +649,7 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
                     <p className="text-sm text-muted-foreground mb-2">
                       Create value combos to increase AOV and compete with declining individual item sales.
                     </p>
-                    <Badge variant="outline" size="sm">
+                    <Badge variant="outline" className="px-2 py-1 text-xs">
                       Medium Impact
                     </Badge>
                   </div>
@@ -588,7 +659,7 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
                     <p className="text-sm text-muted-foreground mb-2">
                       Offer small discounts for voice orders to push adoption beyond 75%.
                     </p>
-                    <Badge variant="outline" size="sm">
+                    <Badge variant="outline" className="px-2 py-1 text-xs">
                       Low Impact
                     </Badge>
                   </div>
@@ -598,7 +669,7 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
                     <p className="text-sm text-muted-foreground mb-2">
                       Consider variations of Chicken Biryani and Dal Makhani to capitalize on popularity.
                     </p>
-                    <Badge variant="secondary" size="sm">
+                    <Badge variant="secondary" className="px-2 py-1 text-xs">
                       High Impact
                     </Badge>
                   </div>

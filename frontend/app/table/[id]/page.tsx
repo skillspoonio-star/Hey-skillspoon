@@ -23,10 +23,38 @@ export default function TablePage() {
   const [showNotification, setShowNotification] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
+  
   useEffect(() => {
     if (tableNumber && !isNaN(tableNumber)) {
-      const loadedSession = sessionManager.getSession(tableNumber)
-      setSession(loadedSession)
+      const loadServerSession = async () => {
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+        try {
+          const res = await fetch(`${base}/api/sessions/table/${tableNumber}`)
+          if (res.ok) {
+            const s = await res.json()
+            // normalize server session shape to TableSession interface roughly
+            setSession({
+              sessionId: s.sessionId,
+              tableNumber: s.tableNumber,
+              customerName: s.customerName,
+              guestCount: s.guestCount || 0,
+              startTime: new Date(s.createdAt || Date.now()),
+              orders: (s.orders || []).map((o: any) => ({ id: o._id?.toString() || '', items: (o.items || []).map((it: any) => ({ name: it.name, quantity: it.quantity, price: it.price })), total: o.total, status: o.status || 'pending', timestamp: new Date(o.timestamp || o.createdAt || Date.now()) })),
+              totalAmount: s.payment?.total || 0,
+              status: s.active ? 'active' : 'completed',
+              phoneNumber: s.mobile || s.phoneNumber,
+            })
+          } else {
+            const loadedSession = sessionManager.getSession(tableNumber)
+            setSession(loadedSession)
+          }
+        } catch (e) {
+          const loadedSession = sessionManager.getSession(tableNumber)
+          setSession(loadedSession)
+        }
+      }
+
+      loadServerSession()
       setIsLoading(false)
 
       const unsubscribe = sessionManager.subscribe(tableNumber, (updatedSession) => {
@@ -38,6 +66,72 @@ export default function TablePage() {
       setIsLoading(false)
     }
   }, [tableNumber])
+
+  // serverAddOrder posts the current items to backend session API
+  const serverAddOrder = async (items: { name: string; quantity: number; price: number }[]) => {
+    if (!session) throw new Error('No active session')
+    const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+    try {
+      const res = await fetch(`${base}/api/sessions/${session.sessionId}/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items, total: items.reduce((s, it) => s + it.price * it.quantity, 0) }),
+      })
+      if (!res.ok) {
+        console.error('Failed to add order to session', await res.text())
+        return null
+      }
+      const data = await res.json()
+      // update session state with returned session
+      const s = data.session
+      setSession({
+        sessionId: s.sessionId,
+        tableNumber: s.tableNumber,
+        customerName: s.customerName,
+        guestCount: s.guestCount || 0,
+        startTime: new Date(s.createdAt || Date.now()),
+        orders: (s.orders || []).map((o: any) => ({ id: o._id?.toString() || '', items: (o.items || []).map((it: any) => ({ name: it.name, quantity: it.quantity, price: it.price })), total: o.total, status: o.status || 'pending', timestamp: new Date(o.timestamp || o.createdAt || Date.now()) })),
+        totalAmount: s.payment?.total || 0,
+        status: s.active ? 'active' : 'completed',
+        phoneNumber: s.mobile || s.phoneNumber,
+      })
+
+      return data
+    } catch (err) {
+      console.error('Failed to post order to server', err)
+      return null
+    }
+  }
+
+  // Helper to add an item to currentOrder; if same itemId/name exists, increment quantity
+  const addOrIncrementItem = (incoming: any) => {
+    const idKey = incoming.itemId ?? incoming.id ?? null
+    const nameKey = (incoming.name || incoming.item || '').toString()
+    const qty = Number(incoming.quantity || 1)
+    const price = Number(incoming.price || 0)
+
+    setCurrentOrder((prev) => {
+      // find by itemId first, then by name
+      const idx = prev.findIndex((p) => {
+        if (idKey != null && (p.itemId === idKey || p.id === idKey)) return true
+        const pn = (p.item || p.name || '').toString()
+        return pn === nameKey
+      })
+      if (idx === -1) {
+        const normalized = {
+          id: Date.now() + Math.floor(Math.random() * 1000),
+          item: nameKey,
+          name: nameKey,
+          itemId: idKey,
+          quantity: qty,
+          price: price,
+        }
+        return [...prev, normalized]
+      }
+      // merge
+      return prev.map((p, i) => i === idx ? { ...p, quantity: Number(p.quantity || 0) + qty, price: Number(p.price || price || 0) } : p)
+    })
+  }
 
   useEffect(() => {
     if (!session) return
@@ -172,14 +266,59 @@ export default function TablePage() {
       <main className="max-w-md mx-auto p-4">
         {currentView === "voice" && (
           <VoiceInterface
-            onOrderUpdate={(newOrder) => setCurrentOrder((prev) => [...prev, newOrder])}
+            onOrderUpdate={(newOrder) => addOrIncrementItem(newOrder)}
             orders={currentOrder}
             tableNumber={tableNumber}
           />
         )}
 
         {currentView === "menu" && (
-          <MenuBrowser onAddToOrder={(item) => setCurrentOrder((prev) => [...prev, item])} tableNumber={tableNumber} />
+          <MenuBrowser
+            onAddToOrder={(item) => {
+              // normalize and merge into currentOrder
+              const normalized = {
+                id: Date.now(),
+                item: item.name || item.item || item.name,
+                name: item.name || item.item || item.name,
+                itemId: (item as any).itemId || item.id,
+                quantity: item.quantity || 1,
+                price: Number(item.price || 0),
+              }
+              addOrIncrementItem(normalized)
+              // switch to order view so user sees the added item
+              // setCurrentView("order")
+            }}
+            tableNumber={tableNumber}
+            serverAddOrder={serverAddOrder}
+            currentOrder={currentOrder}
+            onChangeQuantity={(item: any, delta: number) => {
+              // increment
+              if (delta > 0) {
+                const normalized = {
+                  id: Date.now(),
+                  item: item.name || item.item || item.name,
+                  name: item.name || item.item || item.name,
+                  itemId: (item as any).itemId || item.id,
+                  quantity: delta,
+                  price: Number(item.price || 0),
+                }
+                addOrIncrementItem(normalized)
+                return
+              }
+
+              // decrement
+              setCurrentOrder((prev) => {
+                const idx = prev.findIndex((p) => Number(p.itemId) === Number(item.itemId))
+                if (idx === -1) return prev
+                const currentQty = Number(prev[idx].quantity || 0)
+                const newQty = currentQty + delta // delta is negative
+                if (newQty <= 0) {
+                  return prev.filter((_, i) => i !== idx)
+                }
+                return prev.map((p, i) => (i === idx ? { ...p, quantity: newQty } : p))
+              })
+            }}
+          />
         )}
 
         {currentView === "order" && (
@@ -188,6 +327,7 @@ export default function TablePage() {
             onUpdateCurrentOrder={setCurrentOrder}
             session={session}
             tableNumber={tableNumber}
+            serverAddOrder={serverAddOrder}
           />
         )}
       </main>
@@ -222,7 +362,7 @@ export default function TablePage() {
             <span className="text-xs">Order</span>
             {(currentOrder.length > 0 || (session && session.orders.length > 0)) && (
               <div className="absolute -top-1 -right-1 bg-accent text-accent-foreground rounded-full w-5 h-5 text-xs flex items-center justify-center">
-                {currentOrder.length + (session?.orders.length || 0)}
+                {currentOrder.length }
               </div>
             )}
           </Button>

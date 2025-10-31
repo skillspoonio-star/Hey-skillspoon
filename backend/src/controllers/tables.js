@@ -1,5 +1,6 @@
 const Table = require('../models/table');
 const Reservation = require('../models/reservation');
+const Session = require('../models/session');
 
 // Simple in-memory SSE clients list (dev only). For multi-instance deployments, use Redis pub/sub.
 const sseClients = new Set();
@@ -224,19 +225,42 @@ async function listAvailableTables(req, res) {
         } else {
             windowStart = new Date();
         }
+        const rmainTime=windowStart - new Date();
 
         const duration = (req.body && req.body.duration) ? Number(req.body.duration) : (req.query.duration ? Number(req.query.duration) : 60);
         if (!Number.isFinite(duration) || duration <= 0) return res.status(400).json({ error: 'Invalid duration' });
 
         const windowEnd = new Date(windowStart.getTime() + duration * 60 * 1000);
 
+        // Auto-correct tables that are marked occupied but have no active session.
+        try {
+            const occupied = await Table.find({ status: 'occupied' }).lean();
+            if (occupied && occupied.length) {
+                const nums = occupied.map((t) => t.number);
+                const active = await Session.find({ tableNumber: { $in: nums }, active: false}).lean();
+                const activeSet = new Set(active.map((s) => Number(s.tableNumber)));
+                for (const t of occupied) {
+                    if (activeSet.has(Number(t.number))) {
+                        // last session ended; mark table available
+                        try {
+                            await Table.findOneAndUpdate({ number: t.number }, { $set: { status: 'available', customerName: null, guestCount: null } });
+                        } catch (e) {
+                            // ignore per-table update errors
+                        }
+                    }
+                }
+            }
+            // console.log("occupied tables:- ",occupied);
+        } catch (e) {
+            console.error('Failed to reconcile occupied tables with sessions', e);
+        }
         let tables;
-        if (duration < 60) {
-            // short bookings: exclude currently occupied tables
-            tables = await Table.find({ status: 'available' }).lean();
-        } else {
-            // long bookings: ignore current status
+        if (rmainTime > 60) {
+            // long bookings: ignore  current status
             tables = await Table.find({}).lean();
+        } else {
+            // bookings: exclude currently occupied tables
+            tables = await Table.find({ status: 'available' }).lean();
         }
         const numbers = tables.map((t) => t.number);
         if (!numbers.length) return res.json([]);
@@ -269,21 +293,18 @@ async function listAvailableTables(req, res) {
                 }
             }
         }
-
         const available = tables
             .filter((t) => !reservedNumbers.has(t.number))
             .map((t) => ({ number: t.number, capacity: t.capacity, reservationPrice: t.reservationPrice || 0 }))
             .sort((a, b) => a.number - b.number);
         
-        // also broadcast availability snapshot (optional)
-        try {
-            broadcastTablesUpdate({ type: 'tables:availability', tables: available });
-        } catch (e) { }
         return res.json(available);
     } catch (err) {
         console.error(err);
         return res.status(500).json({ error: 'Server error' });
     }
 }
+
+
 
 module.exports = { listTables, streamTables, getTable, createTable, updateTable, deleteTable, addActivity, listAvailableTables };

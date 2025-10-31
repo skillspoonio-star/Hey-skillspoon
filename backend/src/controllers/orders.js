@@ -3,6 +3,8 @@ const Order = require('../models/order');
 const MenuItem = require('../models/menuItem');
 const Table = require('../models/table');
 const Reservation = require('../models/reservation');
+const Session = require('../models/session');
+const crypto = require('crypto');
 
 function validateCreatePayload(data) {
   if (!data) return 'Missing body';
@@ -179,21 +181,42 @@ async function createOrder(req, res) {
     }
 
 
-    // If this is a dine-in order and tableNumber provided, check table availability and upcoming reservations
+    // For dine-in orders, ensure there's a session to attach to (reuse active session if present,
+    // otherwise create a new session for the customer and table). Also check reservations.
+    let sessionToAttach = null;
     if (data.tableNumber && data.orderType === 'dine-in') {
       const table = await Table.findOne({ number: data.tableNumber }).lean();
       if (!table) return res.status(400).json({ error: 'Table not found' });
 
-      if (table.status && table.status !== 'available') {
-        return res.status(409).json({ error: 'Table is not available', status: table.status });
+      // Check for an active session for this table
+      const activeSession = await Session.findOne({ tableNumber: Number(data.tableNumber), active: true }).lean();
+      if (activeSession) {
+        // If customerPhone provided and differs from active session mobile, block
+        if (data.customerPhone && activeSession.mobile && String(data.customerPhone) !== String(activeSession.mobile)) {
+          return res.status(409).json({ error: 'Table is already occupied by another customer' });
+        }
+        // attach to existing active session
+        sessionToAttach = activeSession;
+      } else {
+        // No active session: create a new session for this dine-in order
+        const newSessionId = `S_${crypto.randomBytes(4).toString('hex')}`;
+        const newSession = new Session({ sessionId: newSessionId, tableNumber: Number(data.tableNumber), customerName: data.customerName || null, mobile: data.customerPhone || null, payment: { total: 0 }, active: true });
+        await newSession.save();
+        // mark table occupied and append session id
+        try {
+          await Table.findOneAndUpdate({ number: Number(data.tableNumber) }, { $set: { status: 'occupied', customerName: data.customerName || null, guestCount: data.guests || null }, $addToSet: { sessionIds: newSessionId } });
+        } catch (uerr) {
+          console.error('Failed to update table after creating session from order', uerr);
+        }
+        sessionToAttach = newSession.toObject ? newSession.toObject() : newSession;
       }
 
       const orderTime = data.timestamp ? new Date(data.timestamp) : new Date();
       const windowEnd = new Date(orderTime.getTime() + 60 * 60 * 1000); // next 1 hour
 
       // fetch reservations for this table and check if any fall within [orderTime, windowEnd]
-  // support both single tableNumber and multiple tableNumbers
-  const reservations = await Reservation.find({ $or: [{ tableNumber: data.tableNumber }, { tableNumbers: data.tableNumber }] }).lean();
+      // support both single tableNumber and multiple tableNumbers
+      const reservations = await Reservation.find({ $or: [{ tableNumber: data.tableNumber }, { tableNumbers: data.tableNumber }] }).lean();
       for (const r of reservations) {
         if (!r.date || !r.time) continue;
         const rt = new Date(`${r.date}T${r.time}`);
@@ -223,10 +246,15 @@ async function createOrder(req, res) {
     });
     await order.save();
     // no-op: counters feature removed per request
-    // If order created for a dine-in table, mark the table as occupied and attach sessionId
-    if (data.tableNumber && data.orderType === 'dine-in') {
+    // If this is a dine-in order and we have a session to attach, attach the order to that session
+    if (data.tableNumber && data.orderType === 'dine-in' && sessionToAttach) {
       try {
-        await Table.findOneAndUpdate({ number: data.tableNumber }, { $set: { status: 'occupied', sessionId: order._id.toString(), customerName: data.customerName || null, guestCount: data.guests || null } });
+        await Session.findOneAndUpdate({ sessionId: sessionToAttach.sessionId }, { $push: { orders: order._id }, $inc: { 'payment.total': Number(order.total) || 0 } });
+      } catch (e) {
+        console.error('Failed to attach order to session', e);
+      }
+      try {
+        await Table.findOneAndUpdate({ number: data.tableNumber }, { $push: { orderIds: order._id }, $set: { status: 'occupied' }, $addToSet: { sessionIds: sessionToAttach.sessionId } });
       } catch (uerr) {
         console.error('Failed to update table status after order create', uerr);
       }

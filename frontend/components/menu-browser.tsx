@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Plus, Search, Star, Clock, Flame } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { fetchMenuItems } from "@/lib/menu-data"
 
 interface MenuItem {
   id: number
@@ -25,99 +26,55 @@ interface MenuItem {
 
 interface MenuBrowserProps {
   onAddToOrder: (item: any) => void
+  tableNumber?: number
+  serverAddOrder?: (items: { name: string; quantity: number; price: number }[]) => Promise<any | null>
+  currentOrder?: any[]
+  onChangeQuantity?: (item: any, delta: number) => void
 }
 
-const menuData: MenuItem[] = [
-  {
-    id: 1,
-    name: "Butter Naan",
-    description: "Soft, fluffy bread brushed with butter",
-    price: 45,
-    category: "Breads",
-    image: "/butter-naan.png",
-    rating: 4.5,
-    prepTime: "10 min",
-    isSpicy: false,
-    isVeg: true,
-    isAvailable: true,
-    isPopular: true,
-  },
-  {
-    id: 2,
-    name: "Paneer Tikka",
-    description: "Grilled cottage cheese with aromatic spices",
-    price: 280,
-    category: "Starters",
-    image: "/paneer-tikka-grilled.jpg",
-    rating: 4.7,
-    prepTime: "15 min",
-    isSpicy: true,
-    isVeg: true,
-    isAvailable: true,
-    isPopular: true,
-  },
-  {
-    id: 3,
-    name: "Mango Lassi",
-    description: "Refreshing yogurt drink with fresh mango",
-    price: 120,
-    category: "Beverages",
-    image: "/mango-lassi.png",
-    rating: 4.3,
-    prepTime: "5 min",
-    isSpicy: false,
-    isVeg: true,
-    isAvailable: true,
-  },
-  {
-    id: 4,
-    name: "Chicken Biryani",
-    description: "Aromatic basmati rice with tender chicken",
-    price: 350,
-    category: "Main Course",
-    image: "/chicken-biryani-rice.jpg",
-    rating: 4.8,
-    prepTime: "25 min",
-    isSpicy: true,
-    isVeg: false,
-    isAvailable: true,
-    isPopular: true,
-  },
-  {
-    id: 5,
-    name: "Dal Makhani",
-    description: "Creamy black lentils slow-cooked with spices",
-    price: 220,
-    category: "Main Course",
-    image: "/dal-makhani-curry.jpg",
-    rating: 4.4,
-    prepTime: "20 min",
-    isSpicy: false,
-    isVeg: true,
-    isAvailable: true,
-  },
-  {
-    id: 6,
-    name: "Gulab Jamun",
-    description: "Sweet milk dumplings in sugar syrup",
-    price: 80,
-    category: "Desserts",
-    image: "/gulab-jamun-dessert.png",
-    rating: 4.2,
-    prepTime: "5 min",
-    isSpicy: false,
-    isVeg: true,
-    isAvailable: false,
-  },
-]
+const menuData: MenuItem[] = []
 
 const categories = ["All", "Starters", "Main Course", "Breads", "Beverages", "Desserts"]
 
-export function MenuBrowser({ onAddToOrder }: MenuBrowserProps) {
+export function MenuBrowser({ onAddToOrder, serverAddOrder, currentOrder = [], onChangeQuantity }: MenuBrowserProps) {
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [searchQuery, setSearchQuery] = useState("")
+  const [items, setItems] = useState<MenuItem[]>(menuData)
 
-  const filteredItems = menuData.filter((item) => {
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      try {
+        const fetched = await fetchMenuItems()
+        if (!mounted) return
+        // map fetched items to local MenuItem shape
+        const mapped: MenuItem[] = fetched.map((it: any) => ({
+          id: Number(it.id),
+          name: it.name || "",
+          description: it.description || "",
+          price: Number(it.price || 0),
+          category: it.category || "",
+          image: it.image || "",
+          rating: Number(it.rating || 4),
+          prepTime: it.preparationTime || it.prepTime || "15 min",
+          isSpicy: Boolean(it.isSpicy),
+          isVeg: Boolean(it.isVeg),
+          isAvailable: typeof it.isAvailable === 'boolean' ? it.isAvailable : true,
+          isPopular: Boolean(it.isPopular),
+        }))
+        setItems(mapped)
+      } catch (e) {
+        // fallback to local menuData
+        if (mounted) setItems(menuData)
+      }
+    }
+    load()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const filteredItems = items.filter((item) => {
     const matchesCategory = selectedCategory === "All" || item.category === selectedCategory
     const matchesSearch =
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -125,15 +82,18 @@ export function MenuBrowser({ onAddToOrder }: MenuBrowserProps) {
     return matchesCategory && matchesSearch
   })
 
-  const handleAddToOrder = (item: MenuItem) => {
+  const handleAddToOrder = async (item: MenuItem) => {
     if (!item.isAvailable) return
+  const single = { itemId: item.id, name: item.name, quantity: 1, price: item.price }
+    // If parent provided an inline quantity setter, use it so Menu shows updated qty without switching views
+    if (onChangeQuantity) {
+      onChangeQuantity(single, 1)
+      return
+    }
 
-    onAddToOrder({
-      id: Date.now(),
-      item: item.name,
-      quantity: 1,
-      price: item.price,
-    })
+    // Always add to the client's current order first so users can compose multi-item orders
+    // include itemId so server payloads later have ids
+    onAddToOrder({ id: Date.now(), item: item.name, itemId: item.id, quantity: 1, price: item.price })
   }
 
   return (
@@ -168,13 +128,13 @@ export function MenuBrowser({ onAddToOrder }: MenuBrowserProps) {
       {selectedCategory === "All" && (
         <div>
           <h3 className="font-semibold mb-3 text-lg">Popular Items</h3>
-          <div className="grid gap-4">
-            {menuData
-              .filter((item) => item.isPopular)
-              .map((item) => (
-                <MenuItemCard key={item.id} item={item} onAddToOrder={handleAddToOrder} />
-              ))}
-          </div>
+              <div className="grid gap-4">
+                {items
+                  .filter((item) => item.isPopular)
+                  .map((item) => (
+                    <MenuItemCard key={item.id} item={item} onAddToOrder={handleAddToOrder} currentOrder={currentOrder} onChangeQuantity={onChangeQuantity} />
+                  ))}
+              </div>
         </div>
       )}
 
@@ -185,7 +145,7 @@ export function MenuBrowser({ onAddToOrder }: MenuBrowserProps) {
           {filteredItems
             .filter((item) => (selectedCategory === "All" ? !item.isPopular : true))
             .map((item) => (
-              <MenuItemCard key={item.id} item={item} onAddToOrder={handleAddToOrder} />
+              <MenuItemCard key={item.id} item={item} onAddToOrder={handleAddToOrder} currentOrder={currentOrder} onChangeQuantity={onChangeQuantity} />
             ))}
         </div>
       </div>
@@ -201,7 +161,20 @@ export function MenuBrowser({ onAddToOrder }: MenuBrowserProps) {
   )
 }
 
-function MenuItemCard({ item, onAddToOrder }: { item: MenuItem; onAddToOrder: (item: MenuItem) => void }) {
+function MenuItemCard({
+  item,
+  onAddToOrder,
+  currentOrder = [],
+  onChangeQuantity,
+}: {
+  item: MenuItem
+  onAddToOrder: (item: MenuItem) => void
+  currentOrder?: any[]
+  onChangeQuantity?: (item: any, delta: number) => void
+}) {
+  const existing = currentOrder.find((o) => Number(o.itemId) === Number(item.id))
+  const qty = existing ? Number(existing.quantity || 0) : 0
+
   return (
     <Card className={cn("overflow-hidden", !item.isAvailable && "opacity-60")}>
       <CardContent className="p-0">
@@ -258,16 +231,40 @@ function MenuItemCard({ item, onAddToOrder }: { item: MenuItem; onAddToOrder: (i
                 >
                   Reviews
                 </Button>
-                <Button size="sm" onClick={() => onAddToOrder(item)} disabled={!item.isAvailable} className="h-8">
-                  {item.isAvailable ? (
-                    <>
-                      <Plus className="w-3 h-3 mr-1" />
-                      Add
-                    </>
-                  ) : (
-                    "Unavailable"
-                  )}
-                </Button>
+
+                {onChangeQuantity && qty ? (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-8 h-8 p-0 pointer"
+                      onClick={() => onChangeQuantity({ itemId: item.id, name: item.name, price: item.price }, -1)}
+                      disabled={qty <= 0}
+                    >
+                      -
+                    </Button>
+                    <div className="min-w-[24px] text-center">{qty}</div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-8 h-8 p-0"
+                      onClick={() => onChangeQuantity({ itemId: item.id, name: item.name, price: item.price }, 1)}
+                    >
+                      +
+                    </Button>
+                  </div>
+                ) : (
+                  <Button size="sm" onClick={() => onAddToOrder(item)} disabled={!item.isAvailable} className="h-8">
+                    {item.isAvailable ? (
+                      <>
+                        <Plus className="w-3 h-3 mr-1" />
+                        Add
+                      </>
+                    ) : (
+                      "Unavailable"
+                    )}
+                  </Button>
+                )}
               </div>
             </div>
           </div>

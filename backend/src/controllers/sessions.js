@@ -22,9 +22,9 @@ async function createSession(req, res) {
     const s = new Session({ sessionId, tableNumber: Number(tableNumber), customerName: customerName || null, mobile: mobile || null, payment: payment || undefined, active: true });
     await s.save();
 
-    // mark table as occupied and attach sessionId
+    // mark table as occupied and append sessionId to sessionIds history
     try {
-      await Table.findOneAndUpdate({ number: Number(tableNumber) }, { $set: { status: 'occupied', sessionId: sessionId, customerName: customerName || null } });
+      await Table.findOneAndUpdate({ number: Number(tableNumber) }, { $set: { status: 'occupied', customerName: customerName || null }, $addToSet: { sessionIds: sessionId } });
     } catch (uerr) {
       console.error('Failed to update table after creating session', uerr);
     }
@@ -41,7 +41,7 @@ async function getSessionById(req, res) {
     const id = req.params.id;
     // allow lookup by sessionId or Mongo _id
     const query = mongoose.Types.ObjectId.isValid(id) ? { $or: [{ _id: id }, { sessionId: id }] } : { sessionId: id };
-    const s = await Session.findOne(query).populate('orders').lean();
+  const s = await Session.findOne(query).populate({ path: 'orders', match: { paymentStatus: { $ne: 'paid' } } }).lean();
     if (!s) return res.status(404).json({ error: 'Session not found' });
     return res.json(s);
   } catch (err) {
@@ -54,11 +54,11 @@ async function getSessionByTable(req, res) {
   try {
     const number = Number(req.params.number);
     if (Number.isNaN(number)) return res.status(400).json({ error: 'Invalid table number' });
-    const s = await Session.findOne({ tableNumber: number, active: true }).populate('orders').lean();
+  const s = await Session.findOne({ tableNumber: number, active: true }).populate({ path: 'orders', match: { paymentStatus: { $ne: 'paid' } } }).lean();
     if (!s) return res.status(404).json({ error: 'Active session not found for table' });
     return res.json(s);
   } catch (err) {
-    console.error(err);
+    console.error(err); 
     return res.status(500).json({ error: 'Server error' });
   }
 }
@@ -128,9 +128,9 @@ async function addOrderToSession(req, res) {
     const inc = Number(order.total) || 0;
     const updated = await Session.findOneAndUpdate(query, { $push: { orders: order._id }, $inc: { 'payment.total': inc } }, { new: true }).lean();
 
-    // Also attach order id to Table.orderIds for quick reference
+    // Also attach order id to Table.orderIds for quick reference and ensure sessionId history contains this session
     try {
-      await Table.findOneAndUpdate({ number: session.tableNumber }, { $push: { orderIds: order._id }, $set: { status: 'occupied', sessionId: session.sessionId } });
+      await Table.findOneAndUpdate({ number: session.tableNumber }, { $push: { orderIds: order._id }, $set: { status: 'occupied' }, $addToSet: { sessionIds: session.sessionId } });
     } catch (e) {
       console.error('Failed to update table with order id', e);
     }
@@ -151,7 +151,8 @@ async function endSession(req, res) {
     if (!session) return res.status(404).json({ error: 'Session not found' });
 
     try {
-      await Table.findOneAndUpdate({ number: session.tableNumber }, { $set: { sessionId: null, status: 'cleaning' } });
+      // Keep sessionIds history, but clear live customer info and mark table cleaning
+      await Table.findOneAndUpdate({ number: session.tableNumber }, { $set: { status: 'cleaning', customerName: null, guestCount: null } });
     } catch (e) {
       console.error('Failed to update table after ending session', e);
     }
