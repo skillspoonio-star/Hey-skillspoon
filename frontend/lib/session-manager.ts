@@ -3,9 +3,8 @@
 export interface SessionOrder {
   id: string
   items: Array<{
-    name: string
+    itemId: number
     quantity: number
-    price: number
   }>
   total: number
   status: "pending" | "preparing" | "ready" | "served"
@@ -58,7 +57,7 @@ class SessionManager {
   // Add order to existing session
   addOrderToSession(
     tableNumber: number,
-    items: Array<{ name: string; quantity: number; price: number }>,
+    items: Array<{ itemId: number; quantity: number; price: number }>,
   ): SessionOrder | null {
     const session = this.getSession(tableNumber)
     if (!session) return null

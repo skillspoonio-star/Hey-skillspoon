@@ -50,7 +50,7 @@ export function TableAssignmentPage() {
           amount: t.amount || undefined,
           sessionId: t.sessionId || undefined,
         }))
-        
+        console.log('Fetched tables with sessions:', normalized[8].sessionId)
         setTables(normalized)
         setError(null)
       } catch (err: any) {

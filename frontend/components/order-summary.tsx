@@ -16,7 +16,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { Plus, Minus, Trash2, IndianRupee, CheckCircle, AlertTriangle, QrCode, Receipt } from "lucide-react"
 import { realTimeSync } from "@/lib/real-time-sync"
-import { menuItems } from "@/lib/menu-data"
+import { fetchMenuItems } from "@/lib/menu-data"
 import { sessionManager, type TableSession } from "@/lib/session-manager"
 
 type Line = {
@@ -32,11 +32,13 @@ export function OrderSummary({
   onUpdateCurrentOrder,
   session,
   tableNumber,
+  serverAddOrder,
 }: {
   currentOrder: Line[]
   onUpdateCurrentOrder: (next: Line[]) => void
   session: TableSession | null
   tableNumber: number
+  serverAddOrder?: (items: { name: string; quantity: number; price: number }[]) => Promise<{ orderId: any; session: any } | null>
 }) {
   const [paymentCompleted, setPaymentCompleted] = useState(false)
   const [showThankYou, setShowThankYou] = useState(false)
@@ -48,23 +50,92 @@ export function OrderSummary({
   const currentSubtotal = useMemo(() => currentOrder.reduce((s, l) => s + l.price * l.quantity, 0), [currentOrder])
 
   const previousOrders = useMemo(() => session?.orders || [], [session])
+  const [expandedPreviousOrders, setExpandedPreviousOrders] = useState<any[] | null>(null)
+
+  // Provide a synchronous view of previous orders while async expansion is pending.
+  const renderPreviousOrders = useMemo(() => {
+    if (expandedPreviousOrders !== null) return expandedPreviousOrders
+    // fallback: derive item names/prices from order.total and item quantities when possible
+    return (previousOrders || []).map((o: any) => {
+      const total = Number(o.total || o.subtotal || 0)
+      const totalQty = (o.items || []).reduce((s: number, it: any) => s + Number(it.quantity || 0), 0) || 0
+      const fallbackUnit = totalQty > 0 ? Math.round(total / totalQty) : 0
+      return {
+        ...o,
+        items: (o.items || []).map((it: any) => ({
+          name: it.name || `item-${it.itemId}`,
+          quantity: Number(it.quantity || 0),
+          price: typeof it.price !== 'undefined' && it.price !== null ? Number(it.price) : fallbackUnit,
+        })),
+      }
+    })
+  }, [expandedPreviousOrders, previousOrders])
+
+  // Expand previousOrders' item ids into { name, price, quantity } using menu data so UI shows correct prices
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      if (!previousOrders || previousOrders.length === 0) {
+        if (mounted) setExpandedPreviousOrders([])
+        return
+      }
+      try {
+        console.log(session?.orders);
+        // collect all itemIds
+        const ids = new Set<number>()
+        for (const o of previousOrders) {
+          for (const it of o.items || []) {
+            const ai = it as any
+            if (typeof ai.itemId !== 'undefined') ids.add(Number(ai.itemId))
+          }
+        }
+        if (ids.size === 0) {
+          // nothing to expand
+          if (mounted) setExpandedPreviousOrders(previousOrders as any)
+          return
+        }
+        const menu = await fetchMenuItems()
+        const menuById = new Map(menu.map((m: any) => [Number(m.id), m]))
+        const expanded = (previousOrders || []).map((o: any) => {
+          // compute fallback unit price from order total if menu price not available
+          const orderTotal = Number(o.total || o.subtotal || 0)
+          const totalQty = (o.items || []).reduce((s: number, it: any) => s + Number(it.quantity || 0), 0) || 0
+          const fallbackUnit = totalQty > 0 ? Math.round(orderTotal / totalQty) : 0
+
+          return {
+            ...o,
+            items: (o.items || []).map((it: any) => {
+              const ai = it as any
+              const mi = menuById.get(Number(ai.itemId))
+              const unitPrice = mi ? Number(mi.price) : (typeof ai.price !== 'undefined' && ai.price !== null ? Number(ai.price) : fallbackUnit)
+              return {
+                name: mi ? mi.name : (ai.name || `item-${ai.itemId}`),
+                price: Number.isFinite(unitPrice) ? unitPrice : 0,
+                quantity: Number(ai.quantity || 0),
+              }
+            }),
+          }
+        })
+        if (mounted) setExpandedPreviousOrders(expanded)
+      } catch (e) {
+        console.warn('Failed to fetch menu items for previous orders expansion', e)
+        if (mounted) setExpandedPreviousOrders(previousOrders as any)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [previousOrders])
 
   const sessionTotal = useMemo(() => session?.totalAmount || 0, [session])
 
   const grandTotal = sessionTotal + currentSubtotal
 
-  const purchasedIds = useMemo(() => {
-    const allOrders = [...previousOrders.flatMap((o) => o.items), ...currentOrder]
-    const names = allOrders.map((o) => (o.item || o.name || "").toString())
-    const ids = names
-      .map((n) => menuItems.find((m) => m.name.toLowerCase() === n.toLowerCase())?.id)
-      .filter((x): x is number => typeof x === "number")
-    return Array.from(new Set(ids))
-  }, [previousOrders, currentOrder])
+  // we store purchased names for lightweight client telemetry; ids require a menu lookup
+  const purchasedIds: number[] = []
 
   const purchasedNames = useMemo(() => {
     const allOrders = [...previousOrders.flatMap((o) => o.items), ...currentOrder]
-    const names = allOrders.map((o) => (o.item || o.name || "").toString()).filter(Boolean)
+    const names = (allOrders as any[]).map((o) => ((o && ((o as any).item || (o as any).name)) || "").toString()).filter(Boolean)
     return Array.from(new Set(names))
   }, [previousOrders, currentOrder])
 
@@ -80,10 +151,6 @@ export function OrderSummary({
           const prevNames = JSON.parse(localStorage.getItem("purchasedItemNames") || "[]")
           const mergedNames = Array.from(new Set([...(prevNames as string[]), ...purchasedNames]))
           localStorage.setItem("purchasedItemNames", JSON.stringify(mergedNames))
-
-          const prevIds = JSON.parse(localStorage.getItem("purchasedItemIds") || "[]")
-          const mergedIds = Array.from(new Set([...(prevIds as number[]), ...purchasedIds]))
-          localStorage.setItem("purchasedItemIds", JSON.stringify(mergedIds))
         } catch (e) {
           // no-op
         }
@@ -101,17 +168,69 @@ export function OrderSummary({
   const remove = (idx: number) => onUpdateCurrentOrder(currentOrder.filter((_, i) => i !== idx))
   const clear = () => onUpdateCurrentOrder([])
 
-  const submitCurrentOrder = () => {
+  const submitCurrentOrder = async () => {
     if (currentOrder.length === 0) return
 
-    const items = currentOrder.map((item) => ({
+    // Build items payload including itemId (required by backend). Try to use item.itemId if present,
+    // otherwise attempt to resolve by name via the menu API.
+    let items = currentOrder.map((item) => ({
       name: (item.item || item.name || "").toString(),
       quantity: item.quantity,
       price: item.price,
+      itemId: (item as any).itemId as number | undefined,
     }))
 
-    sessionManager.addOrderToSession(tableNumber, items)
-    onUpdateCurrentOrder([]) // Clear current order after submitting
+    // If some items lack itemId, try to resolve them by fetching menu items
+    const missing = items.filter((it) => typeof it.itemId === "undefined")
+    if (missing.length > 0) {
+      try {
+        const menu = await fetchMenuItems()
+        const map = new Map<string, number>()
+        for (const m of menu) {
+          map.set((m.name || "").toLowerCase(), Number(m.id))
+        }
+        items = items.map((it) => {
+          if (typeof it.itemId === "undefined") {
+            const id = map.get((it.name || "").toLowerCase())
+            if (typeof id !== "undefined") return { ...it, itemId: id }
+          }
+          return it
+        })
+      } catch (err) {
+        console.warn('Failed to fetch menu items to resolve itemId:', err)
+      }
+    }
+
+    // If still missing itemIds, fallback to client-side session manager and abort server submit
+    const stillMissing = items.filter((it) => typeof it.itemId === "undefined")
+    if (stillMissing.length > 0) {
+      console.error('Cannot submit to server: some items missing itemId', stillMissing)
+      // Add locally instead
+      sessionManager.addOrderToSession(tableNumber, items.map((it) => ({ itemId: it.itemId, quantity: it.quantity, price: it.price })))
+      onUpdateCurrentOrder([])
+      return
+    }
+
+    // If a server add function is provided, use it; otherwise fallback to local sessionManager
+    if (typeof (OrderSummary as any).serverAddOrder === "undefined" && typeof serverAddOrder === "undefined") {
+      sessionManager.addOrderToSession(tableNumber, items)
+      onUpdateCurrentOrder([])
+      return
+    }
+
+    try {
+      if (serverAddOrder) {
+        const res = await serverAddOrder(items)
+        if (res && res.session) {
+          // parent page should update session state via closure when serverAddOrder is provided
+        }
+      } else {
+        sessionManager.addOrderToSession(tableNumber, items)
+      }
+      onUpdateCurrentOrder([])
+    } catch (err) {
+      console.error('Failed to submit order to server', err)
+    }
   }
 
   const requestBill = () => {
@@ -128,7 +247,7 @@ export function OrderSummary({
       customerPhone: session.phoneNumber || "",
       total: grandTotal,
       items: [
-        ...previousOrders.flatMap((o) => o.items),
+        ...((expandedPreviousOrders || previousOrders || []).flatMap((o: any) => o.items)),
         ...currentOrder.map((l) => ({
           name: (l.item || l.name || "").toString(),
           quantity: l.quantity,
@@ -198,15 +317,15 @@ export function OrderSummary({
 
             <div className="border-t pt-4 space-y-3">
               <h4 className="font-semibold">All Orders</h4>
-              {previousOrders.map((order, idx) => (
+              {renderPreviousOrders.map((order: any, idx: number) => (
                 <div key={order.id} className="space-y-2">
                   <div className="text-xs text-muted-foreground">Order #{idx + 1}</div>
-                  {order.items.map((item, itemIdx) => (
+                  {order.items.map((item: any, itemIdx: number) => (
                     <div key={itemIdx} className="flex justify-between text-sm">
                       <span>
                         {item.quantity}x {item.name}
                       </span>
-                      <span>₹{item.price * item.quantity}</span>
+                      <span>₹{(Number(item.price) || 0) * Number(item.quantity || 0)}</span>
                     </div>
                   ))}
                 </div>
@@ -305,7 +424,7 @@ export function OrderSummary({
             <CardTitle>Previous Orders</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {previousOrders.map((order, idx) => (
+              {renderPreviousOrders.map((order, idx) => (
               <div key={order.id} className="border rounded-lg p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Order #{idx + 1}</span>
@@ -323,7 +442,7 @@ export function OrderSummary({
                     {order.status}
                   </Badge>
                 </div>
-                {order.items.map((item, itemIdx) => (
+                {order.items.map((item: any, itemIdx: number) => (
                   <div key={itemIdx} className="flex justify-between text-sm">
                     <span>
                       {item.quantity}x {item.name}
@@ -407,14 +526,14 @@ export function OrderSummary({
               <span className="font-medium">{previousOrders.length}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Session Total</span>
+              <span className="text-sm text-muted-foreground">Previous total</span>
               <span className="font-semibold flex items-center gap-1">
                 <IndianRupee className="w-4 h-4" /> {sessionTotal}
               </span>
             </div>
             {currentOrder.length > 0 && (
               <div className="flex justify-between text-amber-600">
-                <span className="text-sm">+ Pending Order</span>
+                <span className="text-sm">+ New Order</span>
                 <span className="font-medium">₹{currentSubtotal}</span>
               </div>
             )}

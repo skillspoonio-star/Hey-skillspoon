@@ -13,6 +13,7 @@ const menuItemsRouter = require('./routes/menuItems');
   const sessionsRouter = require('./routes/sessions');
   const deliveriesRouter = require('./routes/deliveries');
   const orderCountRouter = require('./routes/orderCount');
+  const analyticsRouter = require('./routes/analytics');
 
 function createApp() {
   const app = express();
@@ -49,6 +50,9 @@ function createApp() {
 
   // Order counts
   app.use('/api/order-count', orderCountRouter);
+
+  // Analytics
+  app.use('/api/analytics', analyticsRouter);
 
 
   app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

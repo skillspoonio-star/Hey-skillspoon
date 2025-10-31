@@ -231,7 +231,7 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
   return (
     <div className="space-y-6">
       {/* Kitchen Header */}
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex items-start  justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Kitchen Display System</h2>
           <p className="text-muted-foreground">Real-time order management for kitchen staff</p>
