@@ -18,7 +18,12 @@ export class SMSService {
   // In a real application, this would integrate with an SMS API like Twilio, AWS SNS, etc.
   async sendBill(billData: BillData): Promise<boolean> {
     try {
-      
+      // Validate phone number
+      const cleanPhone = billData.phoneNumber.replace(/\D/g, '');
+      if (cleanPhone.length !== 10) {
+        throw new Error('Invalid phone number: must be exactly 10 digits');
+      }
+      billData.phoneNumber = cleanPhone;
 
       // Simulate SMS sending delay
       await new Promise((resolve) => setTimeout(resolve, 1500))

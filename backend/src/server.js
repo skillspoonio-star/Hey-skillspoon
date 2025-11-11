@@ -14,6 +14,7 @@ const menuItemsRouter = require('./routes/menuItems');
   const deliveriesRouter = require('./routes/deliveries');
   const orderCountRouter = require('./routes/orderCount');
   const analyticsRouter = require('./routes/analytics');
+  const razorpayRouter = require('./routes/razorpay');
 
 function createApp() {
   const app = express();
@@ -54,13 +55,15 @@ function createApp() {
   // Analytics
   app.use('/api/analytics', analyticsRouter);
 
+  // payment gateway
+  app.use('/api/razorpay', razorpayRouter);
 
   app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
   return app;
 }
 
-async function start(port = process.env.PORT || 3001) {
+async function start(port = process.env.PORT) {
   await connectDB();
   const app = createApp();
   return app.listen(port, () => console.log(`Server running on port ${port}`));

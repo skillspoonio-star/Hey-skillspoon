@@ -145,8 +145,6 @@ async function createOrder(req, res) {
   if (errMsg) return res.status(400).json({ error: errMsg });
 
   try {
-    // no client-provided numeric id; Mongo will create _id
-    // compute total from MenuItem prices
     const itemIds = data.items.map((i) => i.itemId);
     const menuItems = await MenuItem.find({ id: { $in: itemIds } }).lean();
     const menuById = new Map(menuItems.map((m) => [m.id, m]));
@@ -154,7 +152,6 @@ async function createOrder(req, res) {
     let calcTotal = 0;
     for (const it of data.items) {
       const mi = menuById.get(it.itemId);
-      // if menu item exists but is not available, reject
       if (mi && mi.isAvailable === false) {
         return res.status(409).json({ error: 'One or more items are unavailable', itemId: it.itemId, itemName: mi.name });
       }
@@ -167,10 +164,7 @@ async function createOrder(req, res) {
       return res.status(400).json({ error: 'total price is changed', calculatedTotal: calcTotal });
     }
 
-    // If this is a take-away or delivery order and no tableNumber provided,
-    // assign a unique incremental number based on current counts in DB.
-    // Note: this uses countDocuments and may have race conditions under heavy concurrent load.
-    if (!data.tableNumber) {
+   if (!data.tableNumber) {
       if (data.orderType === 'delivery') {
         const cnt = await Order.countDocuments({ orderType: 'delivery' });
         data.tableNumber = cnt + 1;

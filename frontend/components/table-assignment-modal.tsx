@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { X } from "lucide-react"
+import { validatePhoneNumber, formatPhoneNumber } from "@/lib/validation"
 
 interface TableInfo {
   number: number
@@ -24,6 +25,7 @@ interface TableAssignmentModalProps {
 export function TableAssignmentModal({ isOpen, onClose, onAssign, selectedTable }: TableAssignmentModalProps) {
   const [customerName, setCustomerName] = useState("")
   const [mobileNumber, setMobileNumber] = useState("")
+  const [mobileNumberError, setMobileNumberError] = useState("")
   const [availableTables, setAvailableTables] = useState<TableInfo[]>([])
   const [chosenTable, setChosenTable] = useState<string>(selectedTable ? String(selectedTable.number) : "")
 
@@ -53,12 +55,19 @@ export function TableAssignmentModal({ isOpen, onClose, onAssign, selectedTable 
   const handleSubmit = () => {
     const tableNum = selectedTable ? selectedTable.number : (chosenTable ? Number.parseInt(chosenTable) : NaN)
     if (!Number.isFinite(tableNum) || !customerName || !mobileNumber) return
-    onAssign(tableNum, customerName, mobileNumber)
+    
+    if (!validatePhoneNumber(mobileNumber)) {
+      setMobileNumberError("Please enter a valid 10-digit mobile number")
+      return
+    }
+
+    onAssign(tableNum, customerName, formatPhoneNumber(mobileNumber))
 
     // Reset form
     setChosenTable("")
     setCustomerName("")
     setMobileNumber("")
+    setMobileNumberError("")
     onClose()
   }
 
@@ -94,10 +103,19 @@ export function TableAssignmentModal({ isOpen, onClose, onAssign, selectedTable 
             <Input
               id="mobile-number"
               type="tel"
-              placeholder="Enter mobile number"
+              placeholder="Enter 10-digit mobile number"
               value={mobileNumber}
-              onChange={(e) => setMobileNumber(e.target.value)}
+              onChange={(e) => {
+                const input = e.target.value.replace(/\D/g, '').slice(0, 10);
+                setMobileNumber(input);
+                setMobileNumberError('');
+              }}
+              maxLength={10}
+              pattern="[0-9]{10}"
             />
+            {mobileNumberError && (
+              <p className="text-sm text-red-500 mt-1">{mobileNumberError}</p>
+            )}
           </div>
 
           <Button

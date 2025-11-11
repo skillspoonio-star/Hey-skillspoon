@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const Order = require('../models/order');
 const Delivery = require('../models/delivery');
 const MenuItem = require('../models/menuItem');
+const { razorpayInstance, validatePaymentVerification } = require('../config/razorpay');
+const notify = require('../utils/notify');
 
 function validateDeliveryPayload(data) {
   if (!data) return 'Missing body';
@@ -21,22 +23,36 @@ async function createDelivery(req, res) {
   if (err) return res.status(400).json({ error: err });
 
   try {
-    // validate menu items exist and compute price if needed
+    // No payment verification here; handled at order creation or table reservation
+
+    // 1. Validate menu items exist and compute price
     const itemIds = data.items.map((i) => i.itemId);
     const menuItems = await MenuItem.find({ id: { $in: itemIds } }).lean();
     const menuById = new Map(menuItems.map((m) => [m.id, m]));
+    let subtotal = 0;
+    for (const it of data.items) {
+      const menu = menuById.get(it.itemId);
+      if (!menu) return res.status(400).json({ error: `Menu item not found: ${it.itemId}` });
+      subtotal += Number(menu.price) * Number(it.quantity);
+    }
+    // Calculate tax, discount, delivery fee, tip
+    const tax = Math.round(subtotal * 0.18);
+    const discount = data.promo === 'FLAT50' ? 50 : (data.promo === 'SAVE10' ? Math.min(100, Math.round(subtotal * 0.1)) : 0);
+    const deliveryFee = subtotal > 999 ? 0 : 49;
+    const tip = Number(data.tip) || 0;
+    const total = Math.max(0, subtotal - discount) + tax + deliveryFee + tip;
 
-    // create Order first: put items/totals/payment info on Order
+    // 3. Create Order with correct totals
     const orderPayload = {
       items: data.items,
-      subtotal: data.subtotal || 0,
-      tax: data.tax || 0,
-      discount: data.discount || 0,
-      extraCharges: data.extraCharges || 0,
-      total: data.total || 0,
+      subtotal,
+      tax,
+      discount,
+      extraCharges: deliveryFee,
+      total,
       customerPhone: data.customerPhone,
       customerName: data.customerName,
-      paymentStatus: data.paymentStatus || 'unpaid',
+      paymentStatus: data.paymentStatus || (data.paymentMethod === 'upi' ? 'paid' : 'unpaid'),
       paymentMethod: data.paymentMethod || 'pending',
       orderType: 'delivery',
       status: 'pending',
@@ -75,28 +91,32 @@ async function createDelivery(req, res) {
 
     await deliveryDoc.save();
 
+    await notify.sendEmail(data.customerEmail || '', 'Order Placed', `Your order ${order._id} has been placed.`);
+    await notify.sendSMS(data.customerPhone, `Order ${order._id} placed!`);
+
     return res.status(201).json({ orderId: order._id, deliveryId: deliveryDoc._id });
   } catch (err) {
     return res.status(500).json({ error: err.message || 'Server error' });
   }
 }
 
+// List all deliveries
 async function listDeliveries(req, res) {
   try {
-  // populate orderId so the client can read order fields (items, totals, payment)
-  const deliveries = await Delivery.find({}).sort({ createdAt: -1 }).populate('orderId').lean();
-  return res.json(deliveries);
+    const deliveries = await Delivery.find({}).sort({ createdAt: -1 }).populate('orderId').lean();
+    return res.json(deliveries);
   } catch (err) {
     return res.status(500).json({ error: 'Server error' });
   }
 }
 
+// Update delivery
 async function updateDelivery(req, res) {
   const id = req.params.id;
   if (!id) return res.status(400).json({ error: 'id required' });
   try {
     const allowed = ['status', 'eta', 'slot', 'scheduledTime', 'contactless', 'instructions'];
-  const toSet = {};
+    const toSet = {};
     for (const key of Object.keys(req.body || {})) {
       if (allowed.includes(key)) toSet[key] = req.body[key];
     }
@@ -130,12 +150,16 @@ async function updateDelivery(req, res) {
       if (toSet.status === 'delivered') {
         try {
           await Order.findByIdAndUpdate(order._id, { $set: { status: 'served' } });
+          await notify.sendEmail(order.customerEmail || '', 'Order Delivered', `Your order ${order._id} has been delivered.`);
+          await notify.sendSMS(order.customerPhone, `Order ${order._id} delivered!`);
         } catch (err) {
           console.warn('Failed to update linked order status to served', err);
         }
       } else if (toSet.status === 'cancelled') {
         try {
           await Order.findByIdAndUpdate(order._id, { $set: { status: 'cancelled' } });
+          await notify.sendEmail(order.customerEmail || '', 'Order Cancelled', `Your order ${order._id} was cancelled.`);
+          await notify.sendSMS(order.customerPhone, `Order ${order._id} cancelled.`);
         } catch (err) {
           console.warn('Failed to update linked order status to cancelled', err);
         }

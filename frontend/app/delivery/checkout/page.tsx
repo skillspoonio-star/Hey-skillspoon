@@ -7,17 +7,21 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { openRazorpayPayment } from "@/lib/razorpay"
+import { useTheme } from "next-themes"
 
 export default function DeliveryCheckoutPage() {
   const router = useRouter()
+  const { theme } = useTheme()
   const [cart, setCart] = useState<any[]>([])
   const [promo, setPromo] = useState("")
   const [discount, setDiscount] = useState(0)
   const [tip, setTip] = useState<number>(0)
-  const [paymentMethod, setPaymentMethod] = useState<"UPI" | "Card" | "COD">("UPI")
+  const [paymentMethod, setPaymentMethod] = useState<"PAY_NOW" | "COD">("PAY_NOW")
   const [contactless, setContactless] = useState(false)
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [address1, setAddress1] = useState("")
   const [address2, setAddress2] = useState("")
   const [landmark, setLandmark] = useState("")
@@ -27,16 +31,19 @@ export default function DeliveryCheckoutPage() {
   const [instructions, setInstructions] = useState("")
   const [slot, setSlot] = useState<"ASAP" | "30min" | "60min" | "schedule">("ASAP")
   const [scheduledTime, setScheduledTime] = useState<string>("")
-  const [upiId, setUpiId] = useState("")
-  const [cardNumber, setCardNumber] = useState("")
-  const [cardName, setCardName] = useState("")
-  const [cardExp, setCardExp] = useState("")
-  const [cardCvv, setCardCvv] = useState("")
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setCart(JSON.parse(localStorage.getItem("delivery:cart") || "[]"))
     }
+
+    // Cleanup Razorpay script on unmount
+    return () => {
+      const script = document.getElementById('razorpay-script');
+      if (script) {
+        script.remove();
+      }
+    };
   }, [])
 
   const subtotal = useMemo(() => cart.reduce((s, l) => s + l.price * l.qty, 0), [cart])
@@ -51,108 +58,137 @@ export default function DeliveryCheckoutPage() {
     else setDiscount(0)
   }
 
-  const placeOrder = async () => {
-    const customerPayload = {
-      name,
-      phone,
-      address: [address1, address2].filter(Boolean).join(", "),
-      landmark,
-      city,
-      state: stateName,
-      pincode,
-      instructions,
+  const createDeliveryOrder = async (paymentId?: string, paymentSignature?: string) => {
+    const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+    const deliveryPayload = {
+      items: cart.map((l: any) => ({ itemId: l.id, quantity: l.qty })),
+      customerName: name,
+      customerPhone: phone,
+      address: {
+        address1,
+        address2,
+        landmark,
+        city,
+        state: stateName,
+        pincode,
+      },
       slot,
       scheduledTime: slot === "schedule" ? scheduledTime : null,
+      contactless,
+      instructions,
+      paymentMethod: paymentMethod === 'PAY_NOW' ? 'upi' : 'cash', // Default to 'upi' for online payments
+      paymentStatus: paymentMethod === 'PAY_NOW' ? (paymentId ? 'paid' : 'pending') : 'pending',
+      paymentDetails: paymentId ? {
+        paymentId,
+        signature: paymentSignature,
+        method: 'upi' // You can update this if Razorpay provides the actual method
+      } : undefined,
+      promo,
+      tip
     }
 
+    const res = await fetch(`${base}/api/deliveries`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(deliveryPayload),
+    })
+
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error("Failed to create delivery order: " + text)
+    }
+
+    const data = await res.json()
+    return data.orderId || data.id || data._id
+  }
+
+  const handleRazorpayPayment = async (orderId: string, amount: number) => {
+    return openRazorpayPayment({
+      amount,
+      orderId,
+      name,
+      phone,
+      theme: theme as "dark" | "light"
+    });
+  }
+
+  const placeOrder = async () => {
     try {
-      const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
-      const payload = {
-        items: cart.map((l: any) => ({ itemId: l.id, quantity: l.qty })),
-        subtotal,
-        tax,
-        deliveryFee,
-        discount,
-        tip,
-        total,
-        customerName: customerPayload.name,
-        customerPhone: customerPayload.phone,
-        address: {
-          line1: address1,
-          line2: address2 || null,
-          landmark: landmark || null,
-          city,
-          state: stateName,
-          pincode,
-        },
-        delivery: {
-          slot: customerPayload.slot,
-          scheduledTime: customerPayload.scheduledTime || null,
-          contactless,
-          instructions,
-        },
-        paymentMethod,
-        payment: {
-          method: paymentMethod,
-          promo,
-          discount,
-          tip,
-          deliveryFee,
-          tax,
-          subtotal,
-          upiId: paymentMethod === "UPI" ? upiId : null,
-          card: paymentMethod === "Card" ? { cardNumber, cardName, cardExp } : null,
-        },
-        orderType: 'delivery',
-      }
+      setIsProcessingPayment(true)
 
-      const res = await fetch(`${base}/api/deliveries`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: payload.items,
-          subtotal: payload.subtotal,
-          tax: payload.tax,
-          extraCharge: (payload.tip || 0) + (payload.deliveryFee || 0),
-          discount: payload.discount,
-          total: payload.total,
-          customerName: payload.customerName,
-          customerPhone: payload.customerPhone,
-          address: {
-            address1,
-            address2,
-            landmark,
-            city,
-            state: stateName,
-            pincode,
-          },
-          slot: payload.delivery.slot,
-          scheduledTime: payload.delivery.scheduledTime,
-          contactless: payload.delivery.contactless,
-          instructions: payload.delivery.instructions,
-          paymentMethod: paymentMethod === 'UPI' ? 'upi' : paymentMethod === 'Card' ? 'card' : 'cash',
-          paymentStatus: 'paid',
-        }),
-      })
-      if (!res.ok) {
-        const text = await res.text()
-        console.error('Failed to create delivery order', res.status, text)
-        alert('Failed to place order. Please try again or contact support.')
-        return
-      }
-      const data = await res.json()
-      const orderId = data.orderId || data.id || data._id
+      if (paymentMethod === 'PAY_NOW') {
+        // Create Razorpay order first
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+        const orderRes = await fetch(base + "/api/razorpay/create-order", {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: cart.map((l: any) => ({ 
+              itemId: Number(l.id), 
+              quantity: Number(l.qty) 
+            })),
+            tip,
+            promo
+          })
+        })
 
-      if (typeof window !== "undefined") {
-        localStorage.setItem("delivery:latestTotal", String(total))
-        localStorage.setItem("delivery:customer", JSON.stringify(customerPayload))
-        localStorage.removeItem('delivery:cart')
-      }
+        if (!orderRes.ok) {
+          const errorData = await orderRes.json().catch(() => null);
+          throw new Error(
+            errorData?.message || 
+            `Failed to create payment order (${orderRes.status})`
+          );
+        }
 
-      router.push(`/delivery/confirmation?orderId=${orderId}`)
-    } catch (err) {
-      console.error('Error placing delivery order', err)
-      alert('Error placing order. Please try again.')
+        const { order, amounts } = await orderRes.json()
+        
+        try {
+          // Handle payment
+          const { paymentId, signature } = await handleRazorpayPayment(order.id, order.amount)
+          
+          // Create delivery order with payment details
+          const orderId = await createDeliveryOrder(paymentId, signature)
+          
+          if (typeof window !== "undefined") {
+            localStorage.removeItem('delivery:cart')
+          }
+
+          router.push("/delivery/confirmation?orderId=" + orderId)
+        } catch (paymentError: any) {
+          // Check if user cancelled payment
+          if (paymentError?.message?.includes('closed')) {
+            // User closed the payment window
+            throw new Error('Payment cancelled. Please try again.')
+          } else {
+            // Other payment errors
+            throw new Error(
+              'Payment failed: ' + 
+              (paymentError?.message || 'Please try again or choose a different payment method.')
+            )
+          }
+        }
+      } else {
+        // For COD, directly create delivery order
+        try {
+          const orderId = await createDeliveryOrder()
+          
+          if (typeof window !== "undefined") {
+            localStorage.removeItem('delivery:cart')
+          }
+
+          router.push("/delivery/confirmation?orderId=" + orderId)
+        } catch (codError: any) {
+          throw new Error(
+            'Failed to create COD order: ' + 
+            (codError?.message || 'Please try again.')
+          )
+        }
+      }
+    } catch (err: any) {
+      console.error('Error placing order:', err)
+      alert(err?.message || 'Error placing order. Please try again.')
+    } finally {
+      setIsProcessingPayment(false)
     }
   }
 
@@ -286,7 +322,7 @@ export default function DeliveryCheckoutPage() {
               </div>
               <div className="flex items-center justify-between text-sm">
                 <div>Delivery Fee</div>
-                <div>{deliveryFee === 0 ? "Free" : `₹${deliveryFee}`}</div>
+                <div>{deliveryFee === 0 ? "Free" : "₹" + deliveryFee}</div>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
@@ -294,7 +330,7 @@ export default function DeliveryCheckoutPage() {
                   <div className="grid grid-cols-4 gap-2">
                     {[0, 20, 50, 100].map((v) => (
                       <Button key={v} size="sm" variant={tip === v ? "default" : "outline"} onClick={() => setTip(v)}>
-                        {v === 0 ? "No Tip" : `₹${v}`}
+                        {v === 0 ? "No Tip" : "₹" + v}
                       </Button>
                     ))}
                   </div>
@@ -307,66 +343,18 @@ export default function DeliveryCheckoutPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
                   <Button
-                    variant={paymentMethod === "UPI" ? "default" : "outline"}
-                    onClick={() => setPaymentMethod("UPI")}
+                    variant={paymentMethod === "PAY_NOW" ? "default" : "outline"}
+                    onClick={() => setPaymentMethod("PAY_NOW")}
                   >
-                    UPI
-                  </Button>
-                  <Button
-                    variant={paymentMethod === "Card" ? "default" : "outline"}
-                    onClick={() => setPaymentMethod("Card")}
-                  >
-                    Card
+                    Pay Now
                   </Button>
                   <Button
                     variant={paymentMethod === "COD" ? "default" : "outline"}
                     onClick={() => setPaymentMethod("COD")}
                   >
-                    COD
+                    Cash on Delivery
                   </Button>
                 </div>
-
-                {paymentMethod === "UPI" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="sm:col-span-2">
-                      <Label className="text-sm">UPI ID</Label>
-                      <Input value={upiId} onChange={(e) => setUpiId(e.target.value)} placeholder="name@bank" />
-                    </div>
-                  </div>
-                )}
-
-                {paymentMethod === "Card" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="sm:col-span-2">
-                      <Label className="text-sm">Card Number</Label>
-                      <Input
-                        value={cardNumber}
-                        onChange={(e) => setCardNumber(e.target.value.replace(/[^0-9 ]/g, "").slice(0, 19))}
-                        placeholder="1234 5678 9012 3456"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm">Name on Card</Label>
-                      <Input value={cardName} onChange={(e) => setCardName(e.target.value)} placeholder="Full name" />
-                    </div>
-                    <div>
-                      <Label className="text-sm">Expiry (MM/YY)</Label>
-                      <Input
-                        value={cardExp}
-                        onChange={(e) => setCardExp(e.target.value.replace(/[^0-9/]/g, "").slice(0, 5))}
-                        placeholder="MM/YY"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm">CVV</Label>
-                      <Input
-                        value={cardCvv}
-                        onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                        placeholder="***"
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
 
               <label className="flex items-center gap-2 text-sm">
@@ -380,29 +368,19 @@ export default function DeliveryCheckoutPage() {
               </div>
               <Button
                 className="w-full"
+                disabled={isProcessingPayment}
                 onClick={async () => {
                   // basic validations
                   if (!name || phone.length !== 10 || !address1 || !city || !stateName || pincode.length !== 6) {
-                    alert("Please complete delivery details before paying.")
-                    return
-                  }
-                  if (paymentMethod === "UPI" && !upiId.includes("@")) {
-                    alert("Please enter a valid UPI ID.")
-                    return
-                  }
-                  if (
-                    paymentMethod === "Card" &&
-                    (cardNumber.replace(/\s/g, "").length < 16 || !cardExp || cardCvv.length < 3)
-                  ) {
-                    alert("Please enter valid card details.")
+                    alert("Please complete delivery details before proceeding.")
                     return
                   }
 
-                  // proceed with mock payment + order placement
+                  // proceed with order placement
                   await placeOrder()
                 }}
               >
-                Pay & Place Order
+                {isProcessingPayment ? "Processing..." : paymentMethod === "PAY_NOW" ? "Pay Now" : "Place Order"}
               </Button>
             </div>
           </CardContent>

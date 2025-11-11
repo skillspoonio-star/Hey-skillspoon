@@ -44,6 +44,7 @@ export default function TablePage() {
               status: s.active ? 'active' : 'completed',
               phoneNumber: s.mobile || s.phoneNumber,
             })
+            console.log(session);
           } else {
             const loadedSession = sessionManager.getSession(tableNumber)
             setSession(loadedSession)

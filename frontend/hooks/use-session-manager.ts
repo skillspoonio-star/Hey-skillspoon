@@ -124,10 +124,15 @@ export function useSessionManager() {
 
   // Add phone number to session for billing
   const addPhoneToSession = useCallback((tableNumber: number, phoneNumber: string) => {
+    const cleanPhone = phoneNumber.replace(/\D/g, '');
+    if (cleanPhone.length !== 10) {
+      throw new Error('Phone number must be exactly 10 digits');
+    }
+    
     setSessions((prev) =>
       prev.map((session) => {
         if (session.tableNumber === tableNumber) {
-          const updatedSession = { ...session, phoneNumber, status: "billing" as const }
+          const updatedSession = { ...session, phoneNumber: cleanPhone, status: "billing" as const }
           localStorage.setItem(`session_${tableNumber}`, JSON.stringify(updatedSession))
           return updatedSession
         }

@@ -3,11 +3,19 @@ import type { Metadata } from "next"
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { Poppins } from 'next/font/google'
-import { Analytics } from "@vercel/analytics/next"
+import dynamic from 'next/dynamic'
 import { Suspense } from "react"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import { ThemeToggle } from "@/components/theme-toggle"
+
+// Load Analytics and ThemeToggle dynamically on the client to avoid
+// bundling them into the initial SSR payload and reduce hydration time.
+const Analytics = dynamic(() => import('@vercel/analytics/next').then((m) => m.Analytics), {
+  ssr: false,
+})
+const ThemeToggle = dynamic(() => import('@/components/theme-toggle').then((m) => m.ThemeToggle), {
+  ssr: false,
+})
 
 const poppins = Poppins({
   subsets: ["latin"],
