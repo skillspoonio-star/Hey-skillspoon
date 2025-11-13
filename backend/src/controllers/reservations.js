@@ -1,6 +1,7 @@
 const authMiddleware = require('../middleware/auth');
 const Reservation = require('../models/reservation');
 const Table = require('../models/table');
+const Payment = require('../models/payment');
 
 function validateReservationPayload(data) {
   if (!data) return 'Missing body';
@@ -179,6 +180,22 @@ async function createReservation(req, res) {
       });
 
       await created.save();
+
+      // If reservation is marked as paid, create a Payment record automatically
+      if (created.payment && created.payment.paymentStatus === 'paid') {
+        try {
+          const payment = new Payment({
+            amount: created.payment.total,
+            type: 'cash', // default type for reservations
+            paymentOf: 'reservation',
+            reservationId: created._id,
+          });
+          await payment.save();
+        } catch (paymentErr) {
+          console.error('Failed to create Payment record for paid reservation', paymentErr);
+          // Don't fail the reservation creation if payment creation fails
+        }
+      }
 
       // If saving failed due to duplicate public id (rare race), retry with a new number
       // Note: Mongoose will throw on duplicate key; however, to keep logic simple, catch and retry once

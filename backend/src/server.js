@@ -15,8 +15,8 @@ const menuItemsRouter = require('./routes/menuItems');
   const orderCountRouter = require('./routes/orderCount');
   const analyticsRouter = require('./routes/analytics');
   const razorpayRouter = require('./routes/razorpay');
-
-function createApp() {
+  const paymentsRouter = require('./routes/payments');
+  const paymentRequestsRouter = require('./routes/paymentRequests');function createApp() {
   const app = express();
   app.use(cors());
   app.use(bodyParser.json());
@@ -54,6 +54,12 @@ function createApp() {
 
   // Analytics
   app.use('/api/analytics', analyticsRouter);
+
+  // Payments CRUD
+  app.use('/api/payments', paymentsRouter);
+
+  // Payment Requests (temporary, 30 min TTL)
+  app.use('/api/payment-requests', paymentRequestsRouter);
 
   // payment gateway
   app.use('/api/razorpay', razorpayRouter);

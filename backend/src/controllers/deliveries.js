@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Order = require('../models/order');
 const Delivery = require('../models/delivery');
 const MenuItem = require('../models/menuItem');
+const Payment = require('../models/payment');
 const { razorpayInstance, validatePaymentVerification } = require('../config/razorpay');
 const notify = require('../utils/notify');
 
@@ -69,6 +70,22 @@ async function createDelivery(req, res) {
 
     const order = new Order(orderPayload);
     await order.save();
+
+    // If delivery order is marked as paid, create a Payment record automatically
+    if (orderPayload.paymentStatus === 'paid') {
+      try {
+        const payment = new Payment({
+          amount: orderPayload.total,
+          type: orderPayload.paymentMethod || 'cash',
+          paymentOf: 'order',
+          orderId: order._id,
+        });
+        await payment.save();
+      } catch (paymentErr) {
+        console.error('Failed to create Payment record for paid delivery order', paymentErr);
+        // Don't fail the order creation if payment creation fails
+      }
+    }
 
     const address = data.address;
     const deliveryDoc = new Delivery({

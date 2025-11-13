@@ -4,6 +4,7 @@ const MenuItem = require('../models/menuItem');
 const Table = require('../models/table');
 const Reservation = require('../models/reservation');
 const Session = require('../models/session');
+const Payment = require('../models/payment');
 const crypto = require('crypto');
 
 function validateCreatePayload(data) {
@@ -239,6 +240,23 @@ async function createOrder(req, res) {
       orderType: data.orderType,
     });
     await order.save();
+
+    // If order is marked as paid, create a Payment record automatically
+    if (data.paymentStatus === 'paid') {
+      try {
+        const payment = new Payment({
+          amount: data.total,
+          type: data.paymentMethod || 'cash',
+          paymentOf: 'order',
+          orderId: order._id,
+        });
+        await payment.save();
+      } catch (paymentErr) {
+        console.error('Failed to create Payment record for paid order', paymentErr);
+        // Don't fail the order creation if payment creation fails
+      }
+    }
+
     // no-op: counters feature removed per request
     // If this is a dine-in order and we have a session to attach, attach the order to that session
     if (data.tableNumber && data.orderType === 'dine-in' && sessionToAttach) {
@@ -350,4 +368,285 @@ async function updateOrder(req, res) {
   }
 }
 
-module.exports = { listOrders, getOrder, listLiveOrders, getLiveCounterOrders, createOrder, updateOrder };
+// Return dine-in orders with expanded item details and payment status
+async function getDineInOrders(req, res) {
+  try {
+    // fetch all dine-in orders
+    const orders = await Order.find({
+      orderType: 'dine-in'
+    }).sort({ timestamp: -1 }).lean();
+
+    // expand items with menu data
+    const allItemIds = new Set();
+    for (const o of orders) {
+      for (const it of o.items || []) allItemIds.add(it.itemId);
+    }
+    const menuItems = await MenuItem.find({ id: { $in: Array.from(allItemIds) } }).lean();
+    const menuById = new Map(menuItems.map((m) => [m.id, m]));
+
+    const expanded = orders.map((o) => ({
+      ...o,
+      items: (o.items || []).map((it) => {
+        const m = menuById.get(it.itemId);
+        return {
+          name: m ? m.name : `item-${it.itemId}`,
+          quantity: it.quantity,
+          price: m ? m.price : 0,
+        };
+      }),
+    }));
+
+    return res.json(expanded);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+}
+
+// Get revenue history (aggregated by day with payment status breakdown)
+async function getRevenueHistory(req, res) {
+  try {
+    const days = req.query.days ? parseInt(req.query.days) : 7;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+
+    // Get all dine-in orders from the past N days
+    const orders = await Order.find({
+      orderType: 'dine-in',
+      timestamp: { $gte: startDate }
+    }).lean();
+
+    // Group by day and payment status
+    const revenueByDay = {};
+
+    for (const order of orders) {
+      const date = new Date(order.timestamp);
+      date.setHours(0, 0, 0, 0);
+      const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+
+      if (!revenueByDay[dateStr]) {
+        revenueByDay[dateStr] = {
+          date: dateStr,
+          totalRevenue: 0,
+          paidAmount: 0,
+          remainingAmount: 0,
+          paidCount: 0,
+          unpaidCount: 0,
+          cashPayments: 0,
+          upiPayments: 0,
+          cardPayments: 0
+        };
+      }
+
+      revenueByDay[dateStr].totalRevenue += order.total;
+
+      if (order.paymentStatus === 'paid') {
+        revenueByDay[dateStr].paidAmount += order.total;
+        revenueByDay[dateStr].paidCount += 1;
+      } else {
+        revenueByDay[dateStr].remainingAmount += order.total;
+        revenueByDay[dateStr].unpaidCount += 1;
+      }
+
+      if (order.paymentMethod === 'cash') {
+        revenueByDay[dateStr].cashPayments += 1;
+      } else if (order.paymentMethod === 'upi') {
+        revenueByDay[dateStr].upiPayments += 1;
+      } else if (order.paymentMethod === 'card') {
+        revenueByDay[dateStr].cardPayments += 1;
+      }
+    }
+
+    // Convert to sorted array
+    const result = Object.values(revenueByDay).sort((a, b) => a.date.localeCompare(b.date));
+
+    return res.json(result);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+}
+
+// Get today's payment summary for dine-in orders
+async function getTodaysPaymentSummary(req, res) {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+    const orders = await Order.find({
+      orderType: 'dine-in',
+      timestamp: { $gte: today, $lt: tomorrow }
+    }).lean();
+
+    const summary = {
+      totalOrders: orders.length,
+      totalRevenue: 0,
+      paidRevenue: 0,
+      remainingRevenue: 0,
+      paidOrders: 0,
+      unpaidOrders: 0,
+      cashPayments: 0,
+      upiPayments: 0,
+      cardPayments: 0,
+      pendingPayments: []
+    };
+
+    for (const order of orders) {
+      summary.totalRevenue += order.total;
+
+      if (order.paymentStatus === 'paid') {
+        summary.paidRevenue += order.total;
+        summary.paidOrders += 1;
+      } else {
+        summary.remainingRevenue += order.total;
+        summary.unpaidOrders += 1;
+        summary.pendingPayments.push({
+          id: order._id,
+          tableNumber: order.tableNumber,
+          total: order.total,
+          paymentMethod: order.paymentMethod || 'pending',
+          customerPhone: order.customerPhone || 'N/A',
+          timestamp: order.timestamp,
+          status: 'pending'
+        });
+      }
+
+      if (order.paymentMethod === 'cash') {
+        summary.cashPayments += 1;
+      } else if (order.paymentMethod === 'upi') {
+        summary.upiPayments += 1;
+      } else if (order.paymentMethod === 'card') {
+        summary.cardPayments += 1;
+      }
+    }
+
+    return res.json(summary);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+}
+
+
+
+module.exports = { 
+  listOrders, 
+  getOrder, 
+  listLiveOrders, 
+  getLiveCounterOrders, 
+  createOrder, 
+  updateOrder, 
+  getTakeAwayOrders,
+  getDineInOrders,
+  getRevenueHistory,
+  getTodaysPaymentSummary,
+  confirmSessionPayment
+};
+
+// Confirm payment for a session/table: mark session payment paid, create Payment record, and update attached orders
+async function confirmSessionPayment(req, res) {
+  try {
+    const { tableNumber, paymentMethod, amount } = req.body || {}
+    if (typeof tableNumber === 'undefined') return res.status(400).json({ error: 'tableNumber required' })
+
+    // find active session for this table
+    const session = await Session.findOne({ tableNumber: Number(tableNumber), active: true })
+    if (!session) {
+      // fallback: mark recent dine-in orders for table as paid
+      const cutoff = new Date()
+      cutoff.setHours(0,0,0,0)
+      const orders = await Order.find({ orderType: 'dine-in', tableNumber: Number(tableNumber), timestamp: { $gte: cutoff } })
+      const ids = orders.map(o => o._id)
+      if (ids.length > 0) {
+        await Order.updateMany({ _id: { $in: ids } }, { $set: { paymentStatus: 'paid', paymentMethod: paymentMethod || 'cash', status: 'served' } })
+      }
+
+      // Create a Payment record for this session confirmation
+      const totalAmount = typeof amount === 'number' ? amount : orders.reduce((s, o) => s + (Number(o.total) || 0), 0)
+      if (totalAmount > 0) {
+        try {
+          const payment = new Payment({
+            amount: totalAmount,
+            type: paymentMethod || 'cash',
+            paymentOf: 'session',
+            sessionId: `table-${tableNumber}`, // fallback session id
+          })
+          await payment.save()
+        } catch (paymentErr) {
+          console.error('Failed to create Payment for session confirmation', paymentErr)
+        }
+      }
+
+      return res.json({ ok: true, updatedOrders: ids.length })
+    }
+
+    // update session payment
+    session.payment = session.payment || {}
+    session.payment.total = typeof amount === 'number' ? amount : session.payment.total || 0
+    session.payment.method = paymentMethod || session.payment.method || 'cash'
+    session.payment.status = 'paid'
+    await session.save()
+
+    // Create a Payment record for this session confirmation
+    const paymentAmount = typeof amount === 'number' ? amount : (session.payment.total || 0)
+    if (paymentAmount > 0) {
+      try {
+        const payment = new Payment({
+          amount: paymentAmount,
+          type: paymentMethod || 'cash',
+          paymentOf: 'session',
+          sessionId: session.sessionId || session._id,
+        })
+        await payment.save()
+      } catch (paymentErr) {
+        console.error('Failed to create Payment for session confirmation', paymentErr)
+      }
+    }
+
+    // update all orders attached to session
+    if (Array.isArray(session.orders) && session.orders.length > 0) {
+      await Order.updateMany({ _id: { $in: session.orders } }, { $set: { paymentStatus: 'paid', paymentMethod: paymentMethod || 'cash', status: 'served' } })
+    }
+
+    return res.json({ ok: true, sessionId: session.sessionId, updatedOrders: session.orders.length })
+  } catch (err) {
+    console.error(err)
+    return res.status(500).json({ error: 'Server error' })
+  }
+}
+// Return take-away orders with expanded item details
+async function getTakeAwayOrders(req, res) {
+  try {
+    // fetch all take-away orders
+    const orders = await Order.find({
+      orderType: { $in: ['take-away', 'takeaway', 'take away'] }
+    }).sort({ timestamp: -1 }).lean();
+
+    // expand items with menu data
+    const allItemIds = new Set();
+    for (const o of orders) {
+      for (const it of o.items || []) allItemIds.add(it.itemId);
+    }
+    const menuItems = await MenuItem.find({ id: { $in: Array.from(allItemIds) } }).lean();
+    const menuById = new Map(menuItems.map((m) => [m.id, m]));
+
+    const expanded = orders.map((o) => ({
+      ...o,
+      items: (o.items || []).map((it) => {
+        const m = menuById.get(it.itemId);
+        return {
+          name: m ? m.name : `item-${it.itemId}`,
+          quantity: it.quantity,
+          price: m ? m.price : 0,
+        };
+      }),
+    }));
+
+    return res.json(expanded);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+}

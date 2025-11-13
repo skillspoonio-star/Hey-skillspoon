@@ -11,227 +11,147 @@ import { realTimeSync } from "@/lib/real-time-sync"
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid } from "recharts"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
-interface PendingPayment {
-  id: number
+interface CashPaymentRequest {
+  _id: string
   tableNumber: number
-  customerPhone: string
-  total: number
-  paymentMethod: "cash" | "qr"
-  timestamp: Date
-  items: Array<{
-    name: string
-    quantity: number
-    price: number
-  }>
-  status: "pending" | "confirmed"
+  totalAmount: number
+  timestamp: string
+  unpaidOrderCount: number
+}
+
+interface ConfirmedPayment {
+  _id: string
+  tableNumber: number
+  totalAmount: number
+  timestamp: string
+  paymentMethod: "cash"
+}
+
+interface Payment {
+  _id: string
+  amount: number
+  type: "cash" | "card" | "upi" | "qr"
+  paymentOf: "order" | "reservation" | "session"
+  orderId: string | null
+  reservationId: string | null
+  sessionId: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 export function PaymentConfirmation() {
-  const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([
-    // Mock data for demonstration
-    {
-      id: 1,
-      tableNumber: 4,
-      customerPhone: "9876543210",
-      total: 850,
-      paymentMethod: "cash",
-      timestamp: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-      items: [
-        { name: "Chicken Biryani", quantity: 1, price: 350 },
-        { name: "Dal Makhani", quantity: 1, price: 250 },
-        { name: "Butter Naan", quantity: 2, price: 60 },
-        { name: "Mango Lassi", quantity: 1, price: 120 },
-      ],
-      status: "pending",
-    },
-    {
-      id: 2,
-      tableNumber: 7,
-      customerPhone: "9123456789",
-      total: 1200,
-      paymentMethod: "cash",
-      timestamp: new Date(Date.now() - 10 * 60 * 1000), // 10 minutes ago
-      items: [
-        { name: "Paneer Tikka", quantity: 2, price: 300 },
-        { name: "Chicken Biryani", quantity: 1, price: 350 },
-        { name: "Gulab Jamun", quantity: 2, price: 80 },
-      ],
-      status: "pending",
-    },
-  ])
-
+  const [cashPaymentRequests, setCashPaymentRequests] = useState<CashPaymentRequest[]>([])
+  const [payments, setPayments] = useState<Payment[]>([])
   const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState("All Status")
-  const [paymentMethodFilter, setPaymentMethodFilter] = useState("All Methods")
-  const [confirmedPayments, setConfirmedPayments] = useState<PendingPayment[]>([])
+  const [loading, setLoading] = useState(false)
+  const [paymentLoading, setPaymentLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const todaysPayments = confirmedPayments.length
-  const todaysRevenue = confirmedPayments.reduce((sum, p) => sum + p.total, 0)
-  const cashPayments = confirmedPayments.filter((p) => p.paymentMethod === "cash").length
-  const qrPayments = confirmedPayments.filter((p) => p.paymentMethod === "qr").length
+  const base = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-  useEffect(() => {
-    // Listen for new cash payment requests
-    const unsubscribe = realTimeSync.onCashPaymentRequest((paymentData) => {
-      const newPayment: PendingPayment = {
-        id: Date.now(),
-        tableNumber: paymentData.tableNumber,
-        customerPhone: paymentData.customerPhone,
-        total: paymentData.total,
-        paymentMethod: "cash",
-        timestamp: new Date(),
-        items: paymentData.items,
-        status: "pending",
-      }
-      setPendingPayments((prev) => [newPayment, ...prev])
-    })
+  // Helper functions for date formatting
+  const fmtDay = (timestamp: string) => timestamp.slice(0, 10) // YYYY-MM-DD from ISO string
+  const fmtMonth = (timestamp: string) => timestamp.slice(0, 7) // YYYY-MM from ISO string
 
-    return unsubscribe
-  }, [])
+  // Get today's date (midnight to midnight)
+  const getTodayDate = () => {
+    const today = new Date()
+    return today.toISOString().slice(0, 10) // YYYY-MM-DD
+  }
+  const todayDate = getTodayDate()
 
-  useEffect(() => {
-    if (confirmedPayments.length === 0) {
-      const now = new Date()
-      const samples: PendingPayment[] = [
-        // last 7 days examples
-        {
-          id: 1001,
-          tableNumber: 2,
-          customerPhone: "9000000001",
-          total: 560,
-          paymentMethod: "qr",
-          timestamp: new Date(now.getTime() - 1 * 86400000),
-          items: [],
-          status: "confirmed",
-        },
-        {
-          id: 1002,
-          tableNumber: 5,
-          customerPhone: "9000000002",
-          total: 840,
-          paymentMethod: "cash",
-          timestamp: new Date(now.getTime() - 1 * 86400000),
-          items: [],
-          status: "confirmed",
-        },
-        {
-          id: 1003,
-          tableNumber: 3,
-          customerPhone: "9000000003",
-          total: 1260,
-          paymentMethod: "qr",
-          timestamp: new Date(now.getTime() - 2 * 86400000),
-          items: [],
-          status: "confirmed",
-        },
-        {
-          id: 1004,
-          tableNumber: 9,
-          customerPhone: "9000000004",
-          total: 740,
-          paymentMethod: "cash",
-          timestamp: new Date(now.getTime() - 3 * 86400000),
-          items: [],
-          status: "confirmed",
-        },
-        {
-          id: 1005,
-          tableNumber: 7,
-          customerPhone: "9000000005",
-          total: 1120,
-          paymentMethod: "qr",
-          timestamp: new Date(now.getTime() - 4 * 86400000),
-          items: [],
-          status: "confirmed",
-        },
-        {
-          id: 1006,
-          tableNumber: 1,
-          customerPhone: "9000000006",
-          total: 960,
-          paymentMethod: "cash",
-          timestamp: new Date(now.getTime() - 5 * 86400000),
-          items: [],
-          status: "confirmed",
-        },
-        {
-          id: 1007,
-          tableNumber: 8,
-          customerPhone: "9000000007",
-          total: 1350,
-          paymentMethod: "qr",
-          timestamp: new Date(now.getTime() - 6 * 86400000),
-          items: [],
-          status: "confirmed",
-        },
-        // a previous month example to enable month-wise view
-        {
-          id: 1008,
-          tableNumber: 4,
-          customerPhone: "9000000008",
-          total: 1550,
-          paymentMethod: "cash",
-          timestamp: new Date(now.getFullYear(), now.getMonth() - 1, 15, 19, 35),
-          items: [],
-          status: "confirmed",
-        },
-        {
-          id: 1009,
-          tableNumber: 10,
-          customerPhone: "9000000009",
-          total: 890,
-          paymentMethod: "qr",
-          timestamp: new Date(now.getFullYear(), now.getMonth() - 1, 18, 13, 10),
-          items: [],
-          status: "confirmed",
-        },
-      ]
-      setConfirmedPayments(samples)
-    }
-  }, [confirmedPayments.length])
+  // Calculate statistics from real payment data - only for today
+  const todaysPayments = payments.filter((p) => fmtDay(p.createdAt) === todayDate).length
+  const todaysRevenue = payments
+    .filter((p) => fmtDay(p.createdAt) === todayDate)
+    .reduce((sum, p) => sum + p.amount, 0)
 
-  const handleConfirmPayment = (paymentId: number) => {
-    const payment = pendingPayments.find((p) => p.id === paymentId)
-    if (payment) {
-      // Move to confirmed payments
-      const confirmedPayment = { ...payment, status: "confirmed" as const }
-      setConfirmedPayments((prev) => [confirmedPayment, ...prev])
+  // Calculate today's cash payments only
+  const todaysCashRevenue = payments
+    .filter((p) => fmtDay(p.createdAt) === todayDate && p.type === 'cash')
+    .reduce((sum, p) => sum + p.amount, 0)
 
-      // Remove from pending
-      setPendingPayments((prev) => prev.filter((p) => p.id !== paymentId))
-
-      // Notify customer
-      realTimeSync.emitPaymentConfirmation(paymentId, payment.customerPhone, payment.tableNumber)
+  // Fetch cash payment requests from API
+  const fetchCashPaymentRequests = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await fetch(`${base}/api/payment-requests`)
+      if (!response.ok) throw new Error("Failed to fetch payment requests")
+      const data: CashPaymentRequest[] = await response.json()
+      setCashPaymentRequests(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred")
+      console.error("Error fetching payment requests:", err)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const clearFilters = () => {
-    setSearchQuery("")
-    setStatusFilter("All Status")
-    setPaymentMethodFilter("All Methods")
+  // Fetch all payments from backend for revenue history
+  const fetchPayments = async () => {
+    try {
+      setPaymentLoading(true)
+      const response = await fetch(`${base}/api/payments`)
+      if (!response.ok) throw new Error("Failed to fetch payments")
+      const data: Payment[] = await response.json()
+      setPayments(data)
+    } catch (err) {
+      console.error("Error fetching payments:", err)
+    } finally {
+      setPaymentLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    // Initial fetch
+    fetchCashPaymentRequests()
+    fetchPayments()
+  }, [])
+
+  const handleConfirmPayment = async (requestId: string, tableNumber: number, totalAmount: number) => {
+    const confirmPayment = window.confirm(`Are you sure you received payment of ₹${totalAmount} from table ${tableNumber}?`)
+    if (!confirmPayment) return
+
+    try {
+      const response = await fetch(`${base}/api/payment-requests/${requestId}/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to confirm payment")
+      }
+
+      // Remove from pending requests
+      setCashPaymentRequests((prev) => prev.filter((r) => r._id !== requestId))
+
+      // Refresh payments to include the new payment in real-time
+      fetchPayments()
+
+      alert("Payment confirmed successfully!")
+    } catch (err) {
+      console.error("Error confirming payment:", err)
+      alert(`Error: ${err instanceof Error ? err.message : "Failed to confirm payment"}`)
+    }
   }
 
   const [viewBy, setViewBy] = useState<"day" | "month">("day")
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
 
-  const fmtDay = (d: Date) => new Date(d).toISOString().slice(0, 10) // YYYY-MM-DD
-  const fmtMonth = (d: Date) => {
-    const dt = new Date(d)
-    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}` // YYYY-MM
-  }
-
-  const dayMap = confirmedPayments.reduce<Record<string, { revenue: number; count: number }>>((acc, p) => {
-    const key = fmtDay(p.timestamp)
+  // Calculate revenue data from real payment data
+  const dayMap = payments.reduce<Record<string, { revenue: number; count: number }>>((acc, p) => {
+    const key = fmtDay(p.createdAt)
     acc[key] = acc[key] || { revenue: 0, count: 0 }
-    acc[key].revenue += p.total
+    acc[key].revenue += p.amount
     acc[key].count += 1
     return acc
   }, {})
-  const monthMap = confirmedPayments.reduce<Record<string, { revenue: number; count: number }>>((acc, p) => {
-    const key = fmtMonth(p.timestamp)
+  const monthMap = payments.reduce<Record<string, { revenue: number; count: number }>>((acc, p) => {
+    const key = fmtMonth(p.createdAt)
     acc[key] = acc[key] || { revenue: 0, count: 0 }
-    acc[key].revenue += p.total
+    acc[key].revenue += p.amount
     acc[key].count += 1
     return acc
   }, {})
@@ -252,9 +172,9 @@ export function PaymentConfirmation() {
     }
   }, [selectedDay, selectedMonth, dayRevenueData, monthRevenueData])
 
-  const paymentsForSelectedDay = selectedDay ? confirmedPayments.filter((p) => fmtDay(p.timestamp) === selectedDay) : []
+  const paymentsForSelectedDay = selectedDay ? payments.filter((p) => fmtDay(p.createdAt) === selectedDay) : []
   const paymentsForSelectedMonth = selectedMonth
-    ? confirmedPayments.filter((p) => fmtMonth(p.timestamp) === selectedMonth)
+    ? payments.filter((p) => fmtMonth(p.createdAt) === selectedMonth)
     : []
 
   return (
@@ -271,8 +191,8 @@ export function PaymentConfirmation() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Pending Payments</p>
-                <p className="text-3xl font-bold text-orange-600">{pendingPayments.length}</p>
+                <p className="text-sm text-muted-foreground">Pending Cash Requests</p>
+                <p className="text-3xl font-bold text-orange-600">{cashPaymentRequests.length}</p>
               </div>
               <div className="p-3 bg-orange-100 rounded-full">
                 <AlertTriangle className="w-6 h-6 text-orange-600" />
@@ -313,16 +233,11 @@ export function PaymentConfirmation() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Cash vs QR</p>
-                <p className="text-3xl font-bold text-purple-600">
-                  {cashPayments} / {qrPayments}
-                </p>
+                <p className="text-sm text-muted-foreground">Total Cash Collected</p>
+                <p className="text-3xl font-bold text-purple-600">₹{todaysCashRevenue.toLocaleString()}</p>
               </div>
               <div className="p-3 bg-purple-100 rounded-full">
-                <div className="flex gap-1">
-                  <Banknote className="w-3 h-3 text-purple-600" />
-                  <CreditCard className="w-3 h-3 text-purple-600" />
-                </div>
+                <Banknote className="w-6 h-6 text-purple-600" />
               </div>
             </div>
           </CardContent>
@@ -335,88 +250,85 @@ export function PaymentConfirmation() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Filter Payments</span>
+              <span className="text-sm font-medium">Search</span>
             </div>
 
             <div className="flex items-center gap-4 flex-1">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
-                  placeholder="Phone, Table, or Payment ID"
+                  placeholder="Search by table number..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
                 />
               </div>
 
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All Status">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All Methods">All Methods</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="qr">QR Code</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Button variant="outline" onClick={clearFilters}>
-                Clear Filters
+              <Button variant="outline" onClick={() => setSearchQuery("")}>
+                Clear
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Payments List */}
+      {/* Cash Payment Requests */}
       <Card>
         <CardHeader>
-          <CardTitle>All Payments ({pendingPayments.length})</CardTitle>
+          <CardTitle>Pending Cash Payment Requests ({cashPaymentRequests.filter((r) => !searchQuery || r.tableNumber.toString().includes(searchQuery)).length})</CardTitle>
         </CardHeader>
         <CardContent>
-          {pendingPayments.length === 0 ? (
+          {loading && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Loading payment requests...</p>
+            </div>
+          )}
+          {error && (
+            <div className="bg-red-50 p-4 rounded-lg text-red-700 mb-4">
+              Error: {error}
+            </div>
+          )}
+          {!loading && cashPaymentRequests.length === 0 ? (
             <div className="text-center py-12">
               <CheckCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="font-semibold text-lg mb-2">No Payments Found</h3>
-              <p className="text-muted-foreground">
-                All payments have been processed or no payments match your filters.
-              </p>
+              <h3 className="font-semibold text-lg mb-2">No Pending Requests</h3>
+              <p className="text-muted-foreground">All cash payment requests have been processed.</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {pendingPayments.map((payment) => (
-                <div key={payment.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                      <span className="font-bold text-orange-600">T{payment.tableNumber}</span>
+              {cashPaymentRequests
+                .filter((r) => !searchQuery || r.tableNumber.toString().includes(searchQuery))
+                .map((request) => (
+                  <div key={request._id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                        <span className="font-bold text-orange-600">T{request.tableNumber}</span>
+                      </div>
+                      <div>
+                        <div className="font-medium">Table {request.tableNumber}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {request.unpaidOrderCount} unpaid order{request.unpaidOrderCount !== 1 ? "s" : ""}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(request.timestamp).toLocaleTimeString()}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-medium">Table {payment.tableNumber}</div>
-                      <div className="text-sm text-muted-foreground">{payment.customerPhone}</div>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="font-bold">₹{payment.total}</div>
-                      <div className="text-sm text-muted-foreground">Cash Payment</div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="font-bold text-lg">₹{request.totalAmount}</div>
+                        <div className="text-sm text-muted-foreground">Cash Payment</div>
+                      </div>
+                      <Badge variant="destructive">Pending</Badge>
+                      <Button 
+                        onClick={() => handleConfirmPayment(request._id, request.tableNumber, request.totalAmount)}
+                      >
+                        Confirm Payment
+                      </Button>
                     </div>
-                    <Badge variant="destructive">Pending</Badge>
-                    <Button onClick={() => handleConfirmPayment(payment.id)}>Confirm Payment</Button>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           )}
         </CardContent>
@@ -516,22 +428,20 @@ export function PaymentConfirmation() {
                     <TableRow>
                       <TableHead>Time</TableHead>
                       <TableHead>Payment ID</TableHead>
-                      <TableHead>Table</TableHead>
                       <TableHead>Method</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {(viewBy === "day" ? paymentsForSelectedDay : paymentsForSelectedMonth).map((p) => {
-                      const d = new Date(p.timestamp)
+                      const d = new Date(p.createdAt)
                       const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
                       return (
-                        <TableRow key={p.id}>
+                        <TableRow key={p._id}>
                           <TableCell>{time}</TableCell>
-                          <TableCell>#{p.id}</TableCell>
-                          <TableCell>T{p.tableNumber}</TableCell>
-                          <TableCell className="capitalize">{p.paymentMethod}</TableCell>
-                          <TableCell className="text-right">₹{p.total}</TableCell>
+                          <TableCell>#{p._id}</TableCell>
+                          <TableCell className="capitalize">{p.type}</TableCell>
+                          <TableCell className="text-right">₹{p.amount}</TableCell>
                         </TableRow>
                       )
                     })}

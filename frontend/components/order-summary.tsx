@@ -38,7 +38,7 @@ export function OrderSummary({
   onUpdateCurrentOrder: (next: Line[]) => void
   session: TableSession | null
   tableNumber: number
-  serverAddOrder?: (items: { name: string; quantity: number; price: number }[]) => Promise<{ orderId: any; session: any } | null>
+  serverAddOrder?: (items: { itemId: number; quantity: number; price: number }[]) => Promise<{ orderId: any; session: any } | null>
 }) {
   const [paymentCompleted, setPaymentCompleted] = useState(false)
   const [showThankYou, setShowThankYou] = useState(false)
@@ -174,10 +174,10 @@ export function OrderSummary({
     // Build items payload including itemId (required by backend). Try to use item.itemId if present,
     // otherwise attempt to resolve by name via the menu API.
     let items = currentOrder.map((item) => ({
-      name: (item.item || item.name || "").toString(),
+      // name: (item.item || item.name || "").toString(),
       quantity: item.quantity,
       price: item.price,
-      itemId: (item as any).itemId as number | undefined,
+      itemId: (item as any).itemId as number,
     }))
 
     // If some items lack itemId, try to resolve them by fetching menu items
@@ -190,10 +190,6 @@ export function OrderSummary({
           map.set((m.name || "").toLowerCase(), Number(m.id))
         }
         items = items.map((it) => {
-          if (typeof it.itemId === "undefined") {
-            const id = map.get((it.name || "").toLowerCase())
-            if (typeof id !== "undefined") return { ...it, itemId: id }
-          }
           return it
         })
       } catch (err) {
@@ -239,22 +235,60 @@ export function OrderSummary({
     setShowPhoneDialog(true)
   }
 
-  const requestCashPayment = () => {
+  const requestCashPayment = async () => {
     if (!session) return
 
-    realTimeSync.emitCashPaymentRequest({
+    // POST to backend to create a payment request with only tableNumber and sessionId
+    const payload = {
       tableNumber,
-      customerPhone: session.phoneNumber || "",
-      total: grandTotal,
-      items: [
-        ...((expandedPreviousOrders || previousOrders || []).flatMap((o: any) => o.items)),
-        ...currentOrder.map((l) => ({
-          name: (l.item || l.name || "").toString(),
-          quantity: l.quantity,
-          price: l.price,
-        })),
-      ],
-    })
+      sessionId: session.sessionId || (session as any)._id,
+    }
+
+    try {
+      const base = process.env.NEXT_PUBLIC_BACKEND_URL
+      const response = await fetch(`${base}/api/payment-requests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        console.error("Failed to create payment request")
+        return
+      }
+
+      const created = await response.json()
+
+      // Emit event for real-time sync (dashboard, other tabs, etc.)
+      // Use only the fields that dashboard expects
+      try {
+        realTimeSync.emitCashPaymentRequest({
+          tableNumber: created.tableNumber,
+          customerPhone: session.phoneNumber || "",
+          total: grandTotal,
+          items: [
+            ...((expandedPreviousOrders || previousOrders || []).flatMap((o: any) => o.items)),
+            ...currentOrder.map((l) => ({
+              name: (l.item || l.name || "").toString(),
+              quantity: l.quantity,
+              price: l.price,
+            })),
+          ],
+        })
+      } catch (emitErr) {
+        console.warn("Failed to emit payment request event", emitErr)
+      }
+
+      // Redirect to home page
+      try {
+        window.location.reload();
+
+      } catch (e) {
+        alert("Payment request created! Please return to the home page manually.")
+      }
+    } catch (err) {
+      console.error("Error creating payment request:", err)
+    }
   }
 
   const simulateQrPayment = () => {
