@@ -169,13 +169,13 @@ async function createReservation(req, res) {
           extraCharge,
           total,
           currency: data.currency || 'INR',
-          paymentStatus: 'pending',
+          paymentStatus: data.payment.paymentStatus || 'pending',
         },
         specialRequests: data.specialRequests,
         occasion: data.occasion,
         sessionMinutes: sessionMinutes,
         notes: data.notes,
-        status: data.status || 'pending',
+        status: data.payment.paymentStatus,
         sessionId: data.sessionId || undefined,
       });
 
@@ -186,7 +186,7 @@ async function createReservation(req, res) {
         try {
           const payment = new Payment({
             amount: created.payment.total,
-            type: 'cash', // default type for reservations
+            type: 'upi', // default type for reservations
             paymentOf: 'reservation',
             reservationId: created._id,
           });

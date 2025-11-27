@@ -152,7 +152,7 @@ export default function ReservationsPage() {
         extraCharge: tip,
         total,
         currency,
-        paymentStatus: 'pending'
+        paymentStatus: 'paid'
       }
     }
     try {

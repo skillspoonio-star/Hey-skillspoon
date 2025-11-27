@@ -150,7 +150,7 @@ export default function AdminLogin() {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-orange-100/40 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="w-full max-w-md relative z-10">
+      <div className="w-full max-w-md relative z-1 ">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
@@ -166,7 +166,7 @@ export default function AdminLogin() {
         </div>
 
         <Card className="shadow-2xl border-0 backdrop-blur-sm bg-white/95">
-          <CardHeader className="text-center pb-4 relative">
+          <CardHeader className="text-center pb-4 relative text-black">
             <div className="absolute inset-0 opacity-5">
               <svg className="w-full h-full" viewBox="0 0 100 100" fill="currentColor">
                 <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
@@ -192,16 +192,16 @@ export default function AdminLogin() {
                 </>
               )}
             </CardTitle>
-            <div className="flex justify-center gap-2 mt-4">
+            <div className="flex justify-center gap-2 mt-4 ">
               <Badge
                 variant={step === "credentials" ? "default" : "secondary"}
-                className={`${step === "credentials" ? "bg-orange-500 shadow-md" : "bg-gray-200"} transition-all`}
+                className={`${step === "credentials" ? "bg-orange-500 shadow-md" : "bg-gray-200 text-black"} transition-all`}
               >
                 1. Credentials
               </Badge>
               <Badge
                 variant={step === "otp" ? "default" : "secondary"}
-                className={`${step === "otp" ? "bg-orange-500 shadow-md" : "bg-gray-200"} transition-all`}
+                className={`${step === "otp" ? "bg-orange-500 shadow-md" : "text-black bg-gray-200"} transition-all`}
               >
                 2. OTP
               </Badge>
@@ -217,17 +217,17 @@ export default function AdminLogin() {
 
             {step === "credentials" ? (
               <form onSubmit={handleCredentialsSubmit} className="space-y-4">
-                <div className="space-y-2">
+                <div className="space-y-2 text-black">
                   <Label htmlFor="adminId">Admin ID</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                  <div className="relative ">
+                    <User className="absolute left-3 top-3 w-4 h-4 text-black " />
                     <Input
                       id="adminId"
                       type="text"
                       placeholder="Enter your Admin ID"
                       value={credentials.adminId}
                       onChange={(e) => setCredentials((prev) => ({ ...prev, adminId: e.target.value }))}
-                      className="pl-10 border-orange-200 focus:border-orange-400 focus:ring-orange-400/20"
+                      className="pl-10 bg-white border-orange-200 focus:border-orange-400 focus:ring-orange-400/20"
                       required
                     />
                   </div>
@@ -236,7 +236,7 @@ export default function AdminLogin() {
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                    <Lock className="absolute left-3 top-3 w-4 h-4 text-black" />
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
@@ -270,10 +270,7 @@ export default function AdminLogin() {
                   <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
                     <Smartphone className="w-6 h-6 text-orange-600" />
                   </div>
-                  <p className="text-sm text-gray-600">OTP sent to registered mobile number ending with ****7890</p>
-                  <p className="text-xs text-gray-500">
-                    Demo OTP: <span className="font-mono font-bold bg-orange-200 px-2 py-1 rounded">123456</span>
-                  </p>
+                  <p className="text-sm text-gray-600">OTP sent to registered email Address</p>
                 </div>
 
                 <div className="space-y-2">
@@ -324,21 +321,6 @@ export default function AdminLogin() {
                 </div>
               </form>
             )}
-
-            <div className="text-center text-xs text-gray-500 space-y-1 p-4 bg-gray-50 rounded-lg border">
-              <p className="font-medium text-gray-700 mb-2">Demo Credentials:</p>
-              <div className="grid grid-cols-1 gap-1">
-                <p>
-                  Admin ID: <span className="font-mono bg-gray-200 px-2 py-1 rounded">admin001</span>
-                </p>
-                <p>
-                  Password: <span className="font-mono bg-gray-200 px-2 py-1 rounded">admin123</span>
-                </p>
-                <p>
-                  OTP: <span className="font-mono bg-gray-200 px-2 py-1 rounded">123456</span>
-                </p>
-              </div>
-            </div>
           </CardContent>
         </Card>
 
