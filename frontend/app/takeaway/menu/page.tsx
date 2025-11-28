@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search, Plus, Minus, ShoppingCart, Clock, Star, Leaf } from "lucide-react"
 import { useRouter } from "next/navigation"
-
+import { InlineLoader } from "@/components/ui/loader"
 
 import { fetchMenuItems, type MenuItem } from '@/lib/menu-data'
 
@@ -20,16 +20,20 @@ export default function TakeawayMenuPage() {
   const [cart, setCart] = useState<CartItem[]>([])
   const [selectedCategory, setSelectedCategory] = useState("popular")
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     let mounted = true
     ;(async () => {
       try {
+        setIsLoading(true)
         const items = await fetchMenuItems()
         if (!mounted) return
         setMenuItems(items)
       } catch (err) {
         console.error('Failed to load menu items', err)
+      } finally {
+        if (mounted) setIsLoading(false)
       }
     })()
     return () => {
@@ -171,8 +175,11 @@ export default function TakeawayMenuPage() {
         </Tabs>
 
         {/* Menu Items */}
-        <div className="space-y-4">
-          {filteredItems.map((item) => (
+        {isLoading ? (
+          <InlineLoader text="Loading menu items..." size="md" />
+        ) : (
+          <div className="space-y-4">
+            {filteredItems.map((item) => (
             <Card key={item.id} className="overflow-hidden">
               <CardContent className="p-0">
                 <div className="flex">
@@ -244,10 +251,11 @@ export default function TakeawayMenuPage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
-        {filteredItems.length === 0 && (
+        {!isLoading && filteredItems.length === 0 && (
           <div className="text-center py-8">
             <p className="text-muted-foreground">No items found matching your search.</p>
           </div>

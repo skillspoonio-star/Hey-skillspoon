@@ -41,7 +41,9 @@ export default function HomePage() {
       title: "Dine-In Experience",
       description: "Voice-powered ordering at your table",
       icon: <Utensils className="w-8 h-8" />,
-      color: "bg-primary/10 text-primary border-primary/20",
+      color: "bg-primary/10 dark:bg-primary/20 text-primary border-primary/20 dark:border-primary/30",
+      iconBg: "bg-white/20 dark:bg-white/10",
+      buttonBg: "bg-white/50 hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/20",
       action: () => setSelectedService("dine-in"),
     },
     {
@@ -49,7 +51,9 @@ export default function HomePage() {
       title: "Self-Order Takeaway",
       description: "Order online, pay online, pickup yourself",
       icon: <ShoppingBag className="w-8 h-8" />,
-      color: "bg-green-100 text-green-700 border-green-200",
+      color: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800",
+      iconBg: "bg-white/20 dark:bg-white/10",
+      buttonBg: "bg-white/50 hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/20 dark:text-green-400",
       action: () => router.push("/takeaway"),
     },
     {
@@ -57,7 +61,9 @@ export default function HomePage() {
       title: "Online Home Delivery",
       description: "Order online, doorstep delivery",
       icon: <Truck className="w-8 h-8" />,
-      color: "bg-rose-100 text-rose-700 border-rose-200",
+      color: "bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800",
+      iconBg: "bg-white/20 dark:bg-white/10",
+      buttonBg: "bg-white/50 hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/20 dark:text-rose-400",
       action: () => router.push("/delivery"),
     },
     {
@@ -65,7 +71,9 @@ export default function HomePage() {
       title: "Restaurant Info",
       description: "Menu, reviews, contact details",
       icon: <Info className="w-8 h-8" />,
-      color: "bg-blue-100 text-blue-700 border-blue-200",
+      color: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800",
+      iconBg: "bg-white/20 dark:bg-white/10",
+      buttonBg: "bg-white/50 hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/20 dark:text-blue-400",
       action: () => router.push("/restaurant-info"),
     },
     {
@@ -73,7 +81,9 @@ export default function HomePage() {
       title: "Table Reservation",
       description: "Reserve your table in advance",
       icon: <Calendar className="w-8 h-8" />,
-      color: "bg-purple-100 text-purple-700 border-purple-200",
+      color: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800",
+      iconBg: "bg-white/20 dark:bg-white/10",
+      buttonBg: "bg-white/50 hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/20 dark:text-purple-400",
       action: () => router.push("/restaurant-info/reservations"),
     },
   ]
@@ -192,14 +202,14 @@ export default function HomePage() {
                   </div>
                   <CardContent className="p-5 md:p-6 relative z-10">
                     <div className="flex flex-col gap-4">
-                      <div className="flex-shrink-0 p-3 rounded-lg bg-white/20 w-fit">{service.icon}</div>
+                      <div className={`flex-shrink-0 p-3 rounded-lg ${service.iconBg} w-fit`}>{service.icon}</div>
                       <div className="flex-1">
                         <h3 className="font-bold text-base md:text-lg mb-2">{service.title}</h3>
                         <p className="text-xs md:text-sm opacity-80 mb-4">{service.description}</p>
                         <Button
                           variant="outline"
                           size="sm"
-                          className="bg-white/50 hover:bg-white/80 shadow-sm text-xs md:text-sm"
+                          className={`${service.buttonBg} shadow-sm text-xs md:text-sm border-current`}
                         >
                           Get Started
                         </Button>
@@ -225,10 +235,10 @@ export default function HomePage() {
                       <Button
                         key={tableNum}
                         variant="outline"
-                        className="h-16 md:h-20 flex flex-col items-center justify-center bg-white hover:bg-primary/10"
+                        className="h-16 md:h-20 flex flex-col items-center justify-center bg-background hover:bg-primary/10"
                         onClick={() => router.push(`/table/${tableNum}`)}
                       >
-                        <span className="font-bold text-sm md:text-base">Table {tableNum}</span>
+                        <span className="font-bold text-sm md:text-base text-foreground">Table {tableNum}</span>
                         <span className="text-xs text-muted-foreground">Available</span>
                       </Button>
                     ))}
@@ -265,12 +275,12 @@ export default function HomePage() {
               <Card className="text-center hover:shadow-md transition-shadow relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent"></div>
                 <CardContent className="p-5 md:p-6 relative z-10">
-                  <div className="w-12 h-12 md:w-14 md:h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
-                    <Phone className="w-6 h-6 md:w-7 md:h-7 text-green-600" />
+                  <div className="w-12 h-12 md:w-14 md:h-14 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
+                    <Phone className="w-6 h-6 md:w-7 md:h-7 text-green-600 dark:text-green-400" />
                   </div>
                   <h4 className="font-medium text-sm md:text-base mb-1">Contact Us</h4>
                   <p className="text-xs md:text-sm text-muted-foreground mb-3">Get in touch with us</p>
-                  <Button size="sm" variant="outline" className="bg-transparent hover:bg-green-50 text-xs md:text-sm">
+                  <Button size="sm" variant="outline" className="bg-transparent hover:bg-green-50 dark:hover:bg-green-900/20 text-xs md:text-sm">
                     {restaurantInfo.phone}
                   </Button>
                 </CardContent>
@@ -279,8 +289,8 @@ export default function HomePage() {
               <Card className="text-center hover:shadow-md transition-shadow relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent"></div>
                 <CardContent className="p-5 md:p-6 relative z-10">
-                  <div className="w-12 h-12 md:w-14 md:h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
-                    <ChefHat className="w-6 h-6 md:w-7 md:h-7 text-amber-600" />
+                  <div className="w-12 h-12 md:w-14 md:h-14 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
+                    <ChefHat className="w-6 h-6 md:w-7 md:h-7 text-amber-600 dark:text-amber-400" />
                   </div>
                   <h4 className="font-medium text-sm md:text-base mb-2">Our Specialties</h4>
                   <p className="text-xs md:text-sm text-muted-foreground mb-3">Authentic Indian cuisine</p>
@@ -288,7 +298,7 @@ export default function HomePage() {
                     size="sm"
                     variant="outline"
                     onClick={() => router.push("/restaurant-info")}
-                    className="bg-transparent hover:bg-amber-50 text-xs md:text-sm"
+                    className="bg-transparent hover:bg-amber-50 dark:hover:bg-amber-900/20 text-xs md:text-sm"
                   >
                     Learn More
                   </Button>
@@ -319,10 +329,10 @@ export default function HomePage() {
               ))}
             </div>
 
-            <Card className="border-amber-200 bg-amber-50 max-w-2xl mx-auto">
+            <Card className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 max-w-2xl mx-auto">
               <CardContent className="p-4 md:p-6">
-                <h4 className="font-medium text-amber-800 mb-2 text-sm md:text-base">Admin Access</h4>
-                <p className="text-xs md:text-sm text-amber-700">
+                <h4 className="font-medium text-amber-800 dark:text-amber-400 mb-2 text-sm md:text-base">Admin Access</h4>
+                <p className="text-xs md:text-sm text-amber-700 dark:text-amber-500">
                   The dashboard provides access to live orders, kitchen display, table management, staff management,
                   analytics, and menu management.
                 </p>
@@ -345,8 +355,8 @@ export default function HomePage() {
             </div>
 
             <div className="text-center group">
-              <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-green-100 to-green-50 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-lg">
-                <ShoppingBag className="w-7 h-7 md:w-8 md:h-8 text-green-600" />
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-900/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                <ShoppingBag className="w-7 h-7 md:w-8 md:h-8 text-green-600 dark:text-green-400" />
               </div>
               <h4 className="font-medium text-sm md:text-base mb-2">Self-Service Takeaway</h4>
               <p className="text-xs md:text-sm text-muted-foreground">
@@ -355,8 +365,8 @@ export default function HomePage() {
             </div>
 
             <div className="text-center group">
-              <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-lg">
-                <Calendar className="w-7 h-7 md:w-8 md:h-8 text-blue-600" />
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/30 dark:to-blue-900/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                <Calendar className="w-7 h-7 md:w-8 md:h-8 text-blue-600 dark:text-blue-400" />
               </div>
               <h4 className="font-medium text-sm md:text-base mb-2">Easy Reservations</h4>
               <p className="text-xs md:text-sm text-muted-foreground">
@@ -365,8 +375,8 @@ export default function HomePage() {
             </div>
 
             <div className="text-center group">
-              <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-amber-100 to-amber-50 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-lg">
-                <Truck className="w-7 h-7 md:w-8 md:h-8 text-amber-600" />
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-amber-100 to-amber-50 dark:from-amber-900/30 dark:to-amber-900/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                <Truck className="w-7 h-7 md:w-8 md:h-8 text-amber-600 dark:text-amber-400" />
               </div>
               <h4 className="font-medium text-sm md:text-base mb-2">Home Delivery</h4>
               <p className="text-xs md:text-sm text-muted-foreground">

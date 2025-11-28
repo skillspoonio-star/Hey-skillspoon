@@ -230,132 +230,137 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
 
   return (
     <div className="space-y-6">
-      {/* Kitchen Header */}
-      <div className="flex flex-col lg:flex items-start  justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Kitchen Display System</h2>
-          <p className="text-muted-foreground">Real-time order management for kitchen staff</p>
-        </div>
+      {/* Kitchen Controls */}
+      <Card className="shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full">
+            <div className="flex gap-2">
+              <Button
+                variant={soundEnabled ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                className="flex-1 sm:flex-none"
+              >
+                <Volume2 className="w-4 h-4 mr-2" />
+                Sound {soundEnabled ? "On" : "Off"}
+              </Button>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full lg:w-auto">
-          <div className="flex gap-2">
-            <Button
-              variant={soundEnabled ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className="flex-1 sm:flex-none"
-            >
-              <Volume2 className="w-4 h-4 mr-2" />
-              Sound {soundEnabled ? "On" : "Off"}
-            </Button>
+              <Button
+                variant={stationView ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStationView(!stationView)}
+                className="flex-1 sm:flex-none"
+              >
+                <Utensils className="w-4 h-4 mr-2" />
+                Station View
+              </Button>
+            </div>
 
-            <Button
-              variant={stationView ? "default" : "outline"}
-              size="sm"
-              onClick={() => setStationView(!stationView)}
-              className="flex-1 sm:flex-none"
-            >
-              <Utensils className="w-4 h-4 mr-2" />
-              Station View
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                <SelectTrigger className="w-full sm:w-32 bg-background text-foreground border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="priority">Priority</SelectItem>
+                  <SelectItem value="time">Time</SelectItem>
+                  <SelectItem value="table">Table</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filterBy} onValueChange={(value: any) => setFilterBy(value)}>
+                <SelectTrigger className="w-full sm:w-32 bg-background text-foreground border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Active</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="preparing">Preparing</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={orderTypeFilter} onValueChange={(value: any) => setOrderTypeFilter(value)}>
+                <SelectTrigger className="w-full sm:w-36 bg-background text-foreground border-border">
+                  <SelectValue placeholder="Order Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="dine-in">Dine-in</SelectItem>
+                  <SelectItem value="take-away">Takeaway</SelectItem>
+                  <SelectItem value="delivery">Delivery</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-              <SelectTrigger className="w-full sm:w-32 bg-background text-foreground border-border">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="priority">Priority</SelectItem>
-                <SelectItem value="time">Time</SelectItem>
-                <SelectItem value="table">Table</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filterBy} onValueChange={(value: any) => setFilterBy(value)}>
-              <SelectTrigger className="w-full sm:w-32 bg-background text-foreground border-border">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Active</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="preparing">Preparing</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={orderTypeFilter} onValueChange={(value: any) => setOrderTypeFilter(value)}>
-              <SelectTrigger className="w-full sm:w-36 bg-background text-foreground border-border">
-                <SelectValue placeholder="Order Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="dine-in">Dine-in</SelectItem>
-                <SelectItem value="take-away">Takeaway</SelectItem>
-                <SelectItem value="delivery">Delivery</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
-        <Card className="bg-card border-border">
-          <CardContent className="p-3 md:p-4">
+        <Card className="border-l-4 border-l-red-500 hover:shadow-md transition-shadow">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Pending</p>
-                <p className="text-xl md:text-2xl font-bold text-destructive">{pendingCount}</p>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Pending</p>
+                <p className="text-3xl font-bold text-red-600 dark:text-red-500">{pendingCount}</p>
               </div>
-              <Clock className="w-6 h-6 md:w-8 md:h-8 text-destructive" />
+              <div className="p-3 bg-red-500/10 rounded-full">
+                <Clock className="w-6 h-6 text-red-600 dark:text-red-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
-          <CardContent className="p-3 md:p-4">
+        <Card className="border-l-4 border-l-primary hover:shadow-md transition-shadow">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Preparing</p>
-                <p className="text-xl md:text-2xl font-bold text-primary">{preparingCount}</p>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Preparing</p>
+                <p className="text-3xl font-bold text-primary">{preparingCount}</p>
               </div>
-              <ChefHat className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+              <div className="p-3 bg-primary/10 rounded-full">
+                <ChefHat className="w-6 h-6 text-primary" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
-          <CardContent className="p-3 md:p-4">
+        <Card className="border-l-4 border-l-amber-500 hover:shadow-md transition-shadow">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Urgent</p>
-                <p className="text-xl md:text-2xl font-bold text-destructive">{urgentCount}</p>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Urgent</p>
+                <p className="text-3xl font-bold text-amber-600 dark:text-amber-500">{urgentCount}</p>
               </div>
-              <AlertTriangle className="w-6 h-6 md:w-8 md:h-8 text-destructive" />
+              <div className="p-3 bg-amber-500/10 rounded-full">
+                <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
-          <CardContent className="p-3 md:p-4">
+        <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Active Tables</p>
-                <p className="text-xl md:text-2xl font-bold text-chart-2">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Active Tables</p>
+                <p className="text-3xl font-bold text-green-600 dark:text-green-500">
                   {activeDineInTables}
                 </p>
               </div>
-              <Users className="w-6 h-6 md:w-8 md:h-8 text-chart-2" />
+              <div className="p-3 bg-green-500/10 rounded-full">
+                <Users className="w-6 h-6 text-green-600 dark:text-green-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
-          <CardContent className="p-3 md:p-4">
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Avg Prep Time</p>
-                <p className="text-xl md:text-2xl font-bold text-chart-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Avg Prep Time</p>
+                <p className="text-3xl font-bold text-blue-600 dark:text-blue-500">
                   {Math.round(
                     activeOrders.reduce((acc, order) => {
                       const elapsed = Math.floor((currentTime.getTime() - order.timestamp.getTime()) / (1000 * 60))
@@ -365,14 +370,16 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
                   m
                 </p>
               </div>
-              <Timer className="w-6 h-6 md:w-8 md:h-8 text-chart-4" />
+              <div className="p-3 bg-blue-500/10 rounded-full">
+                <Timer className="w-6 h-6 text-blue-600 dark:text-blue-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {stationView && (
-        <Card className="bg-card border-border">
+        <Card className="shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground">
               <Utensils className="w-5 h-5" />
@@ -689,12 +696,19 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
                   </CardContent>
                 </Card>
               ) : (
-                <Card className="bg-card border-border">
-                  <CardContent className="p-8 text-center">
-                    <Eye className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground">
-                      Select an order from the grid view to see detailed information
-                    </p>
+                <Card className="shadow-sm">
+                  <CardContent className="p-12">
+                    <div className="flex flex-col items-center justify-center text-center space-y-3">
+                      <div className="p-4 bg-muted rounded-full">
+                        <Eye className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="font-semibold text-lg">No Order Selected</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Select an order from the grid view to see detailed information
+                        </p>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               )}
@@ -885,11 +899,17 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
       </Tabs>
 
       {sortedOrders.length === 0 && (
-        <Card className="bg-card border-border">
-          <CardContent className="p-12 text-center">
-            <ChefHat className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="font-semibold text-lg mb-2 text-foreground">All caught up!</h3>
-            <p className="text-muted-foreground">No active orders in the kitchen right now.</p>
+        <Card className="shadow-sm">
+          <CardContent className="p-12">
+            <div className="flex flex-col items-center justify-center text-center space-y-3">
+              <div className="p-4 bg-muted rounded-full">
+                <ChefHat className="w-12 h-12 text-muted-foreground" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-semibold text-lg text-foreground">All caught up!</h3>
+                <p className="text-sm text-muted-foreground">No active orders in the kitchen right now.</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

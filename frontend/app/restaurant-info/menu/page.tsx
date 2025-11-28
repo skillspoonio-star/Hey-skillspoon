@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search, Star, Clock, Leaf, ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { InlineLoader } from "@/components/ui/loader"
 
 interface MenuItem {
   id: number
@@ -28,11 +29,12 @@ export default function RestaurantMenuPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("popular")
-
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   useEffect(() => {
     async function fetchMenuItems() {
       try {
+        setIsLoading(true)
         const base = process.env.NEXT_PUBLIC_BACKEND_URL;
         const res = await fetch(`${base}/api/menu/items`)
         if (!res.ok) throw new Error("Failed to fetch menu items")
@@ -40,6 +42,8 @@ export default function RestaurantMenuPage() {
         setMenuItems(data)
       } catch (error) {
         console.error("Error fetching menu items:", error)
+      } finally {
+        setIsLoading(false)
       }
     }
 
@@ -130,8 +134,11 @@ export default function RestaurantMenuPage() {
         </Tabs>
 
         {/* Menu Items */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredItems.map((item) => (
+        {isLoading ? (
+          <InlineLoader text="Loading menu items..." size="md" />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {filteredItems.map((item) => (
             <Card key={item.id} className="overflow-hidden">
               <CardContent className="p-0">
                 <div className="flex">
@@ -195,11 +202,12 @@ export default function RestaurantMenuPage() {
                   </div>
                 </div>
               </CardContent>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+        )}
 
-        {filteredItems.length === 0 && (
+        {!isLoading && filteredItems.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground text-lg">No items found matching your search.</p>
           </div>

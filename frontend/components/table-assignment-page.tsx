@@ -164,13 +164,13 @@ export function TableAssignmentPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "available":
-        return "border-green-500 dark:border-green-600"
+        return "border-green-500 dark:border-green-600 bg-green-50/50 dark:bg-green-950/20"
       case "occupied":
-        return "border-blue-500 dark:border-blue-600"
+        return "border-blue-500 dark:border-blue-600 bg-blue-50/50 dark:bg-blue-950/20"
       case "cleaning":
-        return "border-gray-500 dark:border-gray-600"
+        return "border-gray-500 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-950/20"
       case "reserved":
-        return "border-amber-500 dark:border-amber-600"
+        return "border-amber-500 dark:border-amber-600 bg-amber-50/50 dark:bg-amber-950/20"
       default:
         return "border-border"
     }
@@ -186,7 +186,7 @@ export function TableAssignmentPage() {
 
     return (
       <div className="flex items-center gap-2">
-        <div className={`w-2.5 h-2.5 rounded-full ${colors[status as keyof typeof colors]}`}></div>
+        <div className={`w-3 h-3 rounded-full ${colors[status as keyof typeof colors]}`}></div>
         <span className="text-sm font-semibold capitalize">{status}</span>
       </div>
     )
@@ -196,59 +196,84 @@ export function TableAssignmentPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Table Assignment</h1>
-          <p className="text-muted-foreground">Assign customers to tables and manage dining sessions</p>
-        </div>
-        <Button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white w-full sm:w-auto shadow-lg font-bold"
-        >
-          Assign New Table
-        </Button>
-      </div>
+      {/* Quick Actions */}
+      <Card className="shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="text-sm">
+                <span className="text-muted-foreground">Available Tables: </span>
+                <span className="font-bold text-lg text-green-600 dark:text-green-500">{availableTables.length}</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-muted-foreground">Total Tables: </span>
+                <span className="font-bold text-lg">{tables.length}</span>
+              </div>
+            </div>
+            <Button
+              onClick={() => setIsModalOpen(true)}
+              className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white w-full sm:w-auto shadow-lg font-bold"
+            >
+              Assign New Table
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* QR Code Display */}
       {showQRCode && (
         <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-card border-2 p-6 rounded-lg max-w-md w-full">
-            <QRGenerator
-              tableNumber={showQRCode}
-              customerName={tables.find((t) => t.number === showQRCode)?.customerName || ""}
-              sessionId={tables.find((t) => t.number === showQRCode)?.sessionId || ""}
-            />
-            <Button onClick={() => setShowQRCode(null)} className="w-full mt-4" variant="outline">
-              Close
-            </Button>
-          </div>
+          <Card className="border-2 max-w-md w-full shadow-2xl">
+            <CardContent className="p-6">
+              <QRGenerator
+                tableNumber={showQRCode}
+                customerName={tables.find((t) => t.number === showQRCode)?.customerName || ""}
+                sessionId={tables.find((t) => t.number === showQRCode)?.sessionId || ""}
+              />
+              <Button onClick={() => setShowQRCode(null)} className="w-full mt-4" variant="outline">
+                Close
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       )}
 
       {/* Loading State */}
       {loading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading tables...</p>
-          </div>
-        </div>
+        <Card className="shadow-sm">
+          <CardContent className="p-12">
+            <div className="flex flex-col items-center justify-center text-center space-y-3">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+              <p className="text-muted-foreground">Loading tables...</p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Error State */}
       {error && (
-        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-          <p className="text-destructive font-medium">Error loading tables</p>
-          <p className="text-sm text-muted-foreground mt-1">{error}</p>
-        </div>
+        <Card className="border-destructive/50 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-destructive/10 rounded-full">
+                <svg className="w-5 h-5 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-destructive font-semibold">Error loading tables</p>
+                <p className="text-sm text-muted-foreground mt-1">{error}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Tables Grid */}
       {!loading && !error && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 lg:gap-8">
           {tables.map((table) => (
-          <Card key={table.number} className={`${getStatusColor(table.status)} border-2 min-h-[400px] flex flex-col`}>
+          <Card key={table.number} className={`${getStatusColor(table.status)} border-2 min-h-[400px] flex flex-col hover:shadow-lg transition-shadow min-w-[330px]`}>
             <CardContent className="p-6 lg:p-8 flex-1 flex flex-col">
               <div className="space-y-5 flex-1 flex flex-col">
                 {/* Table Header */}
@@ -266,7 +291,12 @@ export function TableAssignmentPage() {
                 {/* Available Table */}
                 {table.status === "available" && (
                   <div className="space-y-4 flex-1 flex flex-col justify-center">
-                    <p className="text-center text-muted-foreground py-4">Ready for new customers</p>
+                    <div className="text-center py-6">
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-3">
+                        <Users className="w-8 h-8 text-green-600 dark:text-green-500" />
+                      </div>
+                      <p className="text-muted-foreground">Ready for new customers</p>
+                    </div>
                     <Button
                       onClick={() => {
                         setSelectedTableForModal(table)
@@ -328,7 +358,14 @@ export function TableAssignmentPage() {
                 {/* Cleaning Table */}
                 {table.status === "cleaning" && (
                   <div className="space-y-4 flex-1 flex flex-col justify-center">
-                    <p className="text-center text-muted-foreground py-4">Table being cleaned</p>
+                    <div className="text-center py-6">
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-900/30 mb-3">
+                        <svg className="w-8 h-8 text-gray-600 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </div>
+                      <p className="text-muted-foreground">Table being cleaned</p>
+                    </div>
                     <Button variant="outline" className="w-full bg-transparent" disabled>
                       Cleaning in Progress
                     </Button>
@@ -338,7 +375,12 @@ export function TableAssignmentPage() {
                 {/* Reserved Table */}
                 {table.status === "reserved" && (
                   <div className="space-y-4 flex-1 flex flex-col justify-center">
-                    <p className="text-center text-muted-foreground py-4">Reserved for upcoming booking</p>
+                    <div className="text-center py-6">
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 mb-3">
+                        <Clock className="w-8 h-8 text-amber-600 dark:text-amber-500" />
+                      </div>
+                      <p className="text-muted-foreground">Reserved for upcoming booking</p>
+                    </div>
                     <Button variant="outline" className="w-full bg-transparent" disabled>
                       Reserved
                     </Button>

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Search, Plus, Minus } from "lucide-react"
 import { fetchMenuItems, type MenuItem } from "@/lib/menu-data"
 import { useRouter } from "next/navigation"
+import { InlineLoader } from "@/components/ui/loader"
 
 type CartLine = { id: number; name: string; price: number; qty: number }
 
@@ -19,16 +20,20 @@ export default function DeliveryMenuPage() {
   const [vegOnly, setVegOnly] = useState(false)
   const [category, setCategory] = useState<string>("all")
   const [itemsLoaded, setItemsLoaded] = useState<MenuItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     let mounted = true
     ;(async () => {
       try {
+        setIsLoading(true)
         const items = await fetchMenuItems()
         if (!mounted) return
         setItemsLoaded(items)
       } catch (err) {
         console.error('Failed to load menu items', err)
+      } finally {
+        if (mounted) setIsLoading(false)
       }
     })()
 
@@ -120,8 +125,11 @@ export default function DeliveryMenuPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {items.map((i) => (
+        {isLoading ? (
+          <InlineLoader text="Loading menu items..." size="md" />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {items.map((i) => (
             <Card key={i.id}>
               <CardContent className="p-4 flex items-start gap-3">
                 <div className="w-24 h-24 bg-muted rounded overflow-hidden flex-shrink-0">
@@ -145,9 +153,10 @@ export default function DeliveryMenuPage() {
                   </div>
                 </div>
               </CardContent>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {/* Fixed Bottom Cart Bar */}
         {cart.length > 0 && (

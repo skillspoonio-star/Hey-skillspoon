@@ -14,6 +14,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname()
   const [authChecked, setAuthChecked] = useState(false)
   const [notifications, setNotifications] = useState<string[]>([])
+  const [isNavigating, setIsNavigating] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -41,6 +42,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     verify()
     return () => { mounted = false }
   }, [router])
+
+  // Show loading state when pathname changes
+  useEffect(() => {
+    setIsNavigating(true)
+    const timer = setTimeout(() => setIsNavigating(false), 300)
+    return () => clearTimeout(timer)
+  }, [pathname])
 
   // derive activeKey from current pathname so client-side navigation highlights correctly
   const parts = (pathname || '').split('/').filter(Boolean)
@@ -112,7 +120,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <SidebarRail />
         <SidebarInset>
           <header className="bg-card border-b border-border p-4 lg:p-6">
-            <div className="max-w-[1920px] mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <SidebarTrigger />
                 <img src="/hey-paytm-logo.png" alt="Hey Paytm logo" className="w-10 h-10 rounded-xl shadow-sm" />
@@ -141,7 +149,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </header>
 
-          <main className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-8">{children}</main>
+          <main className="px-4 sm:px-6 lg:px-8 xl:px-12 py-6 lg:py-8">
+            {isNavigating ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+                  <p className="text-sm text-muted-foreground">Loading...</p>
+                </div>
+              </div>
+            ) : (
+              children
+            )}
+          </main>
         </SidebarInset>
       </div>
     </SidebarProvider>

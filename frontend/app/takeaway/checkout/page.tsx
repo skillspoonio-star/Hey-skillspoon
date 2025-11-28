@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ShoppingBag, Clock, User, CreditCard, Wallet, QrCode } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { FullPageLoader } from "@/components/ui/loader"
 
 export default function TakeawayCheckoutPage() {
   const router = useRouter()
@@ -275,10 +276,12 @@ export default function TakeawayCheckoutPage() {
         </Card>
 
         {/* Pay Button */}
-                <Button className="w-full h-12 text-base font-medium" onClick={handlePayment} disabled={isProcessing || cartItems.length===0}>
+        <Button className="w-full h-12 text-base font-medium" onClick={handlePayment} disabled={isProcessing || cartItems.length===0}>
           {isProcessing ? "Processing Payment..." : `Pay ₹${total}`}
         </Button>
       </main>
+
+      {isProcessing && <FullPageLoader text="Processing your payment..." />}
     </div>
   )
 }

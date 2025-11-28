@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { openRazorpayPayment } from "@/lib/razorpay"
 import { useTheme } from "next-themes"
+import { FullPageLoader } from "@/components/ui/loader"
 
 export default function DeliveryCheckoutPage() {
   const router = useRouter()
@@ -386,6 +387,8 @@ export default function DeliveryCheckoutPage() {
           </CardContent>
         </Card>
       </main>
+
+      {isProcessingPayment && <FullPageLoader text="Processing your order..." />}
     </div>
   )
 }

@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Truck, MapPin, Phone, Clock, CheckCircle, Search } from "lucide-react"
+import { Truck, MapPin, Phone, Clock, CheckCircle, Search, XCircle } from "lucide-react"
 import { fetchMenuItems, MenuItem } from "@/lib/menu-data"
+import { InlineLoader } from "@/components/ui/loader"
 
 type DeliveryOrder = {
   id: string
@@ -30,11 +31,14 @@ export default function DeliveryManagement() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [orders, setOrders] = useState<DeliveryOrder[]>([])
+  const [loading, setLoading] = useState(true)
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
     ;(async () => {
       try {
+        setLoading(true)
         const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
         const res = await fetch(`${base}/api/deliveries`)
         if (!res.ok) return
@@ -83,6 +87,8 @@ export default function DeliveryManagement() {
         setOrders(mapped)
       } catch (err) {
         console.error('Failed to load deliveries', err)
+      } finally {
+        if (mounted) setLoading(false)
       }
     })()
     return () => { mounted = false }
@@ -111,7 +117,7 @@ export default function DeliveryManagement() {
     }), [orders, searchTerm, statusFilter]
   )
 
-  const markNext = (id: string) => {
+  const markNext = async (id: string) => {
     const nextStatusFor = (s: string) => {
       const flow = ["pending", "out-for-delivery", "delivered"]
       const idx = flow.indexOf(s)
@@ -129,33 +135,34 @@ export default function DeliveryManagement() {
     }
 
     // Attempt update on server first
-    ;(async () => {
-      try {
-        const next = nextStatusFor(o.status)
-        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
-        const res = await fetch(`${base}/api/deliveries/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: next }),
-        })
+    try {
+      setUpdatingOrderId(id)
+      const next = nextStatusFor(o.status)
+      const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+      const res = await fetch(`${base}/api/deliveries/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: next }),
+      })
 
-        if (res.status === 409) {
-          const body = await res.json().catch(() => ({}))
-          alert(body.error || 'Cannot update delivery status: order is not ready yet.')
-          return
-        }
-
-        if (!res.ok) {
-          throw new Error('failed')
-        }
-
-        const updated = await res.json()
-        setOrders((prev) => prev.map((p) => (p.id === id ? { ...p, status: updated.status } : p)))
-      } catch (err) {
-        console.error('Failed to update delivery status', err)
-        alert('Failed to update delivery status. Please try again.')
+      if (res.status === 409) {
+        const body = await res.json().catch(() => ({}))
+        alert(body.error || 'Cannot update delivery status: order is not ready yet.')
+        return
       }
-    })()
+
+      if (!res.ok) {
+        throw new Error('failed')
+      }
+
+      const updated = await res.json()
+      setOrders((prev) => prev.map((p) => (p.id === id ? { ...p, status: updated.status } : p)))
+    } catch (err) {
+      console.error('Failed to update delivery status', err)
+      alert('Failed to update delivery status. Please try again.')
+    } finally {
+      setUpdatingOrderId(null)
+    }
   }
 
   const handlePrint = (order: DeliveryOrder) => {
@@ -202,126 +209,198 @@ export default function DeliveryManagement() {
     }, 500)
   }
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <InlineLoader size="md" text="Loading delivery orders..." />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <div className="text-sm text-muted-foreground">Active</div>
-              <div className="text-2xl font-bold">
-                {filtered.filter((o) => o.status !== "delivered" && o.status !== "cancelled").length}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <Card className="border-l-4 border-l-primary hover:shadow-md transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Active</p>
+                <p className="text-3xl font-bold">
+                  {filtered.filter((o) => o.status !== "delivered" && o.status !== "cancelled").length}
+                </p>
+              </div>
+              <div className="p-3 bg-primary/10 rounded-full">
+                <Truck className="w-6 h-6 text-primary" />
               </div>
             </div>
-            <Truck className="w-8 h-8 text-primary" />
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <div className="text-sm text-muted-foreground">Delivered</div>
-              <div className="text-2xl font-bold text-chart-2">
-                {filtered.filter((o) => o.status === "delivered").length}
+        <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Delivered</p>
+                <p className="text-3xl font-bold text-green-600 dark:text-green-500">
+                  {filtered.filter((o) => o.status === "delivered").length}
+                </p>
+              </div>
+              <div className="p-3 bg-green-500/10 rounded-full">
+                <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-500" />
               </div>
             </div>
-            <CheckCircle className="w-8 h-8 text-chart-2" />
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <div className="text-sm text-muted-foreground">Pending Payment</div>
-              <div className="text-2xl font-bold text-destructive">
-                {filtered.filter((o) => o.paymentStatus === "pending").length}
+        <Card className="border-l-4 border-l-amber-500 hover:shadow-md transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Pending Payment</p>
+                <p className="text-3xl font-bold text-amber-600 dark:text-amber-500">
+                  {filtered.filter((o) => o.paymentStatus === "pending").length}
+                </p>
+              </div>
+              <div className="p-3 bg-amber-500/10 rounded-full">
+                <Clock className="w-6 h-6 text-amber-600 dark:text-amber-500" />
               </div>
             </div>
-            <Clock className="w-8 h-8 text-destructive" />
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <div className="text-sm text-muted-foreground">Total</div>
-              <div className="text-2xl font-bold">{filtered.length}</div>
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Total</p>
+                <p className="text-3xl font-bold">{filtered.length}</p>
+              </div>
+              <div className="p-3 bg-blue-500/10 rounded-full">
+                <Phone className="w-6 h-6 text-blue-600 dark:text-blue-500" />
+              </div>
             </div>
-            <Phone className="w-8 h-8" />
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardContent className="p-4 flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              className="pl-10"
-              placeholder="Search by ID, name, phone, address..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+      <Card className="shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                className="pl-10 h-11"
+                placeholder="Search by ID, name, phone, address..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full md:w-56 h-11">
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="out-for-delivery">Out for Delivery</SelectItem>
+                <SelectItem value="delivered">Delivered</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="out-for-delivery">Out for Delivery</SelectItem>
-              <SelectItem value="delivered">Delivered</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {filtered.map((order) => (
-          <Card key={order.id}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">#{order.id}</CardTitle>
-                <Badge className={getStatusBadge(order.status)}>{order.status.replaceAll("-", " ")}</Badge>
+      {filtered.length === 0 ? (
+        <Card className="shadow-sm">
+          <CardContent className="p-12">
+            <div className="flex flex-col items-center justify-center text-center space-y-3">
+              <div className="p-4 bg-muted rounded-full">
+                <XCircle className="w-8 h-8 text-muted-foreground" />
               </div>
-              <div className="text-sm text-muted-foreground flex items-center gap-2">
-                <Clock className="w-4 h-4" /> Placed: {order.placedAt} {order.eta ? `• ETA: ${order.eta}` : null}
+              <div className="space-y-1">
+                <h3 className="font-semibold text-lg">No delivery orders found</h3>
+                <p className="text-sm text-muted-foreground">
+                  {searchTerm || statusFilter !== "all" 
+                    ? "Try adjusting your search or filters" 
+                    : "Delivery orders will appear here once placed"}
+                </p>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-sm flex items-center gap-2">
-                <Phone className="w-4 h-4" /> {order.customerName} • {order.phone}
-              </div>
-              {order.tableNumber ? (
-                <div className="text-sm text-muted-foreground">Delivery No: <span className="font-medium">{order.tableNumber}</span></div>
-              ) : null}
-              <div className="text-sm flex items-center gap-2">
-                <MapPin className="w-4 h-4" /> {order.address}
-              </div>
-              <div className="text-sm">
-                <span className="font-medium">Items:</span>{" "}
-                {order.items.map((i) => i.price ? `${i.quantity}x ${i.name} (₹${i.price})` : `${i.quantity}x ${i.name}`).join(", ")}
-              </div>
-              <div className="flex items-center justify-between pt-2 border-t">
-                <div className="text-sm">
-                  Payment:{" "}
-                  <Badge variant={order.paymentStatus === "completed" ? "secondary" : "outline"}>
-                    {order.paymentMethod}
-                  </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {filtered.map((order) => (
+            <Card key={order.id} className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base font-semibold">#{order.id}</CardTitle>
+                  <Badge className={getStatusBadge(order.status)}>{order.status.replaceAll("-", " ")}</Badge>
                 </div>
-                <div className="font-bold">₹{order.total}</div>
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm" onClick={() => markNext(order.id)}>
-                  Advance Status
-                </Button>
-                <Button size="sm" variant="outline" className="bg-transparent">
-                  Print
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                <div className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Clock className="w-4 h-4" /> Placed: {order.placedAt} {order.eta ? `• ETA: ${order.eta}` : null}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="text-sm flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-muted-foreground" /> 
+                  <span className="font-medium">{order.customerName}</span> • {order.phone}
+                </div>
+                {order.tableNumber ? (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Delivery No:</span>{" "}
+                    <span className="font-medium">{order.tableNumber}</span>
+                  </div>
+                ) : null}
+                <div className="text-sm flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" /> 
+                  <span className="break-words">{order.address}</span>
+                </div>
+                <div className="text-sm space-y-1 pt-2 border-t">
+                  <p className="font-medium text-muted-foreground">Items:</p>
+                  <div className="space-y-0.5">
+                    {order.items.map((i, idx) => (
+                      <div key={idx} className="flex justify-between">
+                        <span>{i.quantity}x {i.name}</span>
+                        {i.price && <span className="text-muted-foreground">₹{i.price * i.quantity}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Payment:</span>{" "}
+                    <Badge variant={order.paymentStatus === "completed" ? "secondary" : "outline"}>
+                      {order.paymentMethod}
+                    </Badge>
+                  </div>
+                  <div className="text-lg font-bold">₹{order.total}</div>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button 
+                    size="sm" 
+                    onClick={() => markNext(order.id)}
+                    disabled={updatingOrderId === order.id}
+                    className="flex-1"
+                  >
+                    {updatingOrderId === order.id ? (
+                      <InlineLoader size="sm" text="Updating..." />
+                    ) : (
+                      "Advance Status"
+                    )}
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => handlePrint(order)}
+                    className="flex-1"
+                  >
+                    Print
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

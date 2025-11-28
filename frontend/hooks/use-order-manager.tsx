@@ -38,6 +38,7 @@ export interface Analytics {
 export function useOrderManager() {
   const [orders, setOrders] = useState<Order[]>([])
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   // load menu items first so we can map itemId -> name/price
   useEffect(() => {
@@ -60,6 +61,7 @@ export function useOrderManager() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
+        setIsLoading(true)
         const res = await fetch("http://localhost:3001/api/orders/live")
         if (!res.ok) throw new Error("Failed to fetch orders")
         const data = await res.json()
@@ -92,6 +94,8 @@ export function useOrderManager() {
         setOrders(formatted)
       } catch (error) {
         console.error("Failed to load live orders:", error)
+      } finally {
+        setIsLoading(false)
       }
     }
 
@@ -355,6 +359,7 @@ export function useOrderManager() {
 
   return {
     orders,
+    isLoading,
     addOrder,
     updateOrderStatus,
     updateOrder,

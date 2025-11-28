@@ -17,7 +17,6 @@ import {
   Star,
   Phone,
   Mail,
-  MapPin,
   AlertTriangle,
   TrendingUp,
   Calendar,
@@ -207,26 +206,26 @@ export function StaffManagement() {
   const getStatusColor = (status: StaffMember["status"]) => {
     switch (status) {
       case "active":
-        return "bg-green-100 text-green-800"
+        return "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800"
       case "break":
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800"
       case "offline":
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400 border border-gray-200 dark:border-gray-800"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400 border border-gray-200 dark:border-gray-800"
     }
   }
 
   const getAlertColor = (severity: StaffAlert["severity"]) => {
     switch (severity) {
       case "high":
-        return "border-red-200 bg-red-50"
+        return "border-l-4 border-l-red-500 bg-red-50/50 dark:bg-red-950/20"
       case "medium":
-        return "border-yellow-200 bg-yellow-50"
+        return "border-l-4 border-l-amber-500 bg-amber-50/50 dark:bg-amber-950/20"
       case "low":
-        return "border-blue-200 bg-blue-50"
+        return "border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20"
       default:
-        return "border-gray-200 bg-gray-50"
+        return "border-l-4 border-l-gray-500 bg-gray-50/50 dark:bg-gray-950/20"
     }
   }
 
@@ -294,75 +293,101 @@ export function StaffManagement() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="alerts">Alerts</TabsTrigger>
-          <TabsTrigger value="shifts">Shifts</TabsTrigger>
-          <TabsTrigger value="manage">Manage</TabsTrigger>
-        </TabsList>
+        <Card className="shadow-sm">
+          <CardContent className="p-2">
+            <TabsList className="grid w-full grid-cols-5 bg-transparent gap-1">
+              <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="performance" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                Performance
+              </TabsTrigger>
+              <TabsTrigger value="alerts" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                Alerts
+              </TabsTrigger>
+              <TabsTrigger value="shifts" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                Shifts
+              </TabsTrigger>
+              <TabsTrigger value="manage" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                Manage
+              </TabsTrigger>
+            </TabsList>
+          </CardContent>
+        </Card>
 
         <TabsContent value="overview" className="space-y-6">
           {/* Staff Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Active Staff</p>
-                    <p className="text-2xl font-bold text-green-600">{activeStaff}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 ">
+            <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200 w-60">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-green-500/10 rounded-full">
+                    <Users className="w-6 h-6 text-green-600 dark:text-green-500" />
                   </div>
-                  <Users className="w-8 h-8 text-green-600" />
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Active Staff</p>
+                    <p className="text-3xl font-bold text-green-600 dark:text-green-500">{activeStaff}</p>
+                    <p className="text-xs text-muted-foreground">Currently working</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">On Break</p>
-                    <p className="text-2xl font-bold text-yellow-600">{onBreakStaff}</p>
+            <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-200 w-60">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-amber-500/10 rounded-full">
+                    <Coffee className="w-6 h-6 text-amber-600 dark:text-amber-500" />
                   </div>
-                  <Clock className="w-8 h-8 text-yellow-600" />
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">On Break</p>
+                    <p className="text-3xl font-bold text-amber-600 dark:text-amber-500">{onBreakStaff}</p>
+                    <p className="text-xs text-muted-foreground">Taking rest</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Orders Handled</p>
-                    <p className="text-2xl font-bold text-primary">{totalOrdersHandled}</p>
+            <Card className="border-l-4 border-l-primary hover:shadow-lg transition-all duration-200 w-60">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-primary/10 rounded-full">
+                    <Activity className="w-6 h-6 text-primary" />
                   </div>
-                  <MapPin className="w-8 h-8 text-primary" />
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Orders Handled</p>
+                    <p className="text-3xl font-bold text-primary">{totalOrdersHandled}</p>
+                    <p className="text-xs text-muted-foreground">Today's total</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Avg Rating</p>
-                    <p className="text-2xl font-bold text-accent">{avgRating.toFixed(1)}</p>
+            <Card className="border-l-4 border-l-yellow-500 hover:shadow-lg transition-all duration-200 w-60">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-yellow-500/10 rounded-full">
+                    <Star className="w-6 h-6 text-yellow-600 dark:text-yellow-500" />
                   </div>
-                  <Star className="w-8 h-8 text-accent" />
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Avg Rating</p>
+                    <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-500">{avgRating.toFixed(1)}</p>
+                    <p className="text-xs text-muted-foreground">Performance score</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
           {/* Staff List */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {staff.map((member) => (
-              <Card key={member.id}>
+              <Card key={member.id} className="hover:shadow-lg transition-all duration-200">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <Avatar className="w-12 h-12">
-                        <AvatarFallback className="bg-primary text-primary-foreground">
+                      <Avatar className="w-14 h-14 border-2 border-primary/20">
+                        <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-bold text-lg">
                           {member.name
                             .split(" ")
                             .map((n) => n[0])
@@ -370,11 +395,14 @@ export function StaffManagement() {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <h3 className="font-semibold text-lg">{member.name}</h3>
-                        <p className="text-sm text-muted-foreground">{member.role}</p>
+                        <h3 className="font-bold text-lg">{member.name}</h3>
+                        <p className="text-sm text-muted-foreground font-medium">{member.role}</p>
                       </div>
                     </div>
-                    <Badge className={getStatusColor(member.status)} variant="secondary">
+                    <Badge 
+                      className={`${getStatusColor(member.status)} font-semibold`} 
+                      variant="secondary"
+                    >
                       {member.status}
                     </Badge>
                   </div>
@@ -430,10 +458,12 @@ export function StaffManagement() {
                     </div>
 
                     <div className="flex gap-2 pt-2">
-                      <Button size="sm" variant="outline" className="flex-1 bg-transparent">
+                      <Button size="sm" variant="outline" className="flex-1">
+                        <Phone className="w-3 h-3 mr-1" />
                         Contact
                       </Button>
-                      <Button size="sm" variant="outline" className="flex-1 bg-transparent">
+                      <Button size="sm" variant="outline" className="flex-1">
+                        <Calendar className="w-3 h-3 mr-1" />
                         Schedule
                       </Button>
                     </div>
@@ -446,114 +476,151 @@ export function StaffManagement() {
 
         <TabsContent value="performance" className="space-y-6">
           {/* Performance Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Avg Efficiency</p>
-                    <p className="text-2xl font-bold text-primary">{avgEfficiency.toFixed(1)}%</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-orange-500/10 rounded-full">
+                    <TrendingUp className="w-6 h-6 text-orange-600 dark:text-orange-500" />
                   </div>
-                  <TrendingUp className="w-8 h-8 text-primary" />
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Avg Efficiency</p>
+                    <p className="text-3xl font-bold text-orange-600 dark:text-orange-500">{avgEfficiency.toFixed(1)}%</p>
+                    <p className="text-xs text-muted-foreground">Team performance</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Hours</p>
-                    <p className="text-2xl font-bold text-chart-2">{totalHoursWorked.toFixed(1)}h</p>
+            <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-green-500/10 rounded-full">
+                    <Clock className="w-6 h-6 text-green-600 dark:text-green-500" />
                   </div>
-                  <Clock className="w-8 h-8 text-chart-2" />
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Total Hours</p>
+                    <p className="text-3xl font-bold text-green-600 dark:text-green-500">{totalHoursWorked.toFixed(1)}h</p>
+                    <p className="text-xs text-muted-foreground">Worked today</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Customer Rating</p>
-                    <p className="text-2xl font-bold text-accent">{avgRating.toFixed(1)}</p>
+            <Card className="border-l-4 border-l-yellow-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-yellow-500/10 rounded-full">
+                    <Star className="w-6 h-6 text-yellow-600 dark:text-yellow-500" />
                   </div>
-                  <Star className="w-8 h-8 text-accent" />
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Customer Rating</p>
+                    <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-500">{avgRating.toFixed(1)}</p>
+                    <p className="text-xs text-muted-foreground">Average score</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-blue-500/10 rounded-full">
+                    <Target className="w-6 h-6 text-blue-600 dark:text-blue-500" />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Total Staff</p>
+                    <p className="text-3xl font-bold text-blue-600 dark:text-blue-500">{staff.length}</p>
+                    <p className="text-xs text-muted-foreground">Team members</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
           {/* Top Performers */}
-          <Card>
+          <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Award className="w-5 h-5" />
+                <Award className="w-5 h-5 text-yellow-600 dark:text-yellow-500" />
                 Today's Top Performers
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {topPerformers.map((performer, index) => (
-                  <div key={performer.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                          index === 0
-                            ? "bg-yellow-100 text-yellow-800"
-                            : index === 1
-                              ? "bg-gray-100 text-gray-800"
-                              : "bg-orange-100 text-orange-800"
-                        }`}
-                      >
-                        {index + 1}
+                  <Card key={performer.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
+                              index === 0
+                                ? "bg-gradient-to-br from-yellow-400 to-yellow-600 text-white shadow-lg"
+                                : index === 1
+                                  ? "bg-gradient-to-br from-gray-300 to-gray-500 text-white shadow-md"
+                                  : "bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-md"
+                            }`}
+                          >
+                            {index + 1}
+                          </div>
+                          <Avatar className="w-12 h-12 border-2 border-primary/20">
+                            <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-bold">
+                              {performer.name
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-semibold text-base">{performer.name}</p>
+                            <p className="text-sm text-muted-foreground">{performer.role}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-2xl text-primary">{performer.efficiency}%</p>
+                          <p className="text-xs text-muted-foreground">Efficiency</p>
+                        </div>
                       </div>
-                      <Avatar className="w-10 h-10">
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          {performer.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{performer.name}</p>
-                        <p className="text-sm text-muted-foreground">{performer.role}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-lg">{performer.efficiency}%</p>
-                      <p className="text-sm text-muted-foreground">Efficiency</p>
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             </CardContent>
           </Card>
 
           {/* Department Performance */}
-          <Card>
+          <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
+                <BarChart3 className="w-5 h-5 text-primary" />
                 Department Performance
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {Object.entries(departmentStats).map(([dept, stats]) => (
-                  <div key={dept} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">{dept}</span>
-                      <div className="flex items-center gap-4 text-sm">
-                        <span>
-                          {stats.active}/{stats.total} active
-                        </span>
-                        <span>{stats.efficiency.toFixed(1)}% efficiency</span>
+                  <Card key={dept} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold text-base">{dept}</span>
+                          <div className="flex items-center gap-4 text-sm">
+                            <Badge variant="outline" className="font-medium">
+                              {stats.active}/{stats.total} active
+                            </Badge>
+                            <span className="font-bold text-primary">{stats.efficiency.toFixed(1)}%</span>
+                          </div>
+                        </div>
+                        <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+                          <div 
+                            className="h-full transition-all duration-300 bg-gradient-to-r from-primary to-primary/70"
+                            style={{ width: `${stats.efficiency}%` }}
+                          />
+                        </div>
                       </div>
-                    </div>
-                    <Progress value={stats.efficiency} className="h-2" />
-                  </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             </CardContent>
@@ -561,35 +628,109 @@ export function StaffManagement() {
         </TabsContent>
 
         <TabsContent value="alerts" className="space-y-6">
-          <Card>
+          {/* Alert Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="border-l-4 border-l-red-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-red-500/10 rounded-full">
+                    <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-500" />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">High Priority</p>
+                    <p className="text-3xl font-bold text-red-600 dark:text-red-500">
+                      {alerts.filter(a => a.severity === "high").length}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Urgent attention</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-amber-500/10 rounded-full">
+                    <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-500" />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Medium Priority</p>
+                    <p className="text-3xl font-bold text-amber-600 dark:text-amber-500">
+                      {alerts.filter(a => a.severity === "medium").length}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Needs review</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-blue-500/10 rounded-full">
+                    <Activity className="w-6 h-6 text-blue-600 dark:text-blue-500" />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Low Priority</p>
+                    <p className="text-3xl font-bold text-blue-600 dark:text-blue-500">
+                      {alerts.filter(a => a.severity === "low").length}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Informational</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-purple-500/10 rounded-full">
+                    <Bell className="w-6 h-6 text-purple-600 dark:text-purple-500" />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Total Alerts</p>
+                    <p className="text-3xl font-bold text-purple-600 dark:text-purple-500">{alerts.length}</p>
+                    <p className="text-xs text-muted-foreground">All notifications</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Bell className="w-5 h-5" />
-                Staff Alerts ({alerts.length})
+                <Bell className="w-5 h-5 text-amber-600 dark:text-amber-500" />
+                Recent Alerts
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {alerts.map((alert) => {
                   const staffMember = staff.find((s) => s.id === alert.staffId)
                   return (
-                    <Card key={alert.id} className={getAlertColor(alert.severity)}>
+                    <Card key={alert.id} className={`${getAlertColor(alert.severity)} hover:shadow-md transition-shadow`}>
                       <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start gap-3">
-                            <div className="mt-1">
-                              {alert.severity === "high" && <AlertTriangle className="w-5 h-5 text-red-600" />}
-                              {alert.severity === "medium" && <AlertTriangle className="w-5 h-5 text-yellow-600" />}
-                              {alert.severity === "low" && <Activity className="w-5 h-5 text-blue-600" />}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            <div className="mt-0.5 flex-shrink-0">
+                              {alert.severity === "high" && <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-500" />}
+                              {alert.severity === "medium" && <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500" />}
+                              {alert.severity === "low" && <Activity className="w-5 h-5 text-blue-600 dark:text-blue-500" />}
                             </div>
-                            <div>
-                              <p className="font-medium">{alert.message}</p>
-                              <p className="text-sm text-muted-foreground">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm">{alert.message}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
                                 {staffMember?.name} • {alert.timestamp.toLocaleTimeString()}
                               </p>
                             </div>
                           </div>
-                          <Badge variant={alert.severity === "high" ? "destructive" : "secondary"}>{alert.type}</Badge>
+                          <Badge 
+                            variant={alert.severity === "high" ? "destructive" : "secondary"}
+                            className="flex-shrink-0"
+                          >
+                            {alert.type}
+                          </Badge>
                         </div>
                       </CardContent>
                     </Card>
@@ -601,126 +742,230 @@ export function StaffManagement() {
         </TabsContent>
 
         <TabsContent value="shifts" className="space-y-6">
-          <Card>
+          {/* Shift Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-blue-500/10 rounded-full">
+                    <Clock className="w-6 h-6 text-blue-600 dark:text-blue-500" />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Morning Shift</p>
+                    <p className="text-3xl font-bold text-blue-600 dark:text-blue-500">
+                      {staff.filter((s) => s.shift.includes("Morning")).length}
+                    </p>
+                    <p className="text-xs text-muted-foreground">9 AM - 5 PM</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-purple-500/10 rounded-full">
+                    <Clock className="w-6 h-6 text-purple-600 dark:text-purple-500" />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Evening Shift</p>
+                    <p className="text-3xl font-bold text-purple-600 dark:text-purple-500">
+                      {staff.filter((s) => s.shift.includes("Evening")).length}
+                    </p>
+                    <p className="text-xs text-muted-foreground">5 PM - 1 AM</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-orange-500/10 rounded-full">
+                    <Clock className="w-6 h-6 text-orange-600 dark:text-orange-500" />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Full Day</p>
+                    <p className="text-3xl font-bold text-orange-600 dark:text-orange-500">
+                      {staff.filter((s) => s.shift.includes("Full Day")).length}
+                    </p>
+                    <p className="text-xs text-muted-foreground">9 AM - 9 PM</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-amber-500/10 rounded-full">
+                    <Coffee className="w-6 h-6 text-amber-600 dark:text-amber-500" />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">On Break</p>
+                    <p className="text-3xl font-bold text-amber-600 dark:text-amber-500">
+                      {staff.filter((s) => s.status === "break").length}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Currently resting</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Shift Overview Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-blue-600 dark:text-blue-500" />
+                  Morning Shift
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">9 AM - 5 PM</p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {staff
+                    .filter((s) => s.shift.includes("Morning"))
+                    .map((member) => (
+                      <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="w-8 h-8">
+                            <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-xs font-semibold">
+                              {member.name.split(" ").map((n) => n[0]).join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium">{member.name}</span>
+                        </div>
+                        <Badge className={getStatusColor(member.status)} variant="secondary">
+                          {member.status}
+                        </Badge>
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-purple-600 dark:text-purple-500" />
+                  Evening Shift
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">5 PM - 1 AM</p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {staff
+                    .filter((s) => s.shift.includes("Evening"))
+                    .map((member) => (
+                      <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="w-8 h-8">
+                            <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-xs font-semibold">
+                              {member.name.split(" ").map((n) => n[0]).join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium">{member.name}</span>
+                        </div>
+                        <Badge className={getStatusColor(member.status)} variant="secondary">
+                          {member.status}
+                        </Badge>
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-all duration-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-orange-600 dark:text-orange-500" />
+                  Full Day
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">9 AM - 9 PM</p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {staff
+                    .filter((s) => s.shift.includes("Full Day"))
+                    .map((member) => (
+                      <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="w-8 h-8">
+                            <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-xs font-semibold">
+                              {member.name.split(" ").map((n) => n[0]).join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium">{member.name}</span>
+                        </div>
+                        <Badge className={getStatusColor(member.status)} variant="secondary">
+                          {member.status}
+                        </Badge>
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Break Management */}
+          <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                Shift Management
+                <Coffee className="w-5 h-5 text-amber-600 dark:text-amber-500" />
+                Break Management
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                {/* Shift Overview */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card>
-                    <CardContent className="p-4">
-                      <h4 className="font-medium mb-2">Morning Shift (9 AM - 5 PM)</h4>
-                      <div className="space-y-2">
-                        {staff
-                          .filter((s) => s.shift.includes("Morning"))
-                          .map((member) => (
-                            <div key={member.id} className="flex items-center justify-between text-sm">
-                              <span>{member.name}</span>
-                              <Badge className={getStatusColor(member.status)} variant="secondary">
-                                {member.status}
-                              </Badge>
-                            </div>
-                          ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardContent className="p-4">
-                      <h4 className="font-medium mb-2">Evening Shift (5 PM - 1 AM)</h4>
-                      <div className="space-y-2">
-                        {staff
-                          .filter((s) => s.shift.includes("Evening"))
-                          .map((member) => (
-                            <div key={member.id} className="flex items-center justify-between text-sm">
-                              <span>{member.name}</span>
-                              <Badge className={getStatusColor(member.status)} variant="secondary">
-                                {member.status}
-                              </Badge>
-                            </div>
-                          ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardContent className="p-4">
-                      <h4 className="font-medium mb-2">Full Day (9 AM - 9 PM)</h4>
-                      <div className="space-y-2">
-                        {staff
-                          .filter((s) => s.shift.includes("Full Day"))
-                          .map((member) => (
-                            <div key={member.id} className="flex items-center justify-between text-sm">
-                              <span>{member.name}</span>
-                              <Badge className={getStatusColor(member.status)} variant="secondary">
-                                {member.status}
-                              </Badge>
-                            </div>
-                          ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Break Management */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Coffee className="w-5 h-5" />
-                      Break Management
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {staff
-                        .filter((s) => s.status === "break" || s.breakTime > 0)
-                        .map((member) => (
-                          <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="w-8 h-8">
-                                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                                  {member.name
-                                    .split(" ")
-                                    .map((n) => n[0])
-                                    .join("")}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="font-medium">{member.name}</p>
-                                <p className="text-sm text-muted-foreground">{member.role}</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-medium">{member.breakTime} mins</p>
-                              <Badge className={getStatusColor(member.status)} variant="secondary">
-                                {member.status}
-                              </Badge>
+              <div className="space-y-3">
+                {staff
+                  .filter((s) => s.status === "break" || s.breakTime > 0)
+                  .map((member) => (
+                    <Card key={member.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="w-12 h-12 border-2 border-primary/20">
+                              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-bold">
+                                {member.name.split(" ").map((n) => n[0]).join("")}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-semibold">{member.name}</p>
+                              <p className="text-sm text-muted-foreground">{member.role}</p>
                             </div>
                           </div>
-                        ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                          <div className="text-right space-y-1">
+                            <p className="text-2xl font-bold text-amber-600 dark:text-amber-500">{member.breakTime} mins</p>
+                            <Badge className={getStatusColor(member.status)} variant="secondary">
+                              {member.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="manage" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Staff Management</h3>
-            <Dialog open={isAddingStaff} onOpenChange={setIsAddingStaff}>
-              <DialogTrigger asChild>
-                <Button>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Add Staff
-                </Button>
-              </DialogTrigger>
+          <Card className="shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-semibold">Staff Management</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Add new staff and manage team operations</p>
+                </div>
+                <Dialog open={isAddingStaff} onOpenChange={setIsAddingStaff}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70">
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Add Staff
+                    </Button>
+                  </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Add New Staff Member</DialogTitle>
@@ -824,16 +1069,20 @@ export function StaffManagement() {
               </DialogContent>
             </Dialog>
           </div>
+        </CardContent>
+      </Card>
 
           {/* Quick Actions */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <CheckCircle className="w-8 h-8 text-green-600" />
-                  <div>
-                    <h4 className="font-medium">Mark Attendance</h4>
-                    <p className="text-sm text-muted-foreground">Track staff check-in/out</p>
+            <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="p-3 bg-green-500/10 rounded-full">
+                    <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-base mb-1">Mark Attendance</h4>
+                    <p className="text-sm text-muted-foreground">Track staff check-in and check-out times</p>
                   </div>
                 </div>
                 <Button size="sm" className="w-full">
@@ -842,31 +1091,35 @@ export function StaffManagement() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <Settings className="w-8 h-8 text-blue-600" />
-                  <div>
-                    <h4 className="font-medium">Shift Planning</h4>
-                    <p className="text-sm text-muted-foreground">Plan upcoming shifts</p>
+            <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="p-3 bg-blue-500/10 rounded-full">
+                    <Settings className="w-6 h-6 text-blue-600 dark:text-blue-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-base mb-1">Shift Planning</h4>
+                    <p className="text-sm text-muted-foreground">Plan and schedule upcoming shifts</p>
                   </div>
                 </div>
-                <Button size="sm" variant="outline" className="w-full bg-transparent">
+                <Button size="sm" variant="outline" className="w-full">
                   Plan Shifts
                 </Button>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <Target className="w-8 h-8 text-purple-600" />
-                  <div>
-                    <h4 className="font-medium">Performance Review</h4>
-                    <p className="text-sm text-muted-foreground">Review staff performance</p>
+            <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="p-3 bg-purple-500/10 rounded-full">
+                    <Target className="w-6 h-6 text-purple-600 dark:text-purple-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-base mb-1">Performance Review</h4>
+                    <p className="text-sm text-muted-foreground">Review and evaluate staff performance</p>
                   </div>
                 </div>
-                <Button size="sm" variant="outline" className="w-full bg-transparent">
+                <Button size="sm" variant="outline" className="w-full">
                   Review Performance
                 </Button>
               </CardContent>

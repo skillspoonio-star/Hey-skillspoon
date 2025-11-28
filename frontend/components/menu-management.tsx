@@ -41,6 +41,7 @@ import {
   Eye,
   Copy,
 } from "lucide-react"
+import { InlineLoader } from "@/components/ui/loader"
 
 interface MenuItem {
   id: number
@@ -93,6 +94,7 @@ export function MenuManagement() {
   const [viewMode, setViewMode] = useState<"grid" | "list" | "analytics">("grid")
   const [sortBy, setSortBy] = useState<"name" | "price" | "popularity" | "profit">("name")
   const [filterBy, setFilterBy] = useState<"all" | "available" | "unavailable" | "veg" | "non-veg">("all")
+  const [isLoading, setIsLoading] = useState(true)
 
   // Fetch menu items from backend and poll for updates
   React.useEffect(() => {
@@ -101,7 +103,8 @@ export function MenuManagement() {
 
     const load = async () => {
       try {
-  const res = await fetch(`${base}/api/menu/items?all=true`)
+        setIsLoading(true)
+        const res = await fetch(`${base}/api/menu/items?all=true`)
         if (!res.ok) {
           console.error('Failed to fetch menu items', await res.text())
           return
@@ -111,6 +114,8 @@ export function MenuManagement() {
         setMenuItems(items)
       } catch (err) {
         console.error('Failed to fetch menu items', err)
+      } finally {
+        if (mounted) setIsLoading(false)
       }
     }
 
@@ -282,6 +287,10 @@ export function MenuManagement() {
   }
 
   const stats = getMenuStats()
+
+  if (isLoading) {
+    return <InlineLoader text="Loading menu items..." size="md" />
+  }
 
   return (
     <div className="space-y-6">

@@ -30,9 +30,9 @@
   --chart-4: #686b78;
   --chart-5: #282c3f;
   --radius: 0.5rem;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #282c3f;
-  --sidebar-primary: #f8f8f8;
+  --sidebar: #f0f0f5;
+  --sidebar-foreground: #1a1a1a;
+  --sidebar-primary: #ffffff;
   --sidebar-primary-foreground: #282c3f;
   --sidebar-accent: #fc8019;
   --sidebar-accent-foreground: #ffffff;
@@ -124,6 +124,26 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  
+  /* Force sidebar text visibility in light mode */
+  [data-sidebar="sidebar"] {
+    background-color: hsl(var(--sidebar));
+    color: hsl(var(--sidebar-foreground));
+  }
+  
+  [data-sidebar="menu-button"] {
+    color: hsl(var(--sidebar-foreground)) !important;
+  }
+  
+  [data-sidebar="menu-button"]:hover {
+    background-color: hsl(var(--sidebar-accent));
+    color: hsl(var(--sidebar-accent-foreground)) !important;
+  }
+  
+  [data-sidebar="menu-button"][data-active="true"] {
+    background-color: hsl(var(--sidebar-accent));
+    color: hsl(var(--sidebar-accent-foreground)) !important;
   }
 }
 

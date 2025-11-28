@@ -624,56 +624,80 @@ useEffect(() => {
 
   return (
     <div className="space-y-6">
-      {/* Header Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="rounded-xl border shadow-sm">
+      {/* Header Stats - Full Width */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <Card className="rounded-xl border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Active Orders</p>
-                <p className="text-2xl lg:text-3xl font-bold text-orange-600">{activeOrders.length}</p>
+                <p className="text-sm text-muted-foreground font-medium">Active Orders</p>
+                <p className="text-2xl lg:text-3xl font-bold text-orange-600 dark:text-orange-400">{activeOrders.length}</p>
               </div>
-              <Receipt className="w-8 h-8 lg:w-10 lg:h-10 text-orange-600" />
+              <div className="p-3 bg-orange-100 dark:bg-orange-900/40 rounded-full">
+                <Receipt className="w-6 h-6 lg:w-7 lg:h-7 text-orange-600 dark:text-orange-400" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl border shadow-sm">
+        <Card className="rounded-xl border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Available Tables</p>
-                <p className="text-2xl lg:text-3xl font-bold text-green-600">
+                <p className="text-sm text-muted-foreground font-medium">Available Tables</p>
+                <p className="text-2xl lg:text-3xl font-bold text-green-600 dark:text-green-400">
                   {tables.length}
                 </p>
               </div>
-              <Users className="w-8 h-8 lg:w-10 lg:h-10 text-green-600" />
+              <div className="p-3 bg-green-100 dark:bg-green-900/40 rounded-full">
+                <Users className="w-6 h-6 lg:w-7 lg:h-7 text-green-600 dark:text-green-400" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl border shadow-sm">
+        <Card className="rounded-xl border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Today's Revenue</p>
-                <p className="text-2xl lg:text-3xl font-bold text-blue-600">
+                <p className="text-sm text-muted-foreground font-medium">Today's Revenue</p>
+                <p className="text-2xl lg:text-3xl font-bold text-blue-600 dark:text-blue-400">
                   ₹{activeOrders.reduce((sum, order) => sum + order.total, 0).toFixed(0)}
                 </p>
               </div>
-              <Receipt className="w-8 h-8 lg:w-10 lg:h-10 text-blue-600" />
+              <div className="p-3 bg-blue-100 dark:bg-blue-900/40 rounded-full">
+                <Receipt className="w-6 h-6 lg:w-7 lg:h-7 text-blue-600 dark:text-blue-400" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl border shadow-sm">
+        <Card className="rounded-xl border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Completed</p>
-                <p className="text-2xl lg:text-3xl font-bold text-purple-600">{ordersByStatus.paid}</p>
+                <p className="text-sm text-muted-foreground font-medium">Completed</p>
+                <p className="text-2xl lg:text-3xl font-bold text-purple-600 dark:text-purple-400">{ordersByStatus.paid}</p>
               </div>
-              <Star className="w-8 h-8 lg:w-10 lg:h-10 text-purple-600" />
+              <div className="p-3 bg-purple-100 dark:bg-purple-900/40 rounded-full">
+                <Star className="w-6 h-6 lg:w-7 lg:h-7 text-purple-600 dark:text-purple-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 shadow-sm hover:shadow-md transition-shadow">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground font-medium">Avg Order Value</p>
+                <p className="text-2xl lg:text-3xl font-bold text-amber-600 dark:text-amber-400">
+                  ₹{activeOrders.length > 0 ? (activeOrders.reduce((sum, order) => sum + order.total, 0) / activeOrders.length).toFixed(0) : '0'}
+                </p>
+              </div>
+              <div className="p-3 bg-amber-100 dark:bg-amber-900/40 rounded-full">
+                <Clock className="w-6 h-6 lg:w-7 lg:h-7 text-amber-600 dark:text-amber-400" />
+              </div>
             </div>
           </CardContent>
         </Card>
