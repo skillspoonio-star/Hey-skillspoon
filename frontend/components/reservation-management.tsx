@@ -216,70 +216,85 @@ export function ReservationManagement() {
   return (
     <div className="space-y-6">
       {/* Header Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Today's Reservations</p>
-                <p className="text-2xl font-bold text-blue-600">{todayReservations.length}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Today's Reservations</p>
+                <p className="text-3xl font-bold">{todayReservations.length}</p>
+                <p className="text-xs text-muted-foreground">Bookings today</p>
               </div>
-              <CalendarIcon className="w-8 h-8 text-blue-600" />
+              <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <CalendarIcon className="w-6 h-6 text-blue-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold text-yellow-600">{reservationsByStatus.pending}</p>
+        <Card className="border-l-4 border-l-yellow-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Pending</p>
+                <p className="text-3xl font-bold">{reservationsByStatus.pending}</p>
+                <p className="text-xs text-muted-foreground">Awaiting confirmation</p>
               </div>
-              <Clock className="w-8 h-8 text-yellow-600" />
+              <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
+                <Clock className="w-6 h-6 text-yellow-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Confirmed</p>
-                <p className="text-2xl font-bold text-green-600">{reservationsByStatus.confirmed}</p>
+        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Confirmed</p>
+                <p className="text-3xl font-bold">{reservationsByStatus.confirmed}</p>
+                <p className="text-xs text-muted-foreground">Ready to serve</p>
               </div>
-              <CheckCircle className="w-8 h-8 text-green-600" />
+              <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                <CheckCircle className="w-6 h-6 text-green-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Currently Seated</p>
-                <p className="text-2xl font-bold text-orange-600">{reservationsByStatus.seated}</p>
+        <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Currently Seated</p>
+                <p className="text-3xl font-bold">{reservationsByStatus.seated}</p>
+                <p className="text-xs text-muted-foreground">Dining now</p>
               </div>
-              <Users className="w-8 h-8 text-orange-600" />
+              <div className="w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                <Users className="w-6 h-6 text-orange-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Guests Today</p>
-                <p className="text-2xl font-bold text-purple-600">{totalGuests}</p>
+        <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Total Guests</p>
+                <p className="text-3xl font-bold">{totalGuests}</p>
+                <p className="text-xs text-muted-foreground">Expected today</p>
               </div>
-              <Users className="w-8 h-8 text-purple-600" />
+              <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                <Users className="w-6 h-6 text-purple-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters and Search */}
-      <Card>
+      <Card className="shadow-sm">
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
@@ -526,7 +541,7 @@ export function ReservationManagement() {
       {/* Reservations List */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
         {filteredReservations.map((reservation) => (
-          <Card key={reservation.id} className="hover:shadow-md transition-shadow">
+          <Card key={reservation.id} className="hover:shadow-lg transition-all duration-200 shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">#{reservation.id}</CardTitle>

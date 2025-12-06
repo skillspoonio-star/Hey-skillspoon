@@ -35,65 +35,80 @@ export default function DashboardHome() {
       <SectionHeader title="Live Orders" subtitle="Monitor and manage real-time orders" />
 
       {/* Analytics Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        <Card className="border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{pending.length}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card className="border-l-4 border-l-yellow-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-yellow-500/10 rounded-full">
+                <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-500" />
               </div>
-              <Clock className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Pending</p>
+                <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-500">{pending.length}</p>
+                <p className="text-xs text-muted-foreground">Awaiting preparation</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Preparing</p>
-                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{preparing.length}</p>
+        <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-orange-500/10 rounded-full">
+                <ChefHat className="w-6 h-6 text-orange-600 dark:text-orange-500" />
               </div>
-              <ChefHat className="w-8 h-8 text-orange-600 dark:text-orange-400" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Preparing</p>
+                <p className="text-3xl font-bold text-orange-600 dark:text-orange-500">{preparing.length}</p>
+                <p className="text-xs text-muted-foreground">In kitchen</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Ready</p>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{ready.length}</p>
+        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-green-500/10 rounded-full">
+                <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-500" />
               </div>
-              <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Ready</p>
+                <p className="text-3xl font-bold text-green-600 dark:text-green-500">{ready.length}</p>
+                <p className="text-xs text-muted-foreground">Ready to serve</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Active</p>
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalOrders}</p>
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-blue-500/10 rounded-full">
+                <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-500" />
               </div>
-              <TrendingUp className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Total Active</p>
+                <p className="text-3xl font-bold text-blue-600 dark:text-blue-500">{totalOrders}</p>
+                <p className="text-xs text-muted-foreground">All orders</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Revenue</p>
-                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+        <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-purple-500/10 rounded-full">
+                <DollarSign className="w-6 h-6 text-purple-600 dark:text-purple-500" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Revenue</p>
+                <p className="text-3xl font-bold text-purple-600 dark:text-purple-500">
                   ₹{analytics.totalRevenue.toFixed(0)}
                 </p>
+                <p className="text-xs text-muted-foreground">Today's total</p>
               </div>
-              <DollarSign className="w-8 h-8 text-purple-600 dark:text-purple-400" />
             </div>
           </CardContent>
         </Card>

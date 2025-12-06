@@ -219,97 +219,105 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        <Card>
-          <CardContent className="p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Revenue</p>
-                <p className="text-2xl font-bold text-primary">₹{totalRevenue.toLocaleString()}</p>
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground mb-1">Revenue</p>
+                <p className="text-2xl font-bold mb-1">₹{totalRevenue.toLocaleString()}</p>
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3 text-green-500" />
+                  <span className="text-xs text-green-500">+{revenueGrowth}%</span>
+                </div>
               </div>
-              <DollarSign className="w-8 h-8 text-primary" />
-            </div>
-            <div className="flex items-center gap-1 mt-2">
-              <TrendingUp className="w-3 h-3 text-chart-2" />
-              <span className="text-xs text-chart-2">+{revenueGrowth}%</span>
+              <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                <DollarSign className="w-5 h-5 text-green-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Orders</p>
-                <p className="text-2xl font-bold text-secondary">{totalOrders}</p>
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground mb-1">Orders</p>
+                <p className="text-2xl font-bold mb-1">{totalOrders}</p>
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3 text-blue-500" />
+                  <span className="text-xs text-blue-500">+{orderGrowth}%</span>
+                </div>
               </div>
-              <ShoppingCart className="w-8 h-8 text-secondary" />
-            </div>
-            <div className="flex items-center gap-1 mt-2">
-              <TrendingUp className="w-3 h-3 text-chart-2" />
-              <span className="text-xs text-chart-2">+{orderGrowth}%</span>
+              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <ShoppingCart className="w-5 h-5 text-blue-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
+        <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Avg Order</p>
-                <p className="text-2xl font-bold text-accent">₹{avgOrderValue}</p>
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground mb-1">Avg Order</p>
+                <p className="text-2xl font-bold mb-1">₹{avgOrderValue}</p>
+                <div className="flex items-center gap-1">
+                  <TrendingDown className="w-3 h-3 text-red-500" />
+                  <span className="text-xs text-red-500">-2.1%</span>
+                </div>
               </div>
-              <Clock className="w-8 h-8 text-accent" />
-            </div>
-            <div className="flex items-center gap-1 mt-2">
-              <TrendingDown className="w-3 h-3 text-destructive" />
-              <span className="text-xs text-destructive">-2.1%</span>
+              <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                <Clock className="w-5 h-5 text-orange-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
+        <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Customers</p>
-                <p className="text-2xl font-bold text-chart-2">{uniqueCustomers}</p>
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground mb-1">Customers</p>
+                <p className="text-2xl font-bold mb-1">{uniqueCustomers}</p>
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3 text-purple-500" />
+                  <span className="text-xs text-purple-500">+{customerGrowth}%</span>
+                </div>
               </div>
-              <Users className="w-8 h-8 text-chart-2" />
-            </div>
-            <div className="flex items-center gap-1 mt-2">
-              <TrendingUp className="w-3 h-3 text-chart-2" />
-              <span className="text-xs text-chart-2">+{customerGrowth}%</span>
+              <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                <Users className="w-5 h-5 text-purple-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
+        <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Voice Orders</p>
-                <p className="text-2xl font-bold text-primary">{voiceOrders}</p>
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground mb-1">Voice Orders</p>
+                <p className="text-2xl font-bold mb-1">{voiceOrders}</p>
+                <p className="text-xs text-muted-foreground">72% of total</p>
               </div>
-              <Calendar className="w-8 h-8 text-primary" />
-            </div>
-            <div className="flex items-center gap-1 mt-2">
-              <span className="text-xs text-muted-foreground">72% of total</span>
+              <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                <Calendar className="w-5 h-5 text-amber-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
+        <Card className="border-l-4 border-l-red-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Peak Hour</p>
-                <p className="text-2xl font-bold text-destructive">{peakHours[0]}</p>
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground mb-1">Peak Hour</p>
+                <p className="text-2xl font-bold mb-1">{peakHours[0]}</p>
+                <p className="text-xs text-muted-foreground">Highest revenue</p>
               </div>
-              <Clock className="w-8 h-8 text-destructive" />
-            </div>
-            <div className="flex items-center gap-1 mt-2">
-              <span className="text-xs text-muted-foreground">Highest revenue</span>
+              <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                <Clock className="w-5 h-5 text-red-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -327,10 +335,10 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
         <TabsContent value="trends" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Main Trend Chart */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
+            <Card className="lg:col-span-2 shadow-sm">
+              <CardHeader className="border-b">
                 <div className="flex items-center justify-between">
-                  <CardTitle>
+                  <CardTitle className="text-lg">
                     {timeRange === "today" ? "Hourly" : "Daily"}{" "}
                     {selectedMetric.charAt(0).toUpperCase() + selectedMetric.slice(1)} Trend
                   </CardTitle>
@@ -346,7 +354,7 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
                   </Select>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <ResponsiveContainer width="100%" height={350}>
                   <AreaChart data={currentData}>
                     <defs>
@@ -377,11 +385,11 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
             </Card>
 
             {/* Revenue vs Orders Comparison */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Revenue vs Orders</CardTitle>
+            <Card className="shadow-sm">
+              <CardHeader className="border-b">
+                <CardTitle className="text-lg">Revenue vs Orders</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={currentData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -397,11 +405,11 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
             </Card>
 
             {/* Customer Flow */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Customer Flow</CardTitle>
+            <Card className="shadow-sm">
+              <CardHeader className="border-b">
+                <CardTitle className="text-lg">Customer Flow</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={currentData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -417,22 +425,22 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
         </TabsContent>
 
         <TabsContent value="distribution" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Order Status Distribution */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Order Status</CardTitle>
+            <Card className="shadow-sm">
+              <CardHeader className="border-b">
+                <CardTitle className="text-lg">Order Status</CardTitle>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
+              <CardContent className="pt-6">
+                <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
                       data={statusData}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
+                      labelLine={true}
                       label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
+                      outerRadius={90}
                       fill="#8884d8"
                       dataKey="value"
                     >
@@ -447,20 +455,20 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
             </Card>
 
             {/* Payment Methods */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Payment Methods</CardTitle>
+            <Card className="shadow-sm">
+              <CardHeader className="border-b">
+                <CardTitle className="text-lg">Payment Methods</CardTitle>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
+              <CardContent className="pt-6">
+                <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
                       data={paymentData}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
+                      labelLine={true}
                       label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
+                      outerRadius={90}
                       fill="#8884d8"
                       dataKey="value"
                     >
@@ -475,20 +483,20 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
             </Card>
 
             {/* Order Types */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Order Types</CardTitle>
+            <Card className="shadow-sm">
+              <CardHeader className="border-b">
+                <CardTitle className="text-lg">Order Types</CardTitle>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
+              <CardContent className="pt-6">
+                <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
                       data={orderTypeData}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
+                      labelLine={true}
                       label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
+                      outerRadius={90}
                       fill="#8884d8"
                       dataKey="value"
                     >
@@ -507,11 +515,11 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
         <TabsContent value="performance" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Popular Items */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Performing Items</CardTitle>
+            <Card className="shadow-sm">
+              <CardHeader className="border-b">
+                <CardTitle className="text-lg">Top Performing Items</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <div className="space-y-4">
                   {popularItems.map((item: any, index: number) => (
                     <div key={item.name} className="flex items-center justify-between">
@@ -540,11 +548,11 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
             </Card>
 
             {/* Peak Hours */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Peak Performance Hours</CardTitle>
+            <Card className="shadow-sm">
+              <CardHeader className="border-b">
+                <CardTitle className="text-lg">Peak Performance Hours</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <div className="space-y-4">
                   {peakHours.map((hour: string, index: number) => {
                     const hourData = (hourlyData as any[]).find((h: any) => h.hour === hour)
@@ -578,11 +586,11 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
         <TabsContent value="insights" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Key Insights */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Key Insights</CardTitle>
+            <Card className="shadow-sm">
+              <CardHeader className="border-b">
+                <CardTitle className="text-lg">Key Insights</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <div className="space-y-4">
                   <div className="flex items-start gap-3 p-3 bg-chart-2/10 rounded-lg">
                     <TrendingUp className="w-5 h-5 text-chart-2 mt-0.5" />
@@ -628,11 +636,11 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
             </Card>
 
             {/* Recommendations */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recommendations</CardTitle>
+            <Card className="shadow-sm">
+              <CardHeader className="border-b">
+                <CardTitle className="text-lg">Recommendations</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <div className="space-y-4">
                   <div className="p-3 border rounded-lg">
                     <h4 className="font-medium mb-2">Optimize Staff Schedule</h4>

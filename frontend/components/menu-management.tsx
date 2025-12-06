@@ -96,7 +96,7 @@ export function MenuManagement() {
   const [filterBy, setFilterBy] = useState<"all" | "available" | "unavailable" | "veg" | "non-veg">("all")
   const [isLoading, setIsLoading] = useState(true)
 
-  // Fetch menu items from backend and poll for updates
+  // Fetch menu items from backend on mount only
   React.useEffect(() => {
     let mounted = true
     const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
@@ -120,10 +120,9 @@ export function MenuManagement() {
     }
 
     load()
-    const t = setInterval(load, 5000)
+    // Removed auto-refresh interval to prevent constant reloading
     return () => {
       mounted = false
-      clearInterval(t)
     }
   }, [])
 
@@ -294,153 +293,172 @@ export function MenuManagement() {
 
   return (
     <div className="space-y-6">
-      {/* Header with Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Items</p>
-                <p className="text-2xl font-bold text-primary">{stats.totalItems}</p>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Total Items</p>
+                <p className="text-3xl font-bold">{stats.totalItems}</p>
+                <p className="text-xs text-muted-foreground">Menu items</p>
               </div>
-              <ChefHat className="w-8 h-8 text-primary" />
+              <div className="w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                <ChefHat className="w-6 h-6 text-orange-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Available</p>
-                <p className="text-2xl font-bold text-chart-2">{stats.availableItems}</p>
+        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Available</p>
+                <p className="text-3xl font-bold">{stats.availableItems}</p>
+                <p className="text-xs text-muted-foreground">Ready to order</p>
               </div>
-              <Eye className="w-8 h-8 text-chart-2" />
+              <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                <Eye className="w-6 h-6 text-green-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Vegetarian</p>
-                <p className="text-2xl font-bold text-chart-2">{stats.vegItems}</p>
+        <Card className="border-l-4 border-l-emerald-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Vegetarian</p>
+                <p className="text-3xl font-bold">{stats.vegItems}</p>
+                <p className="text-xs text-muted-foreground">Veg options</p>
               </div>
-              <Leaf className="w-8 h-8 text-chart-2" />
+              <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                <Leaf className="w-6 h-6 text-emerald-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Avg Price</p>
-                <p className="text-2xl font-bold text-accent">₹{Math.round(stats.avgPrice)}</p>
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Avg Price</p>
+                <p className="text-3xl font-bold">₹{Math.round(stats.avgPrice)}</p>
+                <p className="text-xs text-muted-foreground">Per item</p>
               </div>
-              <DollarSign className="w-8 h-8 text-accent" />
+              <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <DollarSign className="w-6 h-6 text-blue-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Profit</p>
-                <p className="text-2xl font-bold text-primary">₹{stats.totalProfit}</p>
+        <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Total Profit</p>
+                <p className="text-3xl font-bold">₹{stats.totalProfit}</p>
+                <p className="text-xs text-muted-foreground">Estimated</p>
               </div>
-              <TrendingUp className="w-8 h-8 text-primary" />
+              <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-6 h-6 text-purple-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Controls */}
-      <div className="flex flex-col lg:flex-row gap-4 justify-between">
-        <div className="flex flex-wrap gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Search menu items, ingredients..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 w-64"
-            />
+      <Card className="shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col lg:flex-row gap-4 justify-between">
+            <div className="flex flex-wrap gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  placeholder="Search menu items, ingredients..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 w-64"
+                />
+              </div>
+
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Categories</SelectItem>
+                  {categories
+                    .filter((cat) => cat.isActive)
+                    .map((category) => (
+                      <SelectItem key={category.id} value={category.name}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filterBy} onValueChange={(value: any) => setFilterBy(value)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Items</SelectItem>
+                  <SelectItem value="available">Available</SelectItem>
+                  <SelectItem value="unavailable">Unavailable</SelectItem>
+                  <SelectItem value="veg">Vegetarian</SelectItem>
+                  <SelectItem value="non-veg">Non-Veg</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Name</SelectItem>
+                  <SelectItem value="price">Price</SelectItem>
+                  <SelectItem value="popularity">Popularity</SelectItem>
+                  <SelectItem value="profit">Profit</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+              <Tabs value={viewMode} onValueChange={(value: any) => setViewMode(value)}>
+                <TabsList>
+                  <TabsTrigger value="grid">Grid</TabsTrigger>
+                  <TabsTrigger value="list">List</TabsTrigger>
+                  <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              <Button variant="outline" size="sm">
+                <Upload className="w-4 h-4 mr-2" />
+                Import
+              </Button>
+              <Button variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </Button>
+              <Button onClick={() => setShowAddForm(true)} className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Item
+              </Button>
+            </div>
           </div>
-
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="All">All Categories</SelectItem>
-              {categories
-                .filter((cat) => cat.isActive)
-                .map((category) => (
-                  <SelectItem key={category.id} value={category.name}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={filterBy} onValueChange={(value: any) => setFilterBy(value)}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Items</SelectItem>
-              <SelectItem value="available">Available</SelectItem>
-              <SelectItem value="unavailable">Unavailable</SelectItem>
-              <SelectItem value="veg">Vegetarian</SelectItem>
-              <SelectItem value="non-veg">Non-Veg</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="name">Name</SelectItem>
-              <SelectItem value="price">Price</SelectItem>
-              <SelectItem value="popularity">Popularity</SelectItem>
-              <SelectItem value="profit">Profit</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex gap-2">
-          <Tabs value={viewMode} onValueChange={(value: any) => setViewMode(value)}>
-            <TabsList>
-              <TabsTrigger value="grid">Grid</TabsTrigger>
-              <TabsTrigger value="list">List</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <Button variant="outline" size="sm">
-            <Upload className="w-4 h-4 mr-2" />
-            Import
-          </Button>
-          <Button variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </Button>
-          <Button onClick={() => setShowAddForm(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Item
-          </Button>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Content based on view mode */}
       {viewMode === "grid" && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredItems.map((item) => (
-            <Card key={item.id} className={` ${!item.isAvailable ? "opacity-60" : ""} cursor-pointer`} onClick={() => setEditingItem(item)}>
+            <Card key={item.id} className={`${!item.isAvailable ? "opacity-60" : ""} cursor-pointer hover:shadow-lg transition-all duration-200 shadow-sm`} onClick={() => setEditingItem(item)}>
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -547,7 +565,7 @@ export function MenuManagement() {
       )}
 
       {viewMode === "list" && (
-        <Card>
+        <Card className="shadow-sm">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -629,11 +647,11 @@ export function MenuManagement() {
 
       {viewMode === "analytics" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Performers</CardTitle>
+          <Card className="shadow-sm">
+            <CardHeader className="border-b">
+              <CardTitle className="text-lg">Top Performers</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <div className="space-y-4">
                 {menuItems
                   .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
@@ -659,11 +677,11 @@ export function MenuManagement() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Most Profitable</CardTitle>
+          <Card className="shadow-sm">
+            <CardHeader className="border-b">
+              <CardTitle className="text-lg">Most Profitable</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <div className="space-y-4">
                 {menuItems
                   .sort((a, b) => (b.profit || 0) - (a.profit || 0))

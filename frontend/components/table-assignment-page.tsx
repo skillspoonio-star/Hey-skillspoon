@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { TableAssignmentModal } from "./table-assignment-modal"
 import { QRGenerator } from "./qr-generator"
-import { Users, Clock, QrCode, ExternalLink } from "lucide-react"
+import { Users, Clock, QrCode, ExternalLink, CheckCircle2, UserCheck, CalendarClock, Trash2, Percent } from "lucide-react"
 import { sessionManager } from "@/lib/session-manager"
 
 interface Table {
@@ -193,18 +193,96 @@ export function TableAssignmentPage() {
   }
 
   const availableTables = tables.filter((table) => table.status === "available")
+  const occupiedTables = tables.filter((table) => table.status === "occupied")
+  const reservedTables = tables.filter((table) => table.status === "reserved")
+  const cleaningTables = tables.filter((table) => table.status === "cleaning")
+  const occupancyRate = tables.length > 0 ? Math.round((occupiedTables.length / tables.length) * 100) : 0
 
   return (
     <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Available</p>
+                <p className="text-3xl font-bold">{availableTables.length}</p>
+                <p className="text-xs text-muted-foreground">Ready to assign</p>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 className="w-6 h-6 text-green-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Occupied</p>
+                <p className="text-3xl font-bold">{occupiedTables.length}</p>
+                <p className="text-xs text-muted-foreground">Active sessions</p>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <UserCheck className="w-6 h-6 text-blue-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Reserved</p>
+                <p className="text-3xl font-bold">{reservedTables.length}</p>
+                <p className="text-xs text-muted-foreground">Upcoming bookings</p>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                <CalendarClock className="w-6 h-6 text-amber-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-gray-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Cleaning</p>
+                <p className="text-3xl font-bold">{cleaningTables.length}</p>
+                <p className="text-xs text-muted-foreground">Being prepared</p>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-gray-500/10 flex items-center justify-center flex-shrink-0">
+                <Trash2 className="w-6 h-6 text-gray-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Occupancy</p>
+                <p className="text-3xl font-bold">{occupancyRate}%</p>
+                <p className="text-xs text-muted-foreground">Current rate</p>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                <Percent className="w-6 h-6 text-purple-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Quick Actions */}
       <Card className="shadow-sm">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="text-sm">
-                <span className="text-muted-foreground">Available Tables: </span>
-                <span className="font-bold text-lg text-green-600 dark:text-green-500">{availableTables.length}</span>
-              </div>
               <div className="text-sm">
                 <span className="text-muted-foreground">Total Tables: </span>
                 <span className="font-bold text-lg">{tables.length}</span>
@@ -271,38 +349,38 @@ export function TableAssignmentPage() {
 
       {/* Tables Grid */}
       {!loading && !error && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
           {tables.map((table) => (
-          <Card key={table.number} className={`${getStatusColor(table.status)} border-2 min-h-[400px] flex flex-col hover:shadow-lg transition-shadow min-w-[330px]`}>
-            <CardContent className="p-6 lg:p-8 flex-1 flex flex-col">
-              <div className="space-y-5 flex-1 flex flex-col">
+          <Card key={table.number} className={`${getStatusColor(table.status)} border-2 flex flex-col hover:shadow-lg transition-all duration-200`}>
+            <CardContent className="p-6 flex-1 flex flex-col">
+              <div className="space-y-4 flex-1 flex flex-col">
                 {/* Table Header */}
-                <div className="flex items-center justify-between">
-                  <h3 className="text-2xl font-semibold">Table {table.number}</h3>
+                <div className="flex items-center justify-between pb-3 border-b">
+                  <h3 className="text-xl font-bold">Table {table.number}</h3>
                   {getStatusBadge(table.status)}
                 </div>
 
                 {/* Capacity */}
-                <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  <span className="font-medium text-base">Capacity: {table.capacity}</span>
+                <div className="flex items-center gap-2 text-sm">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Capacity: <span className="font-semibold text-foreground">{table.capacity}</span></span>
                 </div>
 
                 {/* Available Table */}
                 {table.status === "available" && (
                   <div className="space-y-4 flex-1 flex flex-col justify-center">
-                    <div className="text-center py-6">
+                    <div className="text-center py-8">
                       <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-3">
                         <Users className="w-8 h-8 text-green-600 dark:text-green-500" />
                       </div>
-                      <p className="text-muted-foreground">Ready for new customers</p>
+                      <p className="text-sm text-muted-foreground">Ready for new customers</p>
                     </div>
                     <Button
                       onClick={() => {
                         setSelectedTableForModal(table)
                         setIsModalOpen(true)
                       }}
-                      className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold shadow-lg"
+                      className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold shadow-md"
                     >
                       Assign Customer
                     </Button>
@@ -313,30 +391,30 @@ export function TableAssignmentPage() {
                 {table.status === "occupied" && (
                   <div className="space-y-4 flex-1 flex flex-col">
                     <div className="space-y-3 flex-1">
-                      <h4 className="font-medium text-lg">{table.customerName}</h4>
-                      <div className="flex items-center gap-4 text-sm flex-wrap">
-                        <div className="flex items-center gap-1.5">
+                      <h4 className="font-semibold text-base">{table.customerName}</h4>
+                      <div className="flex items-center gap-3 text-sm flex-wrap">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
                           <Users className="w-4 h-4" />
                           <span>{table.guestCount} guests</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
                           <Clock className="w-4 h-4" />
                           <span>{table.sessionTime}</span>
                         </div>
                       </div>
-                      <div className="flex justify-between text-sm bg-muted p-3 rounded-lg border">
-                        <span>Orders: {table.orderCount}</span>
-                        <span>Amount: ₹{table.amount}</span>
+                      <div className="flex justify-between text-sm bg-muted/50 p-3 rounded-lg border">
+                        <span className="text-muted-foreground">Orders: <span className="font-semibold text-foreground">{table.orderCount}</span></span>
+                        <span className="text-muted-foreground">Amount: <span className="font-semibold text-foreground">₹{table.amount}</span></span>
                       </div>
-                      <div className="flex items-center gap-2 text-xs bg-muted p-2.5 rounded border">
-                        <QrCode className="w-4 h-4" />
-                        <span className="font-mono">{table.sessionId}</span>
+                      <div className="flex items-center gap-2 text-xs bg-muted/50 p-2.5 rounded-lg border">
+                        <QrCode className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-mono text-muted-foreground truncate">{table.sessionId}</span>
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-2 mt-auto">
+                    <div className="flex flex-col gap-2 mt-auto pt-2">
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="flex-1 bg-transparent">
+                        <Button variant="outline" size="sm" className="flex-1">
                           View Orders
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => openTableUrl(table.number)}>
@@ -347,7 +425,7 @@ export function TableAssignmentPage() {
                         variant="destructive"
                         size="sm"
                         onClick={() => handleEndSession(table.number)}
-                        className="w-full font-bold"
+                        className="w-full font-semibold"
                       >
                         End Session
                       </Button>
@@ -358,15 +436,13 @@ export function TableAssignmentPage() {
                 {/* Cleaning Table */}
                 {table.status === "cleaning" && (
                   <div className="space-y-4 flex-1 flex flex-col justify-center">
-                    <div className="text-center py-6">
+                    <div className="text-center py-8">
                       <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-900/30 mb-3">
-                        <svg className="w-8 h-8 text-gray-600 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                        <Trash2 className="w-8 h-8 text-gray-600 dark:text-gray-500" />
                       </div>
-                      <p className="text-muted-foreground">Table being cleaned</p>
+                      <p className="text-sm text-muted-foreground">Table being cleaned</p>
                     </div>
-                    <Button variant="outline" className="w-full bg-transparent" disabled>
+                    <Button variant="outline" className="w-full" disabled>
                       Cleaning in Progress
                     </Button>
                   </div>
@@ -375,13 +451,13 @@ export function TableAssignmentPage() {
                 {/* Reserved Table */}
                 {table.status === "reserved" && (
                   <div className="space-y-4 flex-1 flex flex-col justify-center">
-                    <div className="text-center py-6">
+                    <div className="text-center py-8">
                       <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 mb-3">
-                        <Clock className="w-8 h-8 text-amber-600 dark:text-amber-500" />
+                        <CalendarClock className="w-8 h-8 text-amber-600 dark:text-amber-500" />
                       </div>
-                      <p className="text-muted-foreground">Reserved for upcoming booking</p>
+                      <p className="text-sm text-muted-foreground">Reserved for upcoming booking</p>
                     </div>
-                    <Button variant="outline" className="w-full bg-transparent" disabled>
+                    <Button variant="outline" className="w-full" disabled>
                       Reserved
                     </Button>
                   </div>

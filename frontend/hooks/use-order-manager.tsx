@@ -62,7 +62,8 @@ export function useOrderManager() {
     const fetchOrders = async () => {
       try {
         setIsLoading(true)
-        const res = await fetch("http://localhost:3001/api/orders/live")
+        const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3002'
+        const res = await fetch(`${API_BASE}/api/orders/live`)
         if (!res.ok) throw new Error("Failed to fetch orders")
         const data = await res.json()
 
@@ -184,7 +185,8 @@ export function useOrderManager() {
 
         // PATCH request to backend
         // ensure we pass string id (Mongo _id) to backend
-        const res = await fetch(`http://localhost:3001/api/orders/${String(orderId)}`, {
+        const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3002'
+        const res = await fetch(`${API_BASE}/api/orders/${String(orderId)}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: newStatus }),
@@ -217,7 +219,8 @@ export function useOrderManager() {
     async (orderId: number | string, updates: Partial<Order>) => {
       try {
         // Call backend PATCH to update the order
-        const res = await fetch(`http://localhost:3001/api/orders/${String(orderId)}`, {
+        const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3002'
+        const res = await fetch(`${API_BASE}/api/orders/${String(orderId)}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(updates),

@@ -296,69 +296,76 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
       </Card>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
-        <Card className="border-l-4 border-l-red-500 hover:shadow-md transition-shadow">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card className="border-l-4 border-l-red-500 hover:shadow-lg transition-all duration-200">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Pending</p>
-                <p className="text-3xl font-bold text-red-600 dark:text-red-500">{pendingCount}</p>
-              </div>
+            <div className="flex items-start gap-4">
               <div className="p-3 bg-red-500/10 rounded-full">
                 <Clock className="w-6 h-6 text-red-600 dark:text-red-500" />
               </div>
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Pending</p>
+                <p className="text-3xl font-bold text-red-600 dark:text-red-500">{pendingCount}</p>
+                <p className="text-xs text-muted-foreground">Awaiting start</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-primary hover:shadow-md transition-shadow">
+        <Card className="border-l-4 border-l-primary hover:shadow-lg transition-all duration-200">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Preparing</p>
-                <p className="text-3xl font-bold text-primary">{preparingCount}</p>
-              </div>
+            <div className="flex items-start gap-4">
               <div className="p-3 bg-primary/10 rounded-full">
                 <ChefHat className="w-6 h-6 text-primary" />
               </div>
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Preparing</p>
+                <p className="text-3xl font-bold text-primary">{preparingCount}</p>
+                <p className="text-xs text-muted-foreground">In kitchen</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-amber-500 hover:shadow-md transition-shadow">
+        <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-200">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Urgent</p>
-                <p className="text-3xl font-bold text-amber-600 dark:text-amber-500">{urgentCount}</p>
-              </div>
+            <div className="flex items-start gap-4">
               <div className="p-3 bg-amber-500/10 rounded-full">
                 <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-500" />
               </div>
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Urgent</p>
+                <p className="text-3xl font-bold text-amber-600 dark:text-amber-500">{urgentCount}</p>
+                <p className="text-xs text-muted-foreground">High priority</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-green-500/10 rounded-full">
+                <Users className="w-6 h-6 text-green-600 dark:text-green-500" />
+              </div>
+              <div className="flex-1 space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Active Tables</p>
                 <p className="text-3xl font-bold text-green-600 dark:text-green-500">
                   {activeDineInTables}
                 </p>
-              </div>
-              <div className="p-3 bg-green-500/10 rounded-full">
-                <Users className="w-6 h-6 text-green-600 dark:text-green-500" />
+                <p className="text-xs text-muted-foreground">Dining now</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-blue-500/10 rounded-full">
+                <Timer className="w-6 h-6 text-blue-600 dark:text-blue-500" />
+              </div>
+              <div className="flex-1 space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Avg Prep Time</p>
                 <p className="text-3xl font-bold text-blue-600 dark:text-blue-500">
                   {Math.round(
@@ -369,9 +376,7 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
                   )}
                   m
                 </p>
-              </div>
-              <div className="p-3 bg-blue-500/10 rounded-full">
-                <Timer className="w-6 h-6 text-blue-600 dark:text-blue-500" />
+                <p className="text-xs text-muted-foreground">Average time</p>
               </div>
             </div>
           </CardContent>

@@ -5,7 +5,7 @@ import { useOrderManager } from '@/hooks/use-order-manager'
 import { InlineLoader } from '@/components/ui/loader'
 import { SectionHeader } from '@/components/section-header'
 
-export default function DashboardKitchen() {
+export default function DashboardKitchen() { 
   const { isLoading, getOrdersByStatus, updateOrderStatus } = useOrderManager()
   const pending = getOrdersByStatus('pending')
   const preparing = getOrdersByStatus('preparing')

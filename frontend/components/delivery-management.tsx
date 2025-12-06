@@ -219,61 +219,65 @@ export default function DeliveryManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-primary hover:shadow-md transition-shadow">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-l-4 border-l-primary hover:shadow-lg transition-all duration-200">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-primary/10 rounded-full">
+                <Truck className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1 space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Active</p>
                 <p className="text-3xl font-bold">
                   {filtered.filter((o) => o.status !== "delivered" && o.status !== "cancelled").length}
                 </p>
-              </div>
-              <div className="p-3 bg-primary/10 rounded-full">
-                <Truck className="w-6 h-6 text-primary" />
+                <p className="text-xs text-muted-foreground">In progress</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-green-500/10 rounded-full">
+                <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-500" />
+              </div>
+              <div className="flex-1 space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Delivered</p>
                 <p className="text-3xl font-bold text-green-600 dark:text-green-500">
                   {filtered.filter((o) => o.status === "delivered").length}
                 </p>
-              </div>
-              <div className="p-3 bg-green-500/10 rounded-full">
-                <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-500" />
+                <p className="text-xs text-muted-foreground">Completed</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-amber-500 hover:shadow-md transition-shadow">
+        <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-200">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-amber-500/10 rounded-full">
+                <Clock className="w-6 h-6 text-amber-600 dark:text-amber-500" />
+              </div>
+              <div className="flex-1 space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Pending Payment</p>
                 <p className="text-3xl font-bold text-amber-600 dark:text-amber-500">
                   {filtered.filter((o) => o.paymentStatus === "pending").length}
                 </p>
-              </div>
-              <div className="p-3 bg-amber-500/10 rounded-full">
-                <Clock className="w-6 h-6 text-amber-600 dark:text-amber-500" />
+                <p className="text-xs text-muted-foreground">Awaiting payment</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Total</p>
-                <p className="text-3xl font-bold">{filtered.length}</p>
-              </div>
+            <div className="flex items-start gap-4">
               <div className="p-3 bg-blue-500/10 rounded-full">
                 <Phone className="w-6 h-6 text-blue-600 dark:text-blue-500" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Total</p>
+                <p className="text-3xl font-bold">{filtered.length}</p>
+                <p className="text-xs text-muted-foreground">All orders</p>
               </div>
             </div>
           </CardContent>

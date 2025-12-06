@@ -295,84 +295,86 @@ export function StaffManagement() {
       <Tabs defaultValue="overview" className="space-y-6">
         <Card className="shadow-sm">
           <CardContent className="p-2">
-            <TabsList className="grid w-full grid-cols-5 bg-transparent gap-1">
-              <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                Overview
-              </TabsTrigger>
-              <TabsTrigger value="performance" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                Performance
-              </TabsTrigger>
-              <TabsTrigger value="alerts" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                Alerts
-              </TabsTrigger>
-              <TabsTrigger value="shifts" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                Shifts
-              </TabsTrigger>
-              <TabsTrigger value="manage" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                Manage
-              </TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto">
+              <TabsList className="inline-flex w-full min-w-max bg-transparent gap-1">
+                <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap">
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="performance" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap">
+                  Performance
+                </TabsTrigger>
+                <TabsTrigger value="alerts" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap">
+                  Alerts
+                </TabsTrigger>
+                <TabsTrigger value="shifts" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap">
+                  Shifts
+                </TabsTrigger>
+                <TabsTrigger value="manage" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap">
+                  Manage
+                </TabsTrigger>
+              </TabsList>
+            </div>
           </CardContent>
         </Card>
 
         <TabsContent value="overview" className="space-y-6">
           {/* Staff Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 ">
-            <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200 w-60">
-              <CardContent className="p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="px-15 py-5">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 bg-green-500/10 rounded-full">
-                    <Users className="w-6 h-6 text-green-600 dark:text-green-500" />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Active Staff</p>
-                    <p className="text-3xl font-bold text-green-600 dark:text-green-500">{activeStaff}</p>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Active Staff</p>
+                    <p className="text-3xl font-bold">{activeStaff}</p>
                     <p className="text-xs text-muted-foreground">Currently working</p>
                   </div>
+                  <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                    <Users className="w-6 h-6 text-green-500" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-200 w-60">
-              <CardContent className="p-6">
+            <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="px-15 py-5">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 bg-amber-500/10 rounded-full">
-                    <Coffee className="w-6 h-6 text-amber-600 dark:text-amber-500" />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">On Break</p>
-                    <p className="text-3xl font-bold text-amber-600 dark:text-amber-500">{onBreakStaff}</p>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">On Break</p>
+                    <p className="text-3xl font-bold">{onBreakStaff}</p>
                     <p className="text-xs text-muted-foreground">Taking rest</p>
                   </div>
+                  <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                    <Coffee className="w-6 h-6 text-amber-500" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-primary hover:shadow-lg transition-all duration-200 w-60">
-              <CardContent className="p-6">
+            <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="px-15 py-5">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 bg-primary/10 rounded-full">
-                    <Activity className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Orders Handled</p>
-                    <p className="text-3xl font-bold text-primary">{totalOrdersHandled}</p>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Orders Handled</p>
+                    <p className="text-3xl font-bold">{totalOrdersHandled}</p>
                     <p className="text-xs text-muted-foreground">Today's total</p>
                   </div>
+                  <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                    <Activity className="w-6 h-6 text-blue-500" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-yellow-500 hover:shadow-lg transition-all duration-200 w-60">
-              <CardContent className="p-6">
+            <Card className="border-l-4 border-l-yellow-500 hover:shadow-lg transition-all duration-200">
+              <CardContent className="px-15 py-5">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 bg-yellow-500/10 rounded-full">
-                    <Star className="w-6 h-6 text-yellow-600 dark:text-yellow-500" />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Avg Rating</p>
-                    <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-500">{avgRating.toFixed(1)}</p>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Avg Rating</p>
+                    <p className="text-3xl font-bold">{avgRating.toFixed(1)}</p>
                     <p className="text-xs text-muted-foreground">Performance score</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
+                    <Star className="w-6 h-6 text-yellow-500" />
                   </div>
                 </div>
               </CardContent>
@@ -382,7 +384,7 @@ export function StaffManagement() {
           {/* Staff List */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {staff.map((member) => (
-              <Card key={member.id} className="hover:shadow-lg transition-all duration-200">
+              <Card key={member.id} className="hover:shadow-lg transition-all duration-200 shadow-sm">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
@@ -478,7 +480,7 @@ export function StaffManagement() {
           {/* Performance Overview */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-all duration-200">
-              <CardContent className="p-6">
+              <CardContent className="px-15 py-4">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-orange-500/10 rounded-full">
                     <TrendingUp className="w-6 h-6 text-orange-600 dark:text-orange-500" />
@@ -493,7 +495,7 @@ export function StaffManagement() {
             </Card>
 
             <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
-              <CardContent className="p-6">
+              <CardContent className="px-15 py-4">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-green-500/10 rounded-full">
                     <Clock className="w-6 h-6 text-green-600 dark:text-green-500" />
@@ -508,30 +510,30 @@ export function StaffManagement() {
             </Card>
 
             <Card className="border-l-4 border-l-yellow-500 hover:shadow-lg transition-all duration-200">
-              <CardContent className="p-6">
+              <CardContent className="px-15 py-4">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 bg-yellow-500/10 rounded-full">
-                    <Star className="w-6 h-6 text-yellow-600 dark:text-yellow-500" />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Customer Rating</p>
-                    <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-500">{avgRating.toFixed(1)}</p>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Customer Rating</p>
+                    <p className="text-3xl font-bold">{avgRating.toFixed(1)}</p>
                     <p className="text-xs text-muted-foreground">Average score</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
+                    <Star className="w-6 h-6 text-yellow-500" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
-              <CardContent className="p-6">
+              <CardContent className="px-15 py-4">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 bg-blue-500/10 rounded-full">
-                    <Target className="w-6 h-6 text-blue-600 dark:text-blue-500" />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Total Staff</p>
-                    <p className="text-3xl font-bold text-blue-600 dark:text-blue-500">{staff.length}</p>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Total Staff</p>
+                    <p className="text-3xl font-bold">{staff.length}</p>
                     <p className="text-xs text-muted-foreground">Team members</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                    <Target className="w-6 h-6 text-blue-500" />
                   </div>
                 </div>
               </CardContent>
@@ -540,13 +542,13 @@ export function StaffManagement() {
 
           {/* Top Performers */}
           <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="border-b">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Award className="w-5 h-5 text-yellow-600 dark:text-yellow-500" />
                 Today's Top Performers
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <div className="space-y-3">
                 {topPerformers.map((performer, index) => (
                   <Card key={performer.id} className="hover:shadow-md transition-shadow">
@@ -591,13 +593,13 @@ export function StaffManagement() {
 
           {/* Department Performance */}
           <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="border-b">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <BarChart3 className="w-5 h-5 text-primary" />
                 Department Performance
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <div className="space-y-4">
                 {Object.entries(departmentStats).map(([dept, stats]) => (
                   <Card key={dept} className="hover:shadow-md transition-shadow">
@@ -631,7 +633,7 @@ export function StaffManagement() {
           {/* Alert Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="border-l-4 border-l-red-500 hover:shadow-lg transition-all duration-200">
-              <CardContent className="p-6">
+              <CardContent className="px-15 py-5">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-red-500/10 rounded-full">
                     <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-500" />
@@ -648,7 +650,7 @@ export function StaffManagement() {
             </Card>
 
             <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-200">
-              <CardContent className="p-6">
+              <CardContent className="px-15 py-5">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-amber-500/10 rounded-full">
                     <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-500" />
@@ -665,7 +667,7 @@ export function StaffManagement() {
             </Card>
 
             <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
-              <CardContent className="p-6">
+              <CardContent className="px-15 py-5">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-blue-500/10 rounded-full">
                     <Activity className="w-6 h-6 text-blue-600 dark:text-blue-500" />
@@ -682,15 +684,15 @@ export function StaffManagement() {
             </Card>
 
             <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-200">
-              <CardContent className="p-6">
+              <CardContent className="px-15 py-5">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 bg-purple-500/10 rounded-full">
-                    <Bell className="w-6 h-6 text-purple-600 dark:text-purple-500" />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Total Alerts</p>
-                    <p className="text-3xl font-bold text-purple-600 dark:text-purple-500">{alerts.length}</p>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Total Alerts</p>
+                    <p className="text-3xl font-bold">{alerts.length}</p>
                     <p className="text-xs text-muted-foreground">All notifications</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                    <Bell className="w-6 h-6 text-purple-500" />
                   </div>
                 </div>
               </CardContent>
@@ -698,13 +700,13 @@ export function StaffManagement() {
           </div>
 
           <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="border-b">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Bell className="w-5 h-5 text-amber-600 dark:text-amber-500" />
                 Recent Alerts
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <div className="space-y-3">
                 {alerts.map((alert) => {
                   const staffMember = staff.find((s) => s.id === alert.staffId)
@@ -745,7 +747,7 @@ export function StaffManagement() {
           {/* Shift Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
-              <CardContent className="p-6">
+              <CardContent className="px-15 py-5">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-blue-500/10 rounded-full">
                     <Clock className="w-6 h-6 text-blue-600 dark:text-blue-500" />
@@ -762,7 +764,7 @@ export function StaffManagement() {
             </Card>
 
             <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-200">
-              <CardContent className="p-6">
+              <CardContent className="px-15 py-5">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-purple-500/10 rounded-full">
                     <Clock className="w-6 h-6 text-purple-600 dark:text-purple-500" />
@@ -779,7 +781,7 @@ export function StaffManagement() {
             </Card>
 
             <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-all duration-200">
-              <CardContent className="p-6">
+              <CardContent className="px-15 py-5">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-orange-500/10 rounded-full">
                     <Clock className="w-6 h-6 text-orange-600 dark:text-orange-500" />
@@ -796,7 +798,7 @@ export function StaffManagement() {
             </Card>
 
             <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-200">
-              <CardContent className="p-6">
+              <CardContent className="px-15 py-5">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-amber-500/10 rounded-full">
                     <Coffee className="w-6 h-6 text-amber-600 dark:text-amber-500" />

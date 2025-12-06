@@ -158,56 +158,56 @@ export function InventoryManagement() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-l-4 border-l-primary hover:shadow-lg transition-all duration-200">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-primary/10 rounded-full">
+                <Package className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1 space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Total SKUs</p>
                 <p className="text-3xl font-bold">{totalSkus}</p>
                 <p className="text-xs text-muted-foreground">{categories.length} categories</p>
-              </div>
-              <div className="p-3 bg-primary/10 rounded-full">
-                <Package className="w-6 h-6 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
         <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-green-500/10 rounded-full">
+                <Package className="w-6 h-6 text-green-600 dark:text-green-500" />
+              </div>
+              <div className="flex-1 space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Total Units</p>
                 <p className="text-3xl font-bold text-green-600 dark:text-green-500">{totalUnits}</p>
                 <p className="text-xs text-muted-foreground">In stock</p>
-              </div>
-              <div className="p-3 bg-green-500/10 rounded-full">
-                <Package className="w-6 h-6 text-green-600 dark:text-green-500" />
               </div>
             </div>
           </CardContent>
         </Card>
         <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-200">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-amber-500/10 rounded-full">
+                <TrendingDown className="w-6 h-6 text-amber-600 dark:text-amber-500" />
+              </div>
+              <div className="flex-1 space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Low Stock</p>
                 <p className="text-3xl font-bold text-amber-600 dark:text-amber-500">{lowCount}</p>
                 <p className="text-xs text-muted-foreground">Needs attention</p>
-              </div>
-              <div className="p-3 bg-amber-500/10 rounded-full">
-                <TrendingDown className="w-6 h-6 text-amber-600 dark:text-amber-500" />
               </div>
             </div>
           </CardContent>
         </Card>
         <Card className="border-l-4 border-l-red-500 hover:shadow-lg transition-all duration-200">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-red-500/10 rounded-full">
+                <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-500" />
+              </div>
+              <div className="flex-1 space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Critical</p>
                 <p className="text-3xl font-bold text-red-600 dark:text-red-500">{criticalCount}</p>
                 <p className="text-xs text-muted-foreground">Urgent restock</p>
-              </div>
-              <div className="p-3 bg-red-500/10 rounded-full">
-                <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-500" />
               </div>
             </div>
           </CardContent>
