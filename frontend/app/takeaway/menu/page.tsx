@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search, Plus, Minus, ShoppingCart, Clock, Star, Leaf } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { InlineLoader } from "@/components/ui/loader"
-
+import { BackButton } from "@/components/ui/back-button"
 import { fetchMenuItems, type MenuItem } from '@/lib/menu-data'
 
 type CartItem = MenuItem & { quantity?: number }
@@ -18,7 +18,7 @@ export default function TakeawayMenuPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [cart, setCart] = useState<CartItem[]>([])
-  const [selectedCategory, setSelectedCategory] = useState("popular")
+  const [selectedCategory, setSelectedCategory] = useState("all")
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -42,6 +42,7 @@ export default function TakeawayMenuPage() {
   }, [])
 
   const categories = [
+    { id: "all", name: "All Items", count: menuItems.length },
     { id: "popular", name: "Popular", count: menuItems.filter((item) => item.isPopular).length },
     { id: "starters", name: "Starters", count: menuItems.filter((item) => item.category === "starters").length },
     { id: "mains", name: "Main Course", count: menuItems.filter((item) => item.category === "mains").length },
@@ -55,7 +56,16 @@ export default function TakeawayMenuPage() {
     const matchesSearch =
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = selectedCategory === "popular" ? item.isPopular : item.category === selectedCategory
+    
+    let matchesCategory = true
+    if (selectedCategory === "all") {
+      matchesCategory = true
+    } else if (selectedCategory === "popular") {
+      matchesCategory = !!item.isPopular
+    } else {
+      matchesCategory = item.category === selectedCategory
+    }
+    
     return matchesSearch && matchesCategory
   })
 
@@ -115,6 +125,7 @@ export default function TakeawayMenuPage() {
       {/* Header */}
       <header className="bg-card border-b border-border p-4 sticky top-0 z-40">
         <div className="max-w-md mx-auto">
+          <BackButton className="mb-3" fallbackRoute="/takeaway" />
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
@@ -144,7 +155,10 @@ export default function TakeawayMenuPage() {
       <main className="max-w-md mx-auto p-4">
         {/* Categories */}
         <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="mb-6">
-          <TabsList className="grid w-full grid-cols-4 mb-4">
+          <TabsList className="grid w-full grid-cols-5 mb-4">
+            <TabsTrigger value="all" className="text-xs">
+              All
+            </TabsTrigger>
             <TabsTrigger value="popular" className="text-xs">
               Popular
             </TabsTrigger>
@@ -159,8 +173,8 @@ export default function TakeawayMenuPage() {
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {categories.slice(4).map((category) => (
+          <div className="flex gap-2 overflow-x-auto pb-2 whitespace-nowrap">
+            {categories.slice(5).map((category) => (
               <Button
                 key={category.id}
                 variant={selectedCategory === category.id ? "default" : "outline"}
@@ -243,9 +257,12 @@ export default function TakeawayMenuPage() {
 
                   <div className="w-24 h-24 m-4 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                     <img
-                      src={item.image || "/placeholder.svg"}
+                      src={item.image || "https://placehold.co/200x200/e2e8f0/64748b?text=No+Image"}
                       alt={item.name}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "https://placehold.co/200x200/e2e8f0/64748b?text=No+Image"
+                      }}
                     />
                   </div>
                 </div>
@@ -264,11 +281,14 @@ export default function TakeawayMenuPage() {
 
       {/* Cart Footer */}
           {getTotalItems() > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 z-50">
+        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background/95 to-transparent backdrop-blur-sm border-t border-border/50 p-2 z-50">
           <div className="max-w-md mx-auto">
-            <Button className="w-full h-12 text-base font-medium" onClick={proceedToCheckout}>
-              <ShoppingCart className="w-4 h-4 mr-2" />
-              Proceed to Checkout • {getTotalItems()} items • ₹{getTotalPrice()}
+            <Button 
+              className="w-full h-10 text-sm font-semibold bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 dark:from-orange-600 dark:to-amber-600 dark:hover:from-orange-700 dark:hover:to-amber-700 text-white shadow-lg" 
+              onClick={proceedToCheckout}
+            >
+              <ShoppingCart className="w-3.5 h-3.5 mr-1.5" />
+              Checkout • {getTotalItems()} items • ₹{getTotalPrice()}
             </Button>
           </div>
         </div>

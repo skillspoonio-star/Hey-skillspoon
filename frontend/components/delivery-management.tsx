@@ -12,6 +12,7 @@ import { InlineLoader } from "@/components/ui/loader"
 
 type DeliveryOrder = {
   id: string
+  deliveryNo?: number
   customerName: string
   phone: string
   address: string
@@ -25,6 +26,12 @@ type DeliveryOrder = {
   paymentStatus: string
   paymentMethod: string
   tableNumber?: number | null
+}
+
+// Helper function to format order ID to friendly format
+const formatOrderId = (deliveryNo?: number): string => {
+  if (!deliveryNo) return 'N/A'
+  return `DLV${deliveryNo}`
 }
 
 export default function DeliveryManagement() {
@@ -54,7 +61,12 @@ export default function DeliveryManagement() {
         }
         const menuById = new Map(menu.map((m) => [m.id, m]))
 
-        const mapped = data.map((d: any) => {
+        // Sort by creation date (oldest first) to assign sequential numbers
+        const sortedData = [...data].sort((a, b) => 
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        )
+
+        const mapped = sortedData.map((d: any, index: number) => {
           // prefer fields from populated orderId when available
           const order = d.orderId || null
           const sourceItems = order?.items ?? d.items ?? []
@@ -70,6 +82,7 @@ export default function DeliveryManagement() {
 
           return {
             id: d._id,
+            deliveryNo: index + 1, // Sequential number starting from 1
             customerName: order ? (order.customerName || '') : (d.customerName || ''),
             phone: order ? (order.customerPhone || order.customerPhone) : (d.customerPhone || ''),
             address: d.address?.fullAddress || '',
@@ -84,7 +97,9 @@ export default function DeliveryManagement() {
             tableNumber: order ? order.tableNumber : (d.tableNumber ?? null),
           }
         })
-        setOrders(mapped)
+        
+        // Reverse to show newest first in the UI
+        setOrders(mapped.reverse())
       } catch (err) {
         console.error('Failed to load deliveries', err)
       } finally {
@@ -336,7 +351,7 @@ export default function DeliveryManagement() {
             <Card key={order.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-semibold">#{order.id}</CardTitle>
+                  <CardTitle className="text-base font-semibold">#{formatOrderId(order.deliveryNo)}</CardTitle>
                   <Badge className={getStatusBadge(order.status)}>{order.status.replaceAll("-", " ")}</Badge>
                 </div>
                 <div className="text-sm text-muted-foreground flex items-center gap-2">
