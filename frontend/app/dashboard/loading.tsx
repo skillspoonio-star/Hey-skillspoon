@@ -1,4 +1,6 @@
+import { PageLoader } from "@/components/ui/loader"
+
 export default function Loading() {
-  return null
+  return <PageLoader text="Loading dashboard..." />
 }
  

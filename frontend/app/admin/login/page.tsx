@@ -143,11 +143,11 @@ export default function AdminLogin() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-orange-100 to-orange-200 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-orange-100 to-orange-200 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-orange-200/30 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-orange-300/20 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-orange-100/40 rounded-full blur-3xl"></div>
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-orange-200/30 dark:bg-orange-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-orange-300/20 dark:bg-orange-600/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-orange-100/40 dark:bg-orange-500/5 rounded-full blur-3xl"></div>
       </div>
 
       <div className="w-full max-w-md relative z-1 ">
@@ -156,8 +156,8 @@ export default function AdminLogin() {
           <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
             <Shield className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Admin Portal</h1>
-          <p className="text-gray-600 mt-2">Hey Paytm Restaurant Management</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Admin Portal</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Hey Paytm Restaurant Management</p>
           <div className="flex justify-center gap-2 mt-4">
             <div className="w-2 h-2 bg-orange-300 rounded-full"></div>
             <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
@@ -165,8 +165,8 @@ export default function AdminLogin() {
           </div>
         </div>
 
-        <Card className="shadow-2xl border-0 backdrop-blur-sm bg-white/95">
-          <CardHeader className="text-center pb-4 relative text-black">
+        <Card className="shadow-2xl border-0 backdrop-blur-sm bg-white/95 dark:bg-gray-800/95">
+          <CardHeader className="text-center pb-4 relative text-foreground">
             <div className="absolute inset-0 opacity-5">
               <svg className="w-full h-full" viewBox="0 0 100 100" fill="currentColor">
                 <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
@@ -195,13 +195,13 @@ export default function AdminLogin() {
             <div className="flex justify-center gap-2 mt-4 ">
               <Badge
                 variant={step === "credentials" ? "default" : "secondary"}
-                className={`${step === "credentials" ? "bg-orange-500 shadow-md" : "bg-gray-200 text-black"} transition-all`}
+                className={`${step === "credentials" ? "bg-orange-500 shadow-md text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100"} transition-all`}
               >
                 1. Credentials
               </Badge>
               <Badge
                 variant={step === "otp" ? "default" : "secondary"}
-                className={`${step === "otp" ? "bg-orange-500 shadow-md" : "text-black bg-gray-200"} transition-all`}
+                className={`${step === "otp" ? "bg-orange-500 shadow-md text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100"} transition-all`}
               >
                 2. OTP
               </Badge>
@@ -217,39 +217,39 @@ export default function AdminLogin() {
 
             {step === "credentials" ? (
               <form onSubmit={handleCredentialsSubmit} className="space-y-4">
-                <div className="space-y-2 text-black">
-                  <Label htmlFor="adminId">Admin ID</Label>
-                  <div className="relative ">
-                    <User className="absolute left-3 top-3 w-4 h-4 text-black " />
+                <div className="space-y-2">
+                  <Label htmlFor="adminId" className="text-foreground">Admin ID</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="adminId"
                       type="text"
                       placeholder="Enter your Admin ID"
                       value={credentials.adminId}
                       onChange={(e) => setCredentials((prev) => ({ ...prev, adminId: e.target.value }))}
-                      className="pl-10 bg-white border-orange-200 focus:border-orange-400 focus:ring-orange-400/20"
+                      className="pl-10 bg-background text-foreground placeholder:text-muted-foreground border-orange-200 dark:border-orange-800 focus:border-orange-400 focus:ring-orange-400/20"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-foreground">Password</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-3 w-4 h-4 text-black" />
+                    <Lock className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
                       value={credentials.password}
                       onChange={(e) => setCredentials((prev) => ({ ...prev, password: e.target.value }))}
-                      className="pl-10 pr-10 border-orange-200 focus:border-orange-400 focus:ring-orange-400/20"
+                      className="pl-10 pr-10 bg-background text-foreground placeholder:text-muted-foreground border-orange-200 dark:border-orange-800 focus:border-orange-400 focus:ring-orange-400/20"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -266,15 +266,15 @@ export default function AdminLogin() {
               </form>
             ) : (
               <form onSubmit={handleOtpSubmit} className="space-y-4">
-                <div className="text-center space-y-2 p-4 bg-orange-50 rounded-lg border border-orange-200">
-                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <Smartphone className="w-6 h-6 text-orange-600" />
+                <div className="text-center space-y-2 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                  <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/40 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Smartphone className="w-6 h-6 text-orange-600 dark:text-orange-400" />
                   </div>
-                  <p className="text-sm text-gray-600">OTP sent to registered email Address</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">OTP sent to registered email Address</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="otp">Enter 6-digit OTP</Label>
+                  <Label htmlFor="otp" className="text-foreground">Enter 6-digit OTP</Label>
                   <Input
                     id="otp"
                     type="text"
@@ -283,19 +283,19 @@ export default function AdminLogin() {
                     onChange={(e) =>
                       setCredentials((prev) => ({ ...prev, otp: e.target.value.replace(/\D/g, "").slice(0, 6) }))
                     }
-                    className="text-center text-lg tracking-widest font-mono border-orange-200 focus:border-orange-400 focus:ring-orange-400/20"
+                    className="text-center text-lg tracking-widest font-mono bg-background text-foreground placeholder:text-muted-foreground border-orange-200 dark:border-orange-800 focus:border-orange-400 focus:ring-orange-400/20"
                     maxLength={6}
                     required
                   />
                 </div>
 
-                <div className="flex items-center justify-between text-sm p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-500">{otpTimer > 0 ? `Resend in ${otpTimer}s` : "OTP expired"}</span>
+                <div className="flex items-center justify-between text-sm p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <span className="text-muted-foreground">{otpTimer > 0 ? `Resend in ${otpTimer}s` : "OTP expired"}</span>
                   <button
                     type="button"
                     onClick={resendOtp}
                     disabled={otpTimer > 0}
-                    className="text-orange-500 hover:text-orange-600 disabled:text-gray-400 font-medium transition-colors"
+                    className="text-orange-500 hover:text-orange-600 disabled:text-muted-foreground font-medium transition-colors"
                   >
                     Resend OTP
                   </button>
@@ -313,7 +313,7 @@ export default function AdminLogin() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full bg-transparent border-orange-200 hover:bg-orange-50 transition-colors"
+                    className="w-full bg-transparent border-orange-200 dark:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
                     onClick={() => setStep("credentials")}
                   >
                     Back to Credentials
@@ -324,15 +324,15 @@ export default function AdminLogin() {
           </CardContent>
         </Card>
 
-        <div className="text-center mt-6 text-xs text-gray-500">
+        <div className="text-center mt-6 text-xs text-gray-500 dark:text-gray-400">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Shield className="w-3 h-3" />
             <span>Secure admin access with two-factor authentication</span>
           </div>
           <div className="flex justify-center gap-1">
-            <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-            <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-            <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+            <div className="w-1 h-1 bg-gray-400 dark:bg-gray-600 rounded-full"></div>
+            <div className="w-1 h-1 bg-gray-400 dark:bg-gray-600 rounded-full"></div>
+            <div className="w-1 h-1 bg-gray-400 dark:bg-gray-600 rounded-full"></div>
           </div>
         </div>
       </div>

@@ -8,7 +8,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Package, Clock, Phone, CreditCard, CheckCircle, Search, Eye, Printer, RefreshCw } from "lucide-react"
+
+// Utility function to format numbers with K/M suffixes
+const formatNumber = (num: number): string => {
+  if (num < 1000) return num.toString()
+  if (num < 1000000) return `${(num / 1000).toFixed(num % 1000 === 0 ? 0 : 1)}K`
+  if (num < 1000000000) return `${(num / 1000000).toFixed(num % 1000000 === 0 ? 0 : 1)}M`
+  return `${(num / 1000000000).toFixed(num % 1000000000 === 0 ? 0 : 1)}B`
+}
 
 interface TakeawayOrder {
   id: string
@@ -149,66 +158,101 @@ export function TakeawayManagement() {
     completed: filteredOrders.filter((o) => o.status === "completed").length,
   }
 
+  // Calculate today's revenue from completed orders
+  const todayRevenue = takeawayOrders
+    .filter((order) => {
+      const orderDate = new Date(order.orderTime).toDateString()
+      const today = new Date().toDateString()
+      return orderDate === today && order.status === "completed"
+    })
+    .reduce((total, order) => total + order.total, 0)
+
   return (
     <div className="space-y-6">
       {/* Header Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold text-yellow-600">{ordersByStatus.pending}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card className="border-l-4 border-l-yellow-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-yellow-500/10 rounded-full">
+                <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-500" />
               </div>
-              <Clock className="w-8 h-8 text-yellow-600" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Pending</p>
+                <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-500">{ordersByStatus.pending}</p>
+                <p className="text-xs text-muted-foreground">Awaiting confirmation</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Preparing</p>
-                <p className="text-2xl font-bold text-orange-600">{ordersByStatus.preparing}</p>
+        <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-orange-500/10 rounded-full">
+                <Package className="w-6 h-6 text-orange-600 dark:text-orange-500" />
               </div>
-              <Package className="w-8 h-8 text-orange-600" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Preparing</p>
+                <p className="text-3xl font-bold text-orange-600 dark:text-orange-500">{ordersByStatus.preparing}</p>
+                <p className="text-xs text-muted-foreground">Being prepared</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Ready</p>
-                <p className="text-2xl font-bold text-green-600">{ordersByStatus.ready}</p>
+        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-green-500/10 rounded-full">
+                <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-500" />
               </div>
-              <CheckCircle className="w-8 h-8 text-green-600" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Ready</p>
+                <p className="text-3xl font-bold text-green-600 dark:text-green-500">{ordersByStatus.ready}</p>
+                <p className="text-xs text-muted-foreground">Ready for pickup</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Completed Today</p>
-                <p className="text-2xl font-bold text-blue-600">{ordersByStatus.completed}</p>
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-blue-500/10 rounded-full">
+                <CheckCircle className="w-6 h-6 text-blue-600 dark:text-blue-500" />
               </div>
-              <CheckCircle className="w-8 h-8 text-blue-600" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Completed Today</p>
+                <p className="text-3xl font-bold text-blue-600 dark:text-blue-500">{ordersByStatus.completed}</p>
+                <p className="text-xs text-muted-foreground">Picked up</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Revenue</p>
-                <p className="text-2xl font-bold text-green-600">₹12,450</p>
+        <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-purple-500/10 rounded-full">
+                <CreditCard className="w-6 h-6 text-purple-600 dark:text-purple-500" />
               </div>
-              <CreditCard className="w-8 h-8 text-green-600" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Revenue</p>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="text-3xl font-bold text-purple-600 dark:text-purple-500 cursor-help">
+                        ₹{formatNumber(todayRevenue)}
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>₹{todayRevenue.toLocaleString()}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <p className="text-xs text-muted-foreground">Today's total</p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -264,38 +308,38 @@ export function TakeawayManagement() {
       {/* Orders List */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
         {filteredOrders.map((order) => (
-          <Card key={order.id} className="hover:shadow-md transition-shadow">
+          <Card key={order.id} className="hover:shadow-md transition-shadow overflow-hidden">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">#TK {order.id}</CardTitle>
+                <CardTitle className="text-lg truncate">#TK {order.id}</CardTitle>
                 <Badge className={getStatusColor(order.status)}>
                   {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                 </Badge>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="w-4 h-4" />
-                <span>Pickup: {order.pickupTime}</span>
+                <Clock className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">Pickup: {order.pickupTime}</span>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-medium">{order.customerName}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Phone className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="font-medium truncate">{order.customerName}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>{order.phone}</span>
+                  <span className="truncate">{order.phone}</span>
                 </div>
               </div>
 
               <div className="space-y-1">
                 <p className="font-medium text-sm">Items ({order.items.length}):</p>
                 {order.items.slice(0, 2).map((item, index) => (
-                  <div key={index} className="flex justify-between text-sm">
-                    <span>
+                  <div key={index} className="flex justify-between text-sm gap-2">
+                    <span className="truncate">
                       {item.quantity}x {item.name}
                     </span>
-                    <span>₹{item.price * item.quantity}</span>
+                    <span className="flex-shrink-0">₹{item.price * item.quantity}</span>
                   </div>
                 ))}
                 {order.items.length > 2 && (

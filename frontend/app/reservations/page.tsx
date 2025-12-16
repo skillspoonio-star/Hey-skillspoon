@@ -15,9 +15,11 @@ import { CalendarIcon, Clock, Users, Phone, Mail, ArrowLeft } from "lucide-react
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { FullPageLoader } from "@/components/ui/loader"
 
 export default function ReservationsPage() {
   const [date, setDate] = useState<Date>()
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -46,10 +48,14 @@ export default function ReservationsPage() {
     "9:30 PM",
   ]
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle reservation submission
+    setIsSubmitting(true)
     
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    setIsSubmitting(false)
     alert("Reservation request submitted! We will confirm shortly.")
   }
 
@@ -201,8 +207,8 @@ export default function ReservationsPage() {
                   />
                 </div>
 
-                <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700">
-                  Reserve Table
+                <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700" disabled={isSubmitting}>
+                  {isSubmitting ? "Submitting..." : "Reserve Table"}
                 </Button>
               </form>
             </CardContent>
@@ -263,6 +269,8 @@ export default function ReservationsPage() {
           </div>
         </div>
       </div>
+
+      {isSubmitting && <FullPageLoader text="Submitting your reservation..." />}
     </div>
   )
 }

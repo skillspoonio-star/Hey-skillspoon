@@ -15,8 +15,8 @@ export function OrderManagement() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedFilter, setSelectedFilter] = useState<"all" | "priority" | "table">("all")
 
-  const handleOrderStatusUpdate = (orderId: number, newStatus: Order["status"]) => {
-    updateOrderStatus(orderId, newStatus)
+  const handleOrderStatusUpdate = (orderId: string | number, newStatus: Order["status"]) => {
+    updateOrderStatus(typeof orderId === 'string' ? parseInt(orderId) : orderId, newStatus)
   }
 
   const filteredOrders = searchQuery ? searchOrders(searchQuery) : orders
@@ -57,113 +57,131 @@ export function OrderManagement() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold text-destructive">{pendingOrders.length}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-l-4 border-l-red-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Pending</p>
+                <p className="text-3xl font-bold">{pendingOrders.length}</p>
+                <p className="text-xs text-muted-foreground">Awaiting start</p>
               </div>
-              <Clock className="w-8 h-8 text-destructive" />
+              <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                <Clock className="w-6 h-6 text-red-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Preparing</p>
-                <p className="text-2xl font-bold text-primary">{preparingOrders.length}</p>
+        <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Preparing</p>
+                <p className="text-3xl font-bold">{preparingOrders.length}</p>
+                <p className="text-xs text-muted-foreground">In kitchen</p>
               </div>
-              <AlertTriangle className="w-8 h-8 text-primary" />
+              <div className="w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 text-orange-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Ready</p>
-                <p className="text-2xl font-bold text-chart-2">{readyOrders.length}</p>
+        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Ready</p>
+                <p className="text-3xl font-bold">{readyOrders.length}</p>
+                <p className="text-xs text-muted-foreground">To be served</p>
               </div>
-              <CheckCircle className="w-8 h-8 text-chart-2" />
+              <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                <CheckCircle className="w-6 h-6 text-green-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">High Priority</p>
-                <p className="text-2xl font-bold text-destructive">{highPriorityOrders.length}</p>
+        <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">High Priority</p>
+                <p className="text-3xl font-bold">{highPriorityOrders.length}</p>
+                <p className="text-xs text-muted-foreground">Urgent orders</p>
               </div>
-              <AlertTriangle className="w-8 h-8 text-destructive" />
+              <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 text-amber-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Orders Tabs */}
-      <Tabs defaultValue="all" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="all">All Orders ({filteredOrders.length})</TabsTrigger>
-          <TabsTrigger value="pending">Pending ({pendingOrders.length})</TabsTrigger>
-          <TabsTrigger value="preparing">Preparing ({preparingOrders.length})</TabsTrigger>
-          <TabsTrigger value="ready">Ready ({readyOrders.length})</TabsTrigger>
-          <TabsTrigger value="priority">High Priority ({highPriorityOrders.length})</TabsTrigger>
-        </TabsList>
+      <Card className="shadow-sm">
+        <CardContent className="p-2">
+          <Tabs defaultValue="all" className="space-y-4">
+            <div className="overflow-x-auto">
+              <TabsList className="inline-flex w-full min-w-max bg-transparent gap-1">
+                <TabsTrigger value="all" className="whitespace-nowrap">All Orders ({filteredOrders.length})</TabsTrigger>
+                <TabsTrigger value="pending" className="whitespace-nowrap">Pending ({pendingOrders.length})</TabsTrigger>
+                <TabsTrigger value="preparing" className="whitespace-nowrap">Preparing ({preparingOrders.length})</TabsTrigger>
+                <TabsTrigger value="ready" className="whitespace-nowrap">Ready ({readyOrders.length})</TabsTrigger>
+                <TabsTrigger value="priority" className="whitespace-nowrap">High Priority ({highPriorityOrders.length})</TabsTrigger>
+              </TabsList>
+            </div>
 
-        <TabsContent value="all" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filteredOrders.map((order) => (
-              <OrderCard key={order.id} order={order} onStatusUpdate={handleOrderStatusUpdate} />
-            ))}
-          </div>
-          {filteredOrders.length === 0 && (
-            <Card>
-              <CardContent className="p-8 text-center text-muted-foreground">
-                No orders found matching your search.
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
+            <TabsContent value="all" className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                {filteredOrders.map((order) => (
+                  <OrderCard key={order.id} order={order} onStatusUpdate={handleOrderStatusUpdate} />
+                ))}
+              </div>
+              {filteredOrders.length === 0 && (
+                <Card className="shadow-sm">
+                  <CardContent className="p-8 text-center text-muted-foreground">
+                    No orders found matching your search.
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
 
-        <TabsContent value="pending" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {pendingOrders.map((order) => (
-              <OrderCard key={order.id} order={order} onStatusUpdate={handleOrderStatusUpdate} />
-            ))}
-          </div>
-        </TabsContent>
+            <TabsContent value="pending" className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                {pendingOrders.map((order) => (
+                  <OrderCard key={order.id} order={order} onStatusUpdate={handleOrderStatusUpdate} />
+                ))}
+              </div>
+            </TabsContent>
 
-        <TabsContent value="preparing" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {preparingOrders.map((order) => (
-              <OrderCard key={order.id} order={order} onStatusUpdate={handleOrderStatusUpdate} />
-            ))}
-          </div>
-        </TabsContent>
+            <TabsContent value="preparing" className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                {preparingOrders.map((order) => (
+                  <OrderCard key={order.id} order={order} onStatusUpdate={handleOrderStatusUpdate} />
+                ))}
+              </div>
+            </TabsContent>
 
-        <TabsContent value="ready" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {readyOrders.map((order) => (
-              <OrderCard key={order.id} order={order} onStatusUpdate={handleOrderStatusUpdate} />
-            ))}
-          </div>
-        </TabsContent>
+            <TabsContent value="ready" className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                {readyOrders.map((order) => (
+                  <OrderCard key={order.id} order={order} onStatusUpdate={handleOrderStatusUpdate} />
+                ))}
+              </div>
+            </TabsContent>
 
-        <TabsContent value="priority" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {highPriorityOrders.map((order) => (
-              <OrderCard key={order.id} order={order} onStatusUpdate={handleOrderStatusUpdate} />
-            ))}
-          </div>
-        </TabsContent>
-      </Tabs>
+            <TabsContent value="priority" className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                {highPriorityOrders.map((order) => (
+                  <OrderCard key={order.id} order={order} onStatusUpdate={handleOrderStatusUpdate} />
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   )
 }

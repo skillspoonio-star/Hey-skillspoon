@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle, Search, DollarSign, AlertTriangle, Filter, CreditCard, Banknote } from "lucide-react"
-import { realTimeSync } from "@/lib/real-time-sync"
+import { CheckCircle, Search, AlertTriangle, Filter, Wallet, TrendingUp } from "lucide-react"
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid } from "recharts"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
@@ -19,13 +18,7 @@ interface CashPaymentRequest {
   unpaidOrderCount: number
 }
 
-interface ConfirmedPayment {
-  _id: string
-  tableNumber: number
-  totalAmount: number
-  timestamp: string
-  paymentMethod: "cash"
-}
+
 
 interface Payment {
   _id: string
@@ -44,10 +37,9 @@ export function PaymentConfirmation() {
   const [payments, setPayments] = useState<Payment[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(false)
-  const [paymentLoading, setPaymentLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const base = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3001';
 
   // Helper functions for date formatting
   const fmtDay = (timestamp: string) => timestamp.slice(0, 10) // YYYY-MM-DD from ISO string
@@ -76,13 +68,23 @@ export function PaymentConfirmation() {
     try {
       setLoading(true)
       setError(null)
+      console.log('Fetching payment requests from:', `${base}/api/payment-requests`)
       const response = await fetch(`${base}/api/payment-requests`)
-      if (!response.ok) throw new Error("Failed to fetch payment requests")
+      console.log('Payment requests response status:', response.status)
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Payment requests error response:', errorText)
+        throw new Error(`Failed to fetch payment requests: ${response.status} ${errorText}`)
+      }
       const data: CashPaymentRequest[] = await response.json()
-      setCashPaymentRequests(data)
+      console.log('Payment requests data:', data)
+      setCashPaymentRequests(Array.isArray(data) ? data : [])
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+      const errorMessage = err instanceof Error ? err.message : "An error occurred"
+      setError(errorMessage)
       console.error("Error fetching payment requests:", err)
+      // Set empty array on error to prevent undefined issues
+      setCashPaymentRequests([])
     } finally {
       setLoading(false)
     }
@@ -91,22 +93,80 @@ export function PaymentConfirmation() {
   // Fetch all payments from backend for revenue history
   const fetchPayments = async () => {
     try {
-      setPaymentLoading(true)
+      console.log('Fetching payments from:', `${base}/api/payments`)
       const response = await fetch(`${base}/api/payments`)
-      if (!response.ok) throw new Error("Failed to fetch payments")
+      console.log('Payments response status:', response.status)
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Payments error response:', errorText)
+        throw new Error(`Failed to fetch payments: ${response.status} ${errorText}`)
+      }
       const data: Payment[] = await response.json()
-      setPayments(data)
+      console.log('Payments data:', data)
+      setPayments(Array.isArray(data) ? data : [])
     } catch (err) {
       console.error("Error fetching payments:", err)
-    } finally {
-      setPaymentLoading(false)
+      // Set empty array on error to prevent undefined issues
+      setPayments([])
     }
+  }
+
+  // Mock data for development when API is not available
+  const loadMockData = () => {
+    const mockPaymentRequests: CashPaymentRequest[] = [
+      {
+        _id: "mock1",
+        tableNumber: 5,
+        totalAmount: 1250,
+        timestamp: new Date().toISOString(),
+        unpaidOrderCount: 2
+      },
+      {
+        _id: "mock2",
+        tableNumber: 12,
+        totalAmount: 890,
+        timestamp: new Date(Date.now() - 300000).toISOString(), // 5 minutes ago
+        unpaidOrderCount: 1
+      }
+    ]
+
+    const mockPayments: Payment[] = [
+      {
+        _id: "payment1",
+        amount: 1500,
+        type: "cash",
+        paymentOf: "order",
+        orderId: "order1",
+        reservationId: null,
+        sessionId: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        _id: "payment2",
+        amount: 2300,
+        type: "upi",
+        paymentOf: "order",
+        orderId: "order2",
+        reservationId: null,
+        sessionId: null,
+        createdAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+        updatedAt: new Date(Date.now() - 3600000).toISOString()
+      }
+    ]
+
+    setCashPaymentRequests(mockPaymentRequests)
+    setPayments(mockPayments)
+    setError("Using mock data - API not available")
   }
 
   useEffect(() => {
     // Initial fetch
     fetchCashPaymentRequests()
     fetchPayments()
+
+    // If you want to test with mock data, uncomment the line below:
+    // loadMockData()
   }, [])
 
   const handleConfirmPayment = async (requestId: string, tableNumber: number, totalAmount: number) => {
@@ -179,65 +239,94 @@ export function PaymentConfirmation() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Payment Management</h1>
-        <p className="text-muted-foreground">Confirm cash payments and monitor all transactions</p>
-      </div>
+      {/* Error Display */}
+      {error && (
+        <Card className="border-destructive/50 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-destructive/10 rounded-full">
+                <AlertTriangle className="w-5 h-5 text-destructive" />
+              </div>
+              <div className="flex-1">
+                <p className="text-destructive font-semibold">Connection Error</p>
+                <p className="text-sm text-muted-foreground mt-1">{error}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  API Base URL: {base}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => {
+                    fetchCashPaymentRequests()
+                    fetchPayments()
+                  }}
+                >
+                  Retry Connection
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Pending Cash Requests</p>
-                <p className="text-3xl font-bold text-orange-600">{cashPaymentRequests.length}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-10">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Pending Requests</p>
+                <p className="text-3xl font-bold">{cashPaymentRequests.length}</p>
+                <p className="text-xs text-muted-foreground">Cash payments</p>
               </div>
-              <div className="p-3 bg-orange-100 rounded-full">
-                <AlertTriangle className="w-6 h-6 text-orange-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Today's Payments</p>
-                <p className="text-3xl font-bold text-blue-600">{todaysPayments}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-full">
-                <CheckCircle className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 text-orange-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Today's Revenue</p>
-                <p className="text-3xl font-bold text-green-600">₹{todaysRevenue}</p>
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-10">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Today's Payments</p>
+                <p className="text-3xl font-bold">{todaysPayments}</p>
+                <p className="text-xs text-muted-foreground">Completed today</p>
               </div>
-              <div className="p-3 bg-green-100 rounded-full">
-                <DollarSign className="w-6 h-6 text-green-600" />
+              <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <CheckCircle className="w-6 h-6 text-blue-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Cash Collected</p>
-                <p className="text-3xl font-bold text-purple-600">₹{todaysCashRevenue.toLocaleString()}</p>
+        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-10">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Today's Revenue</p>
+                <p className="text-3xl font-bold">₹{todaysRevenue.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Total collected</p>
               </div>
-              <div className="p-3 bg-purple-100 rounded-full">
-                <Banknote className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-6 h-6 text-green-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-10">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Cash Collected</p>
+                <p className="text-3xl font-bold">₹{todaysCashRevenue.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Cash only</p>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                <Wallet className="w-6 h-6 text-purple-500" />
               </div>
             </div>
           </CardContent>
@@ -245,15 +334,15 @@ export function PaymentConfirmation() {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="shadow-sm">
         <CardContent className="p-4">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm font-medium">Search</span>
             </div>
 
-            <div className="flex items-center gap-4 flex-1">
+            <div className="flex items-center gap-3 flex-1 w-full sm:w-auto">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
@@ -264,8 +353,20 @@ export function PaymentConfirmation() {
                 />
               </div>
 
-              <Button variant="outline" onClick={() => setSearchQuery("")}>
+              <Button variant="outline" onClick={() => setSearchQuery("")} size="sm">
                 Clear
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => {
+                  fetchCashPaymentRequests()
+                  fetchPayments()
+                }}
+                size="sm"
+                disabled={loading}
+              >
+                {loading ? 'Refreshing...' : 'Refresh'}
               </Button>
             </div>
           </div>
@@ -273,11 +374,16 @@ export function PaymentConfirmation() {
       </Card>
 
       {/* Cash Payment Requests */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Pending Cash Payment Requests ({cashPaymentRequests.filter((r) => !searchQuery || r.tableNumber.toString().includes(searchQuery)).length})</CardTitle>
+      <Card className="shadow-sm">
+        <CardHeader className="border-b">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Pending Cash Payment Requests</CardTitle>
+            <Badge variant="secondary" className="text-sm">
+              {cashPaymentRequests.filter((r) => !searchQuery || r.tableNumber.toString().includes(searchQuery)).length} pending
+            </Badge>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {loading && (
             <div className="text-center py-12">
               <p className="text-muted-foreground">Loading payment requests...</p>
@@ -290,22 +396,24 @@ export function PaymentConfirmation() {
           )}
           {!loading && cashPaymentRequests.length === 0 ? (
             <div className="text-center py-12">
-              <CheckCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
+                <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-500" />
+              </div>
               <h3 className="font-semibold text-lg mb-2">No Pending Requests</h3>
-              <p className="text-muted-foreground">All cash payment requests have been processed.</p>
+              <p className="text-sm text-muted-foreground">All cash payment requests have been processed.</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {cashPaymentRequests
                 .filter((r) => !searchQuery || r.tableNumber.toString().includes(searchQuery))
                 .map((request) => (
-                  <div key={request._id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div key={request._id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border rounded-lg hover:shadow-md transition-shadow">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                        <span className="font-bold text-orange-600">T{request.tableNumber}</span>
+                      <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="font-bold text-orange-600 dark:text-orange-500">T{request.tableNumber}</span>
                       </div>
                       <div>
-                        <div className="font-medium">Table {request.tableNumber}</div>
+                        <div className="font-semibold">Table {request.tableNumber}</div>
                         <div className="text-sm text-muted-foreground">
                           {request.unpaidOrderCount} unpaid order{request.unpaidOrderCount !== 1 ? "s" : ""}
                         </div>
@@ -315,14 +423,16 @@ export function PaymentConfirmation() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <div className="font-bold text-lg">₹{request.totalAmount}</div>
-                        <div className="text-sm text-muted-foreground">Cash Payment</div>
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <div className="text-left sm:text-right flex-1 sm:flex-none">
+                        <div className="font-bold text-lg">₹{request.totalAmount.toLocaleString()}</div>
+                        <div className="text-xs text-muted-foreground">Cash Payment</div>
                       </div>
-                      <Badge variant="destructive">Pending</Badge>
-                      <Button 
+                      <Badge variant="destructive" className="hidden sm:inline-flex">Pending</Badge>
+                      <Button
                         onClick={() => handleConfirmPayment(request._id, request.tableNumber, request.totalAmount)}
+                        className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold"
+                        size="sm"
                       >
                         Confirm Payment
                       </Button>
@@ -335,11 +445,11 @@ export function PaymentConfirmation() {
       </Card>
 
       {/* Revenue History */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Revenue History</CardTitle>
+      <Card className="shadow-sm">
+        <CardHeader className="border-b">
+          <CardTitle className="text-lg">Revenue History</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pt-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
               <p className="text-sm text-muted-foreground">View aggregated revenue and drill into details</p>
@@ -394,9 +504,8 @@ export function PaymentConfirmation() {
                       <button
                         key={key}
                         onClick={() => (viewBy === "day" ? setSelectedDay(key) : setSelectedMonth(key))}
-                        className={`w-full text-left px-4 py-3 flex items-center justify-between hover:bg-muted ${
-                          isActive ? "bg-muted" : ""
-                        }`}
+                        className={`w-full text-left px-4 py-3 flex items-center justify-between hover:bg-muted ${isActive ? "bg-muted" : ""
+                          }`}
                       >
                         <div>
                           <div className="font-medium">{key}</div>

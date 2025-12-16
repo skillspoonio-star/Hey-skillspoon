@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { openRazorpayPayment } from "@/lib/razorpay"
 import { useTheme } from "next-themes"
+import { FullPageLoader } from "@/components/ui/loader"
+import { BackButton } from "@/components/ui/back-button"
+import { ShoppingCart, MapPin, Clock as ClockIcon, CreditCard as CreditCardIcon } from "lucide-react"
 
 export default function DeliveryCheckoutPage() {
   const router = useRouter()
@@ -60,8 +63,17 @@ export default function DeliveryCheckoutPage() {
 
   const createDeliveryOrder = async (paymentId?: string, paymentSignature?: string) => {
     const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+    
+    // Validate cart has items
+    if (!cart || cart.length === 0) {
+      throw new Error("Cart is empty. Please add items before placing order.")
+    }
+
     const deliveryPayload = {
-      items: cart.map((l: any) => ({ itemId: l.id, quantity: l.qty })),
+      items: cart.map((l: any) => ({ 
+        itemId: Number(l.id), 
+        quantity: Number(l.qty) 
+      })),
       customerName: name,
       customerPhone: phone,
       address: {
@@ -76,16 +88,23 @@ export default function DeliveryCheckoutPage() {
       scheduledTime: slot === "schedule" ? scheduledTime : null,
       contactless,
       instructions,
-      paymentMethod: paymentMethod === 'PAY_NOW' ? 'upi' : 'cash', // Default to 'upi' for online payments
-      paymentStatus: paymentMethod === 'PAY_NOW' ? (paymentId ? 'paid' : 'pending') : 'pending',
+      paymentMethod: paymentMethod === 'PAY_NOW' ? 'upi' : 'cash',
+      paymentStatus: paymentMethod === 'PAY_NOW' ? (paymentId ? 'paid' : 'unpaid') : 'unpaid',
       paymentDetails: paymentId ? {
         paymentId,
         signature: paymentSignature,
-        method: 'upi' // You can update this if Razorpay provides the actual method
+        method: 'upi'
       } : undefined,
       promo,
-      tip
+      tip,
+      subtotal,
+      tax,
+      deliveryFee,
+      discount,
+      total
     }
+
+    console.log('Sending delivery order:', deliveryPayload)
 
     const res = await fetch(`${base}/api/deliveries`, {
       method: 'POST',
@@ -193,13 +212,25 @@ export default function DeliveryCheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="max-w-2xl mx-auto p-4 space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Checkout</CardTitle>
+    <div className="min-h-screen bg-background pb-8">
+      {/* Header */}
+      <div className="bg-card border-b py-6 px-4 shadow-sm mb-6">
+        <div className="max-w-2xl mx-auto">
+          <BackButton className="mb-4" fallbackRoute="/delivery/menu" />
+          <h1 className="text-3xl font-bold mb-1">🛒 Checkout</h1>
+          <p className="text-muted-foreground">Complete your delivery order</p>
+        </div>
+      </div>
+
+      <main className="max-w-2xl mx-auto px-4 space-y-6">
+        <Card className="shadow-lg border-2">
+          <CardHeader className="bg-muted/30">
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <ShoppingCart className="w-6 h-6 text-orange-600" />
+              Order Summary
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-3 pt-6">
             <div className="space-y-2">
               {cart.map((line) => (
                 <div key={line.id} className="flex items-center justify-between text-sm">
@@ -211,77 +242,88 @@ export default function DeliveryCheckoutPage() {
               ))}
             </div>
             <Separator />
-            <div className="space-y-3">
-              <div className="space-y-3">
-                <h3 className="text-base font-semibold">Delivery Details</h3>
+            <div className="space-y-4">
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-orange-600" />
+                  Delivery Details
+                </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-sm">Name</Label>
-                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+                    <Label className="text-sm font-semibold">Name *</Label>
+                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="h-11" />
                   </div>
                   <div>
-                    <Label className="text-sm">Phone</Label>
+                    <Label className="text-sm font-semibold">Phone *</Label>
                     <Input
                       value={phone}
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                       placeholder="10-digit phone"
+                      className="h-11"
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <Label className="text-sm">Address Line 1</Label>
+                    <Label className="text-sm font-semibold">Address Line 1 *</Label>
                     <Input
                       value={address1}
                       onChange={(e) => setAddress1(e.target.value)}
                       placeholder="House/Flat, Street"
+                      className="h-11"
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <Label className="text-sm">Address Line 2 (optional)</Label>
+                    <Label className="text-sm font-semibold">Address Line 2 (optional)</Label>
                     <Input
                       value={address2}
                       onChange={(e) => setAddress2(e.target.value)}
                       placeholder="Area / Locality"
+                      className="h-11"
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <Label className="text-sm">Landmark (optional)</Label>
-                    <Input value={landmark} onChange={(e) => setLandmark(e.target.value)} placeholder="Near ..." />
+                    <Label className="text-sm font-semibold">Landmark (optional)</Label>
+                    <Input value={landmark} onChange={(e) => setLandmark(e.target.value)} placeholder="Near ..." className="h-11" />
                   </div>
                   <div>
-                    <Label className="text-sm">City</Label>
-                    <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" />
+                    <Label className="text-sm font-semibold">City *</Label>
+                    <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="h-11" />
                   </div>
                   <div>
-                    <Label className="text-sm">State</Label>
-                    <Input value={stateName} onChange={(e) => setStateName(e.target.value)} placeholder="State" />
+                    <Label className="text-sm font-semibold">State *</Label>
+                    <Input value={stateName} onChange={(e) => setStateName(e.target.value)} placeholder="State" className="h-11" />
                   </div>
                   <div>
-                    <Label className="text-sm">Pincode</Label>
+                    <Label className="text-sm font-semibold">Pincode *</Label>
                     <Input
                       value={pincode}
                       onChange={(e) => setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                       placeholder="6-digit pincode"
+                      className="h-11"
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <Label className="text-sm">Delivery Instructions (optional)</Label>
+                    <Label className="text-sm font-semibold">Delivery Instructions (optional)</Label>
                     <Input
                       value={instructions}
                       onChange={(e) => setInstructions(e.target.value)}
                       placeholder="e.g., leave at door"
+                      className="h-11"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label className="text-sm">Delivery Time</Label>
+                  <Label className="text-sm font-semibold flex items-center gap-2">
+                    <ClockIcon className="w-4 h-4 text-orange-600" />
+                    Delivery Time
+                  </Label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                     {(["ASAP", "30min", "60min", "schedule"] as const).map((opt) => (
                       <Button
                         key={opt}
                         variant={slot === opt ? "default" : "outline"}
                         onClick={() => setSlot(opt)}
-                        className="text-sm"
+                        className={`text-sm h-11 font-semibold ${slot === opt ? 'bg-orange-600 hover:bg-orange-700' : ''}`}
                       >
                         {opt === "schedule" ? "Schedule" : opt}
                       </Button>
@@ -293,7 +335,7 @@ export default function DeliveryCheckoutPage() {
                         type="datetime-local"
                         value={scheduledTime}
                         onChange={(e) => setScheduledTime(e.target.value)}
-                        className="text-sm"
+                        className="text-sm h-11"
                       />
                     </div>
                   )}
@@ -302,13 +344,16 @@ export default function DeliveryCheckoutPage() {
 
               <Separator />
 
-              <div className="flex items-center gap-2">
-                <Input placeholder="Promo code" value={promo} onChange={(e) => setPromo(e.target.value)} />
-                <Button variant="outline" onClick={applyPromo}>
-                  Apply
-                </Button>
-              </div>
-              {discount > 0 && <div className="text-sm text-green-600">Discount applied: -₹{discount}</div>}
+              {/* <div className="bg-muted/50 p-4 rounded-lg">
+                <Label className="text-sm font-semibold mb-2 block">🎁 Have a promo code?</Label>
+                <div className="flex items-center gap-2">
+                  <Input placeholder="Enter promo code" value={promo} onChange={(e) => setPromo(e.target.value)} className="h-11" />
+                  <Button variant="outline" onClick={applyPromo} className="h-11 px-6 font-semibold">
+                    Apply
+                  </Button>
+                </div>
+                {discount > 0 && <div className="text-sm text-green-600 font-semibold mt-2">✓ Discount applied: -₹{discount}</div>}
+              </div> */}
 
               <Separator />
 
@@ -321,55 +366,76 @@ export default function DeliveryCheckoutPage() {
                 <div>₹{tax}</div>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <div>Delivery Fee</div>
+                <div>Delivery Charge</div>
                 <div>{deliveryFee === 0 ? "Free" : "₹" + deliveryFee}</div>
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <span>Tip</span>
-                  <div className="grid grid-cols-4 gap-2">
-                    {[0, 20, 50, 100].map((v) => (
-                      <Button key={v} size="sm" variant={tip === v ? "default" : "outline"} onClick={() => setTip(v)}>
-                        {v === 0 ? "No Tip" : "₹" + v}
-                      </Button>
-                    ))}
-                  </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold">💝 Tip for delivery partner</Label>
+                  <span className="font-bold text-orange-600">₹{tip}</span>
                 </div>
-                <div>₹{tip}</div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[0, 20, 50, 100].map((v) => (
+                    <Button 
+                      key={v} 
+                      size="sm" 
+                      variant={tip === v ? "default" : "outline"} 
+                      onClick={() => setTip(v)}
+                      className={`h-10 font-semibold ${tip === v ? 'bg-orange-600 hover:bg-orange-700' : ''}`}
+                    >
+                      {v === 0 ? "No Tip" : "₹" + v}
+                    </Button>
+                  ))}
+                </div>
               </div>
 
               <Separator />
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between font-bold text-lg">
+                <div>Total</div>
+                <div>₹{total}</div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold flex items-center gap-2">
+                  <CreditCardIcon className="w-4 h-4 text-orange-600" />
+                  Payment Method
+                </Label>
+                <div className="grid grid-cols-2 gap-3">
                   <Button
                     variant={paymentMethod === "PAY_NOW" ? "default" : "outline"}
                     onClick={() => setPaymentMethod("PAY_NOW")}
+                    className={`h-12 font-semibold ${paymentMethod === "PAY_NOW" ? 'bg-orange-600 hover:bg-orange-700' : ''}`}
                   >
-                    Pay Now
+                    �  Pay Now
                   </Button>
                   <Button
                     variant={paymentMethod === "COD" ? "default" : "outline"}
                     onClick={() => setPaymentMethod("COD")}
+                    className={`h-12 font-semibold ${paymentMethod === "COD" ? 'bg-orange-600 hover:bg-orange-700' : ''}`}
                   >
-                    Cash on Delivery
+                    💵 Cash on Delivery
                   </Button>
                 </div>
               </div>
 
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={contactless} onChange={(e) => setContactless(e.target.checked)} />
-                Contactless delivery
+              <label className="flex items-center gap-3 text-sm bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800 cursor-pointer">
+                <input type="checkbox" checked={contactless} onChange={(e) => setContactless(e.target.checked)} className="w-4 h-4" />
+                <span className="font-medium">🛡️ Contactless delivery (recommended)</span>
               </label>
-
-              <div className="flex items-center justify-between font-semibold text-base">
-                <div>Total</div>
-                <div>₹{total}</div>
-              </div>
               <Button
-                className="w-full"
+                className="w-full h-14 text-lg font-bold bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-lg"
                 disabled={isProcessingPayment}
                 onClick={async () => {
+                  // Check if cart is empty
+                  if (!cart || cart.length === 0) {
+                    alert("Your cart is empty. Please add items before checkout.")
+                    router.push("/delivery/menu")
+                    return
+                  }
+
                   // basic validations
                   if (!name || phone.length !== 10 || !address1 || !city || !stateName || pincode.length !== 6) {
                     alert("Please complete delivery details before proceeding.")
@@ -380,12 +446,14 @@ export default function DeliveryCheckoutPage() {
                   await placeOrder()
                 }}
               >
-                {isProcessingPayment ? "Processing..." : paymentMethod === "PAY_NOW" ? "Pay Now" : "Place Order"}
+                {isProcessingPayment ? "Processing..." : paymentMethod === "PAY_NOW" ? "💳 Pay Now" : "📦 Place Order"}
               </Button>
             </div>
           </CardContent>
         </Card>
       </main>
+
+      {isProcessingPayment && <FullPageLoader text="Processing your order..." />}
     </div>
   )
 }

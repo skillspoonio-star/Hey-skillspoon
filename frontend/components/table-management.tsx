@@ -385,101 +385,80 @@ export function TableManagement({ orders }: TableManagementProps) {
   return (
     <div className="space-y-6">
       {/* Enhanced Table Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3 md:gap-4">
-        <Card>
-          <CardContent className="p-3 md:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Available</p>
-                <p className="text-xl md:text-xl font-bold text-chart-2">{availableTables}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-green-500/10 rounded-full">
+                <Utensils className="w-6 h-6 text-green-600 dark:text-green-500" />
               </div>
-              <Utensils className="w-6 h-6 md:w-8 md:h-8 text-chart-2" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Available</p>
+                <p className="text-3xl font-bold text-green-600 dark:text-green-500">{availableTables}</p>
+                <p className="text-xs text-muted-foreground">Ready to use</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-3 md:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Occupied</p>
-                <p className="text-xl md:text-xl font-bold text-destructive">{occupiedTables}</p>
+        <Card className="border-l-4 border-l-red-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-red-500/10 rounded-full">
+                <Users className="w-6 h-6 text-red-600 dark:text-red-500" />
               </div>
-              <Users className="w-6 h-6 md:w-8 md:h-8 text-destructive" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Occupied</p>
+                <p className="text-3xl font-bold text-red-600 dark:text-red-500">{occupiedTables}</p>
+                <p className="text-xs text-muted-foreground">Currently dining</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-3 md:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Reserved</p>
-                <p className="text-xl md:text-xl font-bold text-primary">{reservedTables}</p>
+        <Card className="border-l-4 border-l-primary hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-primary/10 rounded-full">
+                <Calendar className="w-6 h-6 text-primary" />
               </div>
-              <Calendar className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Reserved</p>
+                <p className="text-3xl font-bold text-primary">{reservedTables}</p>
+                <p className="text-xs text-muted-foreground">Upcoming bookings</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-3 md:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Cleaning</p>
-                <p className="text-xl md:text-xl font-bold text-chart-4">{cleaningTables}</p>
+        <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-amber-500/10 rounded-full">
+                <Sparkles className="w-6 h-6 text-amber-600 dark:text-amber-500" />
               </div>
-              <Sparkles className="w-6 h-6 md:w-8 md:h-8 text-chart-4" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Cleaning</p>
+                <p className="text-3xl font-bold text-amber-600 dark:text-amber-500">{cleaningTables}</p>
+                <p className="text-xs text-muted-foreground">Being cleaned</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-3 md:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Cleaning Tasks</p>
-                <p className="text-xl md:text-xl font-bold text-orange-600">{cleaningTasks}</p>
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-blue-500/10 rounded-full">
+                <DollarSign className="w-6 h-6 text-blue-600 dark:text-blue-500" />
               </div>
-              <Sparkles className="w-6 h-6 md:w-8 md:h-8 text-orange-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-3 md:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Maintenance Tasks</p>
-                <p className="text-xl md:text-xl font-bold text-blue-600">{maintenanceTasks}</p>
-              </div>
-              <Wrench className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-3 md:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Occupancy</p>
-                <p className="text-xl md:text-xl font-bold text-primary">
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Occupancy</p>
+                <p className="text-3xl font-bold text-blue-600 dark:text-blue-500">
                   {Math.round((occupiedTables / tables.length) * 100)}%
                 </p>
+                <p className="text-xs text-muted-foreground">Current rate</p>
               </div>
-              <DollarSign className="w-6 h-6 md:w-8 md:h-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-3 md:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Avg Revenue</p>
-                <p className="text-xl md:text-xl font-bold text-accent">₹{averageTableTurnover}</p>
-              </div>
-              <DollarSign className="w-6 h-6 md:w-8 md:h-8 text-accent" />
             </div>
           </CardContent>
         </Card>

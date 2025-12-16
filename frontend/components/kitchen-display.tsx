@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   Clock,
   ChefHat,
@@ -159,12 +160,38 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
     return Number.isFinite(parsed) ? parsed : 0
   }
 
+  const getTruncatedOrderId = (order: Order) => {
+    const id = String(order.id || '')
+    // If ID is longer than 10 characters, truncate it
+    if (id.length > 10) {
+      return `#${id.substring(0, 8)}...`
+    }
+    return `#${id}`
+  }
+
+  const formatTimeUnit = (minutes: number) => {
+    if (minutes < 60) {
+      return `${minutes}m`
+    } else if (minutes < 1440) { // Less than 24 hours
+      const hours = Math.floor(minutes / 60)
+      const remainingMinutes = minutes % 60
+      if (remainingMinutes === 0) {
+        return `${hours}h`
+      }
+      return `${hours}h ${remainingMinutes}m`
+    } else { // 24 hours or more
+      const days = Math.floor(minutes / 1440)
+      const remainingHours = Math.floor((minutes % 1440) / 60)
+      if (remainingHours === 0) {
+        return `${days}d`
+      }
+      return `${days}d ${remainingHours}h`
+    }
+  }
+
   const formatElapsedTime = (timestamp: Date) => {
     const elapsed = Math.floor((currentTime.getTime() - timestamp.getTime()) / (1000 * 60))
-    if (elapsed < 60) return `${elapsed}m`
-    const hours = Math.floor(elapsed / 60)
-    const minutes = elapsed % 60
-    return `${hours}h ${minutes}m`
+    return formatTimeUnit(elapsed)
   }
 
   const getEstimatedCompletionTime = (order: Order) => {
@@ -230,149 +257,162 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
 
   return (
     <div className="space-y-6">
-      {/* Kitchen Header */}
-      <div className="flex flex-col lg:flex items-start  justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Kitchen Display System</h2>
-          <p className="text-muted-foreground">Real-time order management for kitchen staff</p>
-        </div>
+      {/* Kitchen Controls */}
+      <Card className="shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full">
+            <div className="flex gap-2">
+              <Button
+                variant={soundEnabled ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                className="flex-1 sm:flex-none"
+              >
+                <Volume2 className="w-4 h-4 mr-2" />
+                Sound {soundEnabled ? "On" : "Off"}
+              </Button>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full lg:w-auto">
-          <div className="flex gap-2">
-            <Button
-              variant={soundEnabled ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className="flex-1 sm:flex-none"
-            >
-              <Volume2 className="w-4 h-4 mr-2" />
-              Sound {soundEnabled ? "On" : "Off"}
-            </Button>
+              <Button
+                variant={stationView ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStationView(!stationView)}
+                className="flex-1 sm:flex-none"
+              >
+                <Utensils className="w-4 h-4 mr-2" />
+                Station View
+              </Button>
+            </div>
 
-            <Button
-              variant={stationView ? "default" : "outline"}
-              size="sm"
-              onClick={() => setStationView(!stationView)}
-              className="flex-1 sm:flex-none"
-            >
-              <Utensils className="w-4 h-4 mr-2" />
-              Station View
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                <SelectTrigger className="w-full sm:w-32 bg-background text-foreground border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="priority">Priority</SelectItem>
+                  <SelectItem value="time">Time</SelectItem>
+                  <SelectItem value="table">Table</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filterBy} onValueChange={(value: any) => setFilterBy(value)}>
+                <SelectTrigger className="w-full sm:w-32 bg-background text-foreground border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Active</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="preparing">Preparing</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={orderTypeFilter} onValueChange={(value: any) => setOrderTypeFilter(value)}>
+                <SelectTrigger className="w-full sm:w-36 bg-background text-foreground border-border">
+                  <SelectValue placeholder="Order Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="dine-in">Dine-in</SelectItem>
+                  <SelectItem value="take-away">Takeaway</SelectItem>
+                  <SelectItem value="delivery">Delivery</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-              <SelectTrigger className="w-full sm:w-32 bg-background text-foreground border-border">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="priority">Priority</SelectItem>
-                <SelectItem value="time">Time</SelectItem>
-                <SelectItem value="table">Table</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filterBy} onValueChange={(value: any) => setFilterBy(value)}>
-              <SelectTrigger className="w-full sm:w-32 bg-background text-foreground border-border">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Active</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="preparing">Preparing</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={orderTypeFilter} onValueChange={(value: any) => setOrderTypeFilter(value)}>
-              <SelectTrigger className="w-full sm:w-36 bg-background text-foreground border-border">
-                <SelectValue placeholder="Order Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="dine-in">Dine-in</SelectItem>
-                <SelectItem value="take-away">Takeaway</SelectItem>
-                <SelectItem value="delivery">Delivery</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
-        <Card className="bg-card border-border">
-          <CardContent className="p-3 md:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Pending</p>
-                <p className="text-xl md:text-2xl font-bold text-destructive">{pendingCount}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card className="border-l-4 border-l-red-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-red-500/10 rounded-full">
+                <Clock className="w-6 h-6 text-red-600 dark:text-red-500" />
               </div>
-              <Clock className="w-6 h-6 md:w-8 md:h-8 text-destructive" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Pending</p>
+                <p className="text-3xl font-bold text-red-600 dark:text-red-500">{pendingCount}</p>
+                <p className="text-xs text-muted-foreground">Awaiting start</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
-          <CardContent className="p-3 md:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Preparing</p>
-                <p className="text-xl md:text-2xl font-bold text-primary">{preparingCount}</p>
+        <Card className="border-l-4 border-l-primary hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-primary/10 rounded-full">
+                <ChefHat className="w-6 h-6 text-primary" />
               </div>
-              <ChefHat className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Preparing</p>
+                <p className="text-3xl font-bold text-primary">{preparingCount}</p>
+                <p className="text-xs text-muted-foreground">In kitchen</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
-          <CardContent className="p-3 md:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Urgent</p>
-                <p className="text-xl md:text-2xl font-bold text-destructive">{urgentCount}</p>
+        <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-amber-500/10 rounded-full">
+                <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-500" />
               </div>
-              <AlertTriangle className="w-6 h-6 md:w-8 md:h-8 text-destructive" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Urgent</p>
+                <p className="text-3xl font-bold text-amber-600 dark:text-amber-500">{urgentCount}</p>
+                <p className="text-xs text-muted-foreground">High priority</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
-          <CardContent className="p-3 md:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Active Tables</p>
-                <p className="text-xl md:text-2xl font-bold text-chart-2">
+        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-green-500/10 rounded-full">
+                <Users className="w-6 h-6 text-green-600 dark:text-green-500" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Active Tables</p>
+                <p className="text-3xl font-bold text-green-600 dark:text-green-500">
                   {activeDineInTables}
                 </p>
+                <p className="text-xs text-muted-foreground">Dining now</p>
               </div>
-              <Users className="w-6 h-6 md:w-8 md:h-8 text-chart-2" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
-          <CardContent className="p-3 md:p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Avg Prep Time</p>
-                <p className="text-xl md:text-2xl font-bold text-chart-4">
-                  {Math.round(
-                    activeOrders.reduce((acc, order) => {
-                      const elapsed = Math.floor((currentTime.getTime() - order.timestamp.getTime()) / (1000 * 60))
-                      return acc + elapsed
-                    }, 0) / Math.max(activeOrders.length, 1),
-                  )}
-                  m
-                </p>
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-blue-500/10 rounded-full">
+                <Timer className="w-6 h-6 text-blue-600 dark:text-blue-500" />
               </div>
-              <Timer className="w-6 h-6 md:w-8 md:h-8 text-chart-4" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Avg Prep Time</p>
+                <p className="text-3xl font-bold text-blue-600 dark:text-blue-500">
+                  {formatTimeUnit(
+                    Math.round(
+                      activeOrders.reduce((acc, order) => {
+                        const elapsed = Math.floor((currentTime.getTime() - order.timestamp.getTime()) / (1000 * 60))
+                        return acc + elapsed
+                      }, 0) / Math.max(activeOrders.length, 1),
+                    )
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground">Average time</p>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {stationView && (
-        <Card className="bg-card border-border">
+        <Card className="shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground">
               <Utensils className="w-5 h-5" />
@@ -421,7 +461,7 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
 
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Timer className="w-3 h-3" />
-                        <span>Avg: {station.avgCookTime}m</span>
+                        <span>Avg: {formatTimeUnit(station.avgCookTime)}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -455,7 +495,7 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
                   className={cn(
                     "transition-all duration-200 hover:shadow-lg cursor-pointer min-h-[450px] flex flex-col bg-card border-2",
                     priority === "urgent" &&
-                      "border-destructive bg-destructive/10 dark:bg-destructive/20 animate-pulse",
+                    "border-destructive bg-destructive/10 dark:bg-destructive/20 animate-pulse",
                     priority === "high" && "border-destructive/70 bg-destructive/5 dark:bg-destructive/10",
                     priority === "medium" && "border-primary/70 bg-primary/5 dark:bg-primary/10",
                     order.status === "preparing" && "ring-2 ring-primary shadow-primary/20",
@@ -477,9 +517,18 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
                         <Badge variant="outline" className="capitalize text-xs">
                           {order.orderType || "dine-in"}
                         </Badge>
-                        <Badge variant="secondary" className="text-xs">
-                          {getOrderDisplay(order).startsWith('Table') ? `#${order.id}` : getOrderDisplay(order)}
-                        </Badge>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="secondary" className="text-xs cursor-help">
+                                {getOrderDisplay(order).startsWith('Table') ? getTruncatedOrderId(order) : getOrderDisplay(order)}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Full Order ID: #{order.id}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         {priority === "urgent" && <AlertTriangle className="w-4 h-4 text-destructive animate-bounce" />}
                         {priority === "high" && <AlertTriangle className="w-4 h-4 text-destructive" />}
                         <div
@@ -599,9 +648,9 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                       <CardTitle className="text-base md:text-lg text-foreground">
                         {selectedOrder.orderType && selectedOrder.orderType !== 'dine-in' ? (
-                          <>{getOrderDisplay(selectedOrder)} - Order #{selectedOrder.id}</>
+                          <>{getOrderDisplay(selectedOrder)} - Order {getTruncatedOrderId(selectedOrder)}</>
                         ) : (
-                          <>Table {selectedOrder.tableNumber} - Order #{selectedOrder.id}</>
+                          <>Table {selectedOrder.tableNumber} - Order {getTruncatedOrderId(selectedOrder)}</>
                         )}
                       </CardTitle>
                       <Badge variant={selectedOrder.status === "pending" ? "destructive" : "default"}>
@@ -689,12 +738,19 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
                   </CardContent>
                 </Card>
               ) : (
-                <Card className="bg-card border-border">
-                  <CardContent className="p-8 text-center">
-                    <Eye className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground">
-                      Select an order from the grid view to see detailed information
-                    </p>
+                <Card className="shadow-sm">
+                  <CardContent className="p-12">
+                    <div className="flex flex-col items-center justify-center text-center space-y-3">
+                      <div className="p-4 bg-muted rounded-full">
+                        <Eye className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="font-semibold text-lg">No Order Selected</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Select an order from the grid view to see detailed information
+                        </p>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               )}
@@ -721,17 +777,18 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
                     </div>
                     <div className="text-center p-3 bg-muted rounded-lg">
                       <p className="text-2xl font-bold text-chart-2">
-                        {Math.round(
-                          orders
-                            .filter((o) => o.status === "served")
-                            .reduce((acc, order) => {
-                              const elapsed = Math.floor(
-                                (new Date().getTime() - order.timestamp.getTime()) / (1000 * 60),
-                              )
-                              return acc + elapsed
-                            }, 0) / Math.max(orders.filter((o) => o.status === "served").length, 1),
+                        {formatTimeUnit(
+                          Math.round(
+                            orders
+                              .filter((o) => o.status === "served")
+                              .reduce((acc, order) => {
+                                const elapsed = Math.floor(
+                                  (new Date().getTime() - order.timestamp.getTime()) / (1000 * 60),
+                                )
+                                return acc + elapsed
+                              }, 0) / Math.max(orders.filter((o) => o.status === "served").length, 1),
+                          )
                         )}
-                        m
                       </p>
                       <p className="text-sm text-muted-foreground">Avg Completion</p>
                     </div>
@@ -780,7 +837,7 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
                     <div className="flex items-center gap-4">
                       <div className="text-center">
                         {
-                          order.orderType ==="dine-in"
+                          order.orderType === "dine-in"
                         }
                         <div className="font-bold text-lg text-foreground">Table {order.tableNumber}</div>
                         <div className="text-xs text-muted-foreground">{elapsedTime}</div>
@@ -885,11 +942,17 @@ export function KitchenDisplay({ orders, onStatusUpdate }: KitchenDisplayProps) 
       </Tabs>
 
       {sortedOrders.length === 0 && (
-        <Card className="bg-card border-border">
-          <CardContent className="p-12 text-center">
-            <ChefHat className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="font-semibold text-lg mb-2 text-foreground">All caught up!</h3>
-            <p className="text-muted-foreground">No active orders in the kitchen right now.</p>
+        <Card className="shadow-sm">
+          <CardContent className="p-12">
+            <div className="flex flex-col items-center justify-center text-center space-y-3">
+              <div className="p-4 bg-muted rounded-full">
+                <ChefHat className="w-12 h-12 text-muted-foreground" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-semibold text-lg text-foreground">All caught up!</h3>
+                <p className="text-sm text-muted-foreground">No active orders in the kitchen right now.</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

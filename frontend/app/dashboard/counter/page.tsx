@@ -1,13 +1,14 @@
 "use client"
 
 import { CounterOrderManagement } from '@/components/counter-order-management'
-import { useOrderManager } from '@/hooks/use-order-manager'
 
 export default function DashboardCounter() {
-  const { orders } = useOrderManager()
   return (
-    <div>
-      <h2 className="text-2xl font-semibold mb-4">Counter Orders</h2>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">Counter Orders</h2>
+        <p className="text-sm text-muted-foreground mt-1">Manage walk-in customer orders and table assignments</p>
+      </div>
       <CounterOrderManagement />
     </div>
   )
