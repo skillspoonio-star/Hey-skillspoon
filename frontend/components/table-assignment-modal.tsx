@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { X } from "lucide-react"
+
 import { validatePhoneNumber, formatPhoneNumber } from "@/lib/validation"
 
 interface TableInfo {
@@ -35,17 +35,17 @@ export function TableAssignmentModal({ isOpen, onClose, onAssign, selectedTable 
     // when modal opens and no preselected table, fetch available tables
     if (isOpen && !selectedTable) {
       let mounted = true
-      ;(async () => {
-        try {
-          const res = await fetch(`${API_BASE}/api/tables`)
-          if (!res.ok) return
-          const data = await res.json()
-          const avail = (Array.isArray(data) ? data : []).filter((t: any) => (t.status || 'available') === 'available').map((t: any) => ({ number: Number(t.number), capacity: Number(t.capacity || 4) }))
-          if (mounted) setAvailableTables(avail)
-        } catch (e) {
-          // ignore fetch errors here; parent page will show overall errors
-        }
-      })()
+        ; (async () => {
+          try {
+            const res = await fetch(`${API_BASE}/api/tables`)
+            if (!res.ok) return
+            const data = await res.json()
+            const avail = (Array.isArray(data) ? data : []).filter((t: any) => (t.status || 'available') === 'available').map((t: any) => ({ number: Number(t.number), capacity: Number(t.capacity || 4) }))
+            if (mounted) setAvailableTables(avail)
+          } catch (e) {
+            // ignore fetch errors here; parent page will show overall errors
+          }
+        })()
       return () => { mounted = false }
     }
     // if a selectedTable prop is provided, prefill chosenTable
@@ -55,7 +55,7 @@ export function TableAssignmentModal({ isOpen, onClose, onAssign, selectedTable 
   const handleSubmit = () => {
     const tableNum = selectedTable ? selectedTable.number : (chosenTable ? Number.parseInt(chosenTable) : NaN)
     if (!Number.isFinite(tableNum) || !customerName || !mobileNumber) return
-    
+
     if (!validatePhoneNumber(mobileNumber)) {
       setMobileNumberError("Please enter a valid 10-digit mobile number")
       return
@@ -75,12 +75,7 @@ export function TableAssignmentModal({ isOpen, onClose, onAssign, selectedTable 
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-semibold">Assign Customer to Table</DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-xl font-semibold">Assign Customer to Table</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6 py-4">

@@ -29,17 +29,48 @@ interface AnalyticsCardProps {
   orders: Order[]
 }
 
+// Configuration constants
+const CURRENCY_SYMBOL = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL ?? '₹'
+const CURRENCY_LOCALE = process.env.NEXT_PUBLIC_CURRENCY_LOCALE ?? 'en-IN'
+const DEFAULT_GROWTH_RATE = 0 // Default growth rate when no historical data
+const POPULAR_ITEMS_LIMIT = 8
+const PEAK_HOURS_LIMIT = 3
+
+// Status colors configuration
+const STATUS_COLORS: Record<string, string> = {
+  served: '#60b246',
+  ready: '#fc8019',
+  preparing: '#f97316',
+  pending: '#e23744'
+}
+
+const PAYMENT_COLORS: string[] = ['#fc8019', '#60b246', '#e23744', '#686b78']
+
 export function AnalyticsCard({ orders }: AnalyticsCardProps) {
   const [timeRange, setTimeRange] = useState<"today" | "week" | "month">("today")
   const [selectedMetric, setSelectedMetric] = useState<"revenue" | "orders" | "customers">("revenue")
 
   const [analytics, setAnalytics] = useState<any | null>(null)
-  const [loading, setLoading] = useState(false)
+
   const [ordersData, setOrdersData] = useState<Order[] | null>(null)
+
+  // Currency formatter
+  const formatCurrency = (amount: number) => {
+    try {
+      return new Intl.NumberFormat(CURRENCY_LOCALE, {
+        style: 'currency',
+        currency: CURRENCY_SYMBOL === '₹' ? 'INR' : 'USD',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      }).format(amount)
+    } catch (e) {
+      return `${CURRENCY_SYMBOL}${amount.toLocaleString()}`
+    }
+  }
 
   useEffect(() => {
     let mounted = true
-    setLoading(true)
+
     const range = timeRange === 'today' ? '24h' : timeRange
     const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
 
@@ -54,7 +85,7 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
         if (Array.isArray(ordersRes)) setOrdersData(ordersRes)
       })
       .catch((err) => console.error('Failed to load analytics or orders', err))
-      .finally(() => mounted && setLoading(false))
+      .finally(() => { })
 
     return () => {
       mounted = false
@@ -70,10 +101,10 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
   const voiceOrders = analytics && typeof analytics.voiceOrders !== 'undefined' ? analytics.voiceOrders : sourceOrders.filter((o: any) => o.source === 'voice' || o.isVoice === true || o.orderSource === 'voice').length || 0
   const uniqueCustomers = analytics && typeof analytics.uniqueCustomers !== 'undefined' ? analytics.uniqueCustomers : new Set(sourceOrders.map((o) => o.customerPhone)).size
 
-  // Calculate growth metrics (mock data for demo)
-  const revenueGrowth = 12.5
-  const orderGrowth = 8.3
-  const customerGrowth = 15.2
+  // Calculate growth metrics (use analytics data or default)
+  const revenueGrowth = analytics?.growth?.revenue ?? DEFAULT_GROWTH_RATE
+  const orderGrowth = analytics?.growth?.orders ?? DEFAULT_GROWTH_RATE
+  const customerGrowth = analytics?.growth?.customers ?? DEFAULT_GROWTH_RATE
 
   // Helper to format hour numbers -> e.g. 13 -> "1 PM"
   // Convert a UTC hour bucket (0-23) to a localized hour label in IST.
@@ -100,25 +131,25 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
   // hourly: prefer analytics.hourly (which returns 24 buckets), otherwise derive from orders
   const hourlyData = analytics && analytics.hourly && Array.isArray(analytics.hourly)
     ? analytics.hourly.map((h: any) => {
-        // backend uses hour like "9:00" — extract leading number
-        const raw = String(h.hour || '0');
-        const hourNum = parseInt(raw.split(':')[0], 10);
-        return { hour: formatHourLabel(hourNum), revenue: h.revenue || 0, orders: h.orders || 0, customers: h.customers || 0 }
-      })
+      // backend uses hour like "9:00" — extract leading number
+      const raw = String(h.hour || '0');
+      const hourNum = parseInt(raw.split(':')[0], 10);
+      return { hour: formatHourLabel(hourNum), revenue: h.revenue || 0, orders: h.orders || 0, customers: h.customers || 0 }
+    })
     : (() => {
-        // derive hourly buckets from orders
-        const buckets: Record<number, { revenue: number; orders: number; customersSet: Set<string> }> = {};
-        for (let i = 0; i < 24; i++) buckets[i] = { revenue: 0, orders: 0, customersSet: new Set() };
-        for (const o of ordersForAnalysis) {
-          const d = new Date((o as any).timestamp || (o as any).createdAt || Date.now());
-          // Use UTC hour to match backend aggregation (Mongo $hour uses UTC by default)
-          const h = d.getUTCHours();
-          buckets[h].revenue += Number(o.total || 0);
-          buckets[h].orders += 1;
-          if (o.customerPhone) buckets[h].customersSet.add(String(o.customerPhone));
-        }
-        return Object.keys(buckets).map((k) => ({ hour: formatHourLabel(Number(k)), revenue: buckets[Number(k)].revenue, orders: buckets[Number(k)].orders, customers: buckets[Number(k)].customersSet.size }));
-      })()
+      // derive hourly buckets from orders
+      const buckets: Record<number, { revenue: number; orders: number; customersSet: Set<string> }> = {};
+      for (let i = 0; i < 24; i++) buckets[i] = { revenue: 0, orders: 0, customersSet: new Set() };
+      for (const o of ordersForAnalysis) {
+        const d = new Date((o as any).timestamp || (o as any).createdAt || Date.now());
+        // Use UTC hour to match backend aggregation (Mongo $hour uses UTC by default)
+        const h = d.getUTCHours();
+        buckets[h].revenue += Number(o.total || 0);
+        buckets[h].orders += 1;
+        if (o.customerPhone) buckets[h].customersSet.add(String(o.customerPhone));
+      }
+      return Object.keys(buckets).map((k) => ({ hour: formatHourLabel(Number(k)), revenue: buckets[Number(k)].revenue, orders: buckets[Number(k)].orders, customers: buckets[Number(k)].customersSet.size }));
+    })()
 
   // weekly/daily trend: if analytics doesn't provide daily data, derive from orders
   const weeklyData = (() => {
@@ -147,39 +178,38 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
   })()
 
   // status distribution
-  const statusColors: Record<string, string> = { served: '#60b246', ready: '#fc8019', preparing: '#f97316', pending: '#e23744' };
+
   const statusData = analytics && analytics.statusCounts
-    ? Object.entries(analytics.statusCounts).map(([name, value]) => ({ name, value, color: statusColors[name] || '#686b78' }))
+    ? Object.entries(analytics.statusCounts).map(([name, value]) => ({ name, value, color: STATUS_COLORS[name] || '#686b78' }))
     : [
-        { name: 'Served', value: ordersForAnalysis.filter((o: any) => o.status === 'served').length, color: statusColors.served },
-        { name: 'Ready', value: ordersForAnalysis.filter((o: any) => o.status === 'ready').length, color: statusColors.ready },
-        { name: 'Preparing', value: ordersForAnalysis.filter((o: any) => o.status === 'preparing').length, color: statusColors.preparing },
-        { name: 'Pending', value: ordersForAnalysis.filter((o: any) => o.status === 'pending').length, color: statusColors.pending },
-      ]
+      { name: 'Served', value: ordersForAnalysis.filter((o: any) => o.status === 'served').length, color: STATUS_COLORS.served },
+      { name: 'Ready', value: ordersForAnalysis.filter((o: any) => o.status === 'ready').length, color: STATUS_COLORS.ready },
+      { name: 'Preparing', value: ordersForAnalysis.filter((o: any) => o.status === 'preparing').length, color: STATUS_COLORS.preparing },
+      { name: 'Pending', value: ordersForAnalysis.filter((o: any) => o.status === 'pending').length, color: STATUS_COLORS.pending },
+    ]
 
   // payment methods
-  const paymentColors: string[] = ['#fc8019', '#60b246', '#e23744', '#686b78'];
   const paymentData = analytics && analytics.paymentMethods
-    ? Object.entries(analytics.paymentMethods).map(([name, value], i) => ({ name, value, color: paymentColors[i % paymentColors.length] }))
+    ? Object.entries(analytics.paymentMethods).map(([name, value], i) => ({ name, value, color: PAYMENT_COLORS[i % PAYMENT_COLORS.length] }))
     : []
 
   // popular items
   const popularItems = analytics && Array.isArray(analytics.popular) && analytics.popular.length
     ? analytics.popular.map((p: any) => ({ name: p.name || `item-${p.itemId}`, count: p.quantity || 0, revenue: (p.price || 0) * (p.quantity || 0) }))
     : (() => {
-        // derive from orders (orders endpoint expands item names)
-        const counts: Record<string, { count: number; price: number }> = {};
-        for (const o of ordersForAnalysis) {
-      for (const it of o.items || []) {
-        const item = it as any
-        const name = item.name || `item-${item.itemId}`;
-        counts[name] = counts[name] || { count: 0, price: item.price || 0 };
-        counts[name].count += Number(item.quantity || 0);
-        if (!counts[name].price && item.price) counts[name].price = item.price;
-          }
+      // derive from orders (orders endpoint expands item names)
+      const counts: Record<string, { count: number; price: number }> = {};
+      for (const o of ordersForAnalysis) {
+        for (const it of o.items || []) {
+          const item = it as any
+          const name = item.name || `item-${item.itemId}`;
+          counts[name] = counts[name] || { count: 0, price: item.price || 0 };
+          counts[name].count += Number(item.quantity || 0);
+          if (!counts[name].price && item.price) counts[name].price = item.price;
         }
-        return Object.entries(counts).sort(([, a], [, b]) => b.count - a.count).slice(0, 8).map(([name, c]) => ({ name, count: c.count, revenue: c.count * (c.price || 0) }));
-      })()
+      }
+      return Object.entries(counts).sort(([, a], [, b]) => b.count - a.count).slice(0, POPULAR_ITEMS_LIMIT).map(([name, c]) => ({ name, count: c.count, revenue: c.count * (c.price || 0) }));
+    })()
 
   const orderTypeData = [
     { name: 'Voice Orders', value: voiceOrders, color: '#fc8019' },
@@ -187,7 +217,7 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
   ]
 
   // Peak hours
-  const peakHours = (hourlyData || []).slice().sort((a: any, b: any) => b.revenue - a.revenue).slice(0, 3).map((h: any) => h.hour)
+  const peakHours = (hourlyData || []).slice().sort((a: any, b: any) => b.revenue - a.revenue).slice(0, PEAK_HOURS_LIMIT).map((h: any) => h.hour)
 
   const currentData = timeRange === 'today' ? hourlyData : weeklyData
 
@@ -219,104 +249,116 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 overflow-hidden">
+        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200 overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground mb-1">Revenue</p>
-                <p className="text-2xl font-bold mb-1">₹{totalRevenue.toLocaleString()}</p>
+                <p className="text-lg font-bold mb-1 truncate" title={formatCurrency(totalRevenue)}>
+                  {formatCurrency(totalRevenue)}
+                </p>
                 <div className="flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3 text-green-500" />
+                  <TrendingUp className="w-3 h-3 text-green-500 flex-shrink-0" />
                   <span className="text-xs text-green-500">+{revenueGrowth}%</span>
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
-                <DollarSign className="w-5 h-5 text-green-500" />
+              <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                <DollarSign className="w-4 h-4 text-green-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200 overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground mb-1">Orders</p>
-                <p className="text-2xl font-bold mb-1">{totalOrders}</p>
+                <p className="text-lg font-bold mb-1 truncate">{totalOrders}</p>
                 <div className="flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3 text-blue-500" />
+                  <TrendingUp className="w-3 h-3 text-blue-500 flex-shrink-0" />
                   <span className="text-xs text-blue-500">+{orderGrowth}%</span>
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                <ShoppingCart className="w-5 h-5 text-blue-500" />
+              <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <ShoppingCart className="w-4 h-4 text-blue-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-all duration-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
+        <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-all duration-200 overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground mb-1">Avg Order</p>
-                <p className="text-2xl font-bold mb-1">₹{avgOrderValue}</p>
+                <p className="text-lg font-bold mb-1 truncate" title={formatCurrency(avgOrderValue)}>
+                  {formatCurrency(avgOrderValue)}
+                </p>
                 <div className="flex items-center gap-1">
-                  <TrendingDown className="w-3 h-3 text-red-500" />
-                  <span className="text-xs text-red-500">-2.1%</span>
+                  {orderGrowth >= 0 ? (
+                    <TrendingUp className="w-3 h-3 text-green-500 flex-shrink-0" />
+                  ) : (
+                    <TrendingDown className="w-3 h-3 text-red-500 flex-shrink-0" />
+                  )}
+                  <span className={`text-xs ${orderGrowth >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {orderGrowth > 0 ? `+${orderGrowth}%` : orderGrowth < 0 ? `${orderGrowth}%` : '0%'}
+                  </span>
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
-                <Clock className="w-5 h-5 text-orange-500" />
+              <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                <Clock className="w-4 h-4 text-orange-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
+        <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-200 overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground mb-1">Customers</p>
-                <p className="text-2xl font-bold mb-1">{uniqueCustomers}</p>
+                <p className="text-lg font-bold mb-1 truncate">{uniqueCustomers}</p>
                 <div className="flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3 text-purple-500" />
+                  <TrendingUp className="w-3 h-3 text-purple-500 flex-shrink-0" />
                   <span className="text-xs text-purple-500">+{customerGrowth}%</span>
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-                <Users className="w-5 h-5 text-purple-500" />
+              <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                <Users className="w-4 h-4 text-purple-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
+        <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-200 overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground mb-1">Voice Orders</p>
-                <p className="text-2xl font-bold mb-1">{voiceOrders}</p>
-                <p className="text-xs text-muted-foreground">72% of total</p>
+                <p className="text-lg font-bold mb-1 truncate">{voiceOrders}</p>
+                <p className="text-xs text-muted-foreground">
+                  {totalOrders > 0 ? Math.round((voiceOrders / totalOrders) * 100) : 0}% of total
+                </p>
               </div>
-              <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                <Calendar className="w-5 h-5 text-amber-500" />
+              <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                <Calendar className="w-4 h-4 text-amber-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-red-500 hover:shadow-lg transition-all duration-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
+        <Card className="border-l-4 border-l-red-500 hover:shadow-lg transition-all duration-200 overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground mb-1">Peak Hour</p>
-                <p className="text-2xl font-bold mb-1">{peakHours[0]}</p>
+                <p className="text-lg font-bold mb-1 truncate">{peakHours[0] || 'N/A'}</p>
                 <p className="text-xs text-muted-foreground">Highest revenue</p>
               </div>
-              <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0">
-                <Clock className="w-5 h-5 text-red-500" />
+              <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                <Clock className="w-4 h-4 text-red-500" />
               </div>
             </div>
           </CardContent>
@@ -368,7 +410,7 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
                     <YAxis />
                     <Tooltip
                       formatter={(value) => [
-                        selectedMetric === "revenue" ? `₹${value}` : value,
+                        selectedMetric === "revenue" ? formatCurrency(Number(value)) : value,
                         selectedMetric.charAt(0).toUpperCase() + selectedMetric.slice(1),
                       ]}
                     />
@@ -432,25 +474,45 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
                 <CardTitle className="text-lg">Order Status</CardTitle>
               </CardHeader>
               <CardContent className="pt-6">
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={statusData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={true}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={90}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {statusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="space-y-4">
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie
+                        data={statusData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={false}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {statusData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value, name) => [value, name]}
+                        labelFormatter={() => ''}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+
+                  {/* Custom Legend */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {statusData.map((entry, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: entry.color }}
+                        />
+                        <span className="text-sm text-muted-foreground truncate">
+                          {entry.name}: {String(entry.value)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
@@ -460,25 +522,54 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
                 <CardTitle className="text-lg">Payment Methods</CardTitle>
               </CardHeader>
               <CardContent className="pt-6">
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={paymentData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={true}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={90}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
+                {paymentData.length > 0 ? (
+                  <div className="space-y-4">
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={paymentData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={false}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {paymentData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value, name) => [value, name]}
+                          labelFormatter={() => ''}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+
+                    {/* Custom Legend */}
+                    <div className="grid grid-cols-2 gap-2">
                       {paymentData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                        <div key={index} className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: entry.color }}
+                          />
+                          <span className="text-sm text-muted-foreground truncate">
+                            {entry.name}: {String(entry.value)}
+                          </span>
+                        </div>
                       ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-64 text-muted-foreground">
+                    <div className="text-center">
+                      <p className="text-sm">No payment data available</p>
+                      <p className="text-xs mt-1">Payment methods will appear here when orders are processed</p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -488,25 +579,50 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
                 <CardTitle className="text-lg">Order Types</CardTitle>
               </CardHeader>
               <CardContent className="pt-6">
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={orderTypeData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={true}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={90}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {orderTypeData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="space-y-4">
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie
+                        data={orderTypeData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={false}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {orderTypeData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value, name) => [value, name]}
+                        labelFormatter={() => ''}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+
+                  {/* Custom Legend */}
+                  <div className="grid grid-cols-1 gap-2">
+                    {orderTypeData.map((entry, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: entry.color }}
+                          />
+                          <span className="text-sm text-muted-foreground">
+                            {entry.name}
+                          </span>
+                        </div>
+                        <div className="text-sm font-medium">
+                          {entry.value} ({totalOrders > 0 ? Math.round((entry.value / totalOrders) * 100) : 0}%)
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -529,7 +645,7 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
                         </Badge>
                         <div>
                           <span className="font-medium">{item.name}</span>
-                          <p className="text-xs text-muted-foreground">₹{item.revenue.toLocaleString()} revenue</p>
+                          <p className="text-xs text-muted-foreground">{formatCurrency(item.revenue)} revenue</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -571,7 +687,7 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className="font-bold text-primary">₹{hourData?.revenue.toLocaleString()}</span>
+                          <span className="font-bold text-primary">{formatCurrency(hourData?.revenue || 0)}</span>
                           <p className="text-xs text-muted-foreground">{hourData?.customers} customers</p>
                         </div>
                       </div>
@@ -627,7 +743,7 @@ export function AnalyticsCard({ orders }: AnalyticsCardProps) {
                     <div>
                       <p className="font-medium text-accent">Customer Growth Strong</p>
                       <p className="text-sm text-muted-foreground">
-                        15.2% increase in unique customers. Retention programs working well.
+                        {customerGrowth > 0 ? `${customerGrowth}% increase` : customerGrowth < 0 ? `${Math.abs(customerGrowth)}% decrease` : 'No change'} in unique customers. {customerGrowth > 0 ? 'Retention programs working well.' : customerGrowth < 0 ? 'Consider improving retention strategies.' : 'Customer base is stable.'}
                       </p>
                     </div>
                   </div>

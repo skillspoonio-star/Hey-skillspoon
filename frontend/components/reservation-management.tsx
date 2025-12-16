@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from 'next/navigation'
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -10,7 +10,28 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { CalendarIcon, Clock, Phone, Users, CheckCircle, Search, Eye, Edit, Plus, RefreshCw } from "lucide-react"
+import { CalendarIcon, Clock, Phone, Users, CheckCircle, Eye, Edit, Plus, RefreshCw } from "lucide-react"
+
+
+
+// Generate time slots dynamically
+const generateTimeSlots = () => {
+  const slots = []
+  const startHour = 11 // 11 AM
+  const endHour = 23 // 11 PM
+
+  for (let hour = startHour; hour <= endHour; hour++) {
+    for (let minute = 0; minute < 60; minute += 30) {
+      const time24 = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+      const hour12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
+      const ampm = hour >= 12 ? 'PM' : 'AM'
+      const time12 = `${hour12}:${minute.toString().padStart(2, '0')} ${ampm}`
+
+      slots.push({ value: time24, label: time12 })
+    }
+  }
+  return slots
+}
 
 interface Reservation {
   id: string
@@ -30,12 +51,12 @@ interface Reservation {
 }
 
 export function ReservationManagement() {
-  const router = useRouter()
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
-  const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [dateFilter, setDateFilter] = useState<string>("today")
+  const [dateFilter, setDateFilter] = useState<string>("all")
+  const [tableFilter, setTableFilter] = useState<string>("all")
   const [showAddDialog, setShowAddDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
 
   // new-reservation state for the Add Reservation dialog
   const [newDate, setNewDate] = useState<string>('')
@@ -62,7 +83,7 @@ export function ReservationManagement() {
   const fetchReservations = async () => {
     setLoading(true)
     setLoadError(null)
-  
+
     try {
       const res = await fetch(`${API_BASE}/api/reservation`)
       if (!res.ok) throw new Error(`Status ${res.status}`)
@@ -177,12 +198,32 @@ export function ReservationManagement() {
 
   const matchesDateFilter = (resDateStr: string) => {
     if (!resDateStr) return false
-    const resDate = new Date(resDateStr + 'T00:00:00')
+
+    // Handle different date formats from backend
+    let resDate: Date
+    if (resDateStr.includes('T')) {
+      // ISO format: 2024-01-15T00:00:00.000Z
+      resDate = new Date(resDateStr)
+    } else if (resDateStr.includes('-')) {
+      // Date only format: 2024-01-15
+      resDate = new Date(resDateStr + 'T00:00:00')
+    } else {
+      // Try parsing as-is
+      resDate = new Date(resDateStr)
+    }
+
+    // If date is invalid, return false
+    if (isNaN(resDate.getTime())) return false
+
+    const resDateOnly = toDateString(resDate)
+    const todayOnly = toDateString(today)
+    const tomorrowOnly = toDateString(tomorrow)
+
     switch (dateFilter) {
       case 'today':
-        return toDateString(resDate) === toDateString(today)
+        return resDateOnly === todayOnly
       case 'tomorrow':
-        return toDateString(resDate) === toDateString(tomorrow)
+        return resDateOnly === tomorrowOnly
       case 'week':
         return resDate >= startOfWeek && resDate <= endOfWeek
       case 'month':
@@ -192,15 +233,37 @@ export function ReservationManagement() {
     }
   }
 
-  const filteredReservations = reservations.filter((reservation) => {
-    const matchesSearch =
-      reservation.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reservation.phone.includes(searchTerm) ||
-      reservation.id.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || reservation.status === statusFilter
-    const matchesDate = matchesDateFilter(reservation.date)
-    return matchesSearch && matchesStatus && matchesDate
-  })
+  // Get unique table numbers for filter options
+  const allTableNumbers = Array.from(
+    new Set(
+      reservations.flatMap(r =>
+        r.tableNumbers && r.tableNumbers.length > 0
+          ? r.tableNumbers
+          : r.tableNumber
+            ? [r.tableNumber]
+            : []
+      )
+    )
+  ).sort((a, b) => a - b)
+
+  const filteredReservations = reservations
+    .filter((reservation) => {
+      const matchesStatus = statusFilter === "all" || reservation.status === statusFilter
+      const matchesDate = matchesDateFilter(reservation.date)
+
+      // Table filter logic
+      const matchesTable = tableFilter === "all" ||
+        (reservation.tableNumbers && reservation.tableNumbers.includes(parseInt(tableFilter))) ||
+        (reservation.tableNumber && reservation.tableNumber === parseInt(tableFilter))
+
+      return matchesStatus && matchesDate && matchesTable
+    })
+    .sort((a, b) => {
+      // Sort by creation time (newest first)
+      const dateA = new Date(a.createdAt || a.id || 0)
+      const dateB = new Date(b.createdAt || b.id || 0)
+      return dateB.getTime() - dateA.getTime()
+    })
 
   const reservationsByStatus = {
     pending: filteredReservations.filter((r) => r.status === "pending").length,
@@ -296,18 +359,20 @@ export function ReservationManagement() {
       {/* Filters and Search */}
       <Card className="shadow-sm">
         <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder="Search by customer name, phone, or reservation ID..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
+          <div className="flex flex-col md:flex-row gap-20">
+            <Select value={tableFilter} onValueChange={setTableFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by table" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Tables</SelectItem>
+                {allTableNumbers.map((tableNum) => (
+                  <SelectItem key={tableNum} value={tableNum.toString()}>
+                    Table {tableNum}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Filter by status" />
@@ -327,211 +392,290 @@ export function ReservationManagement() {
                 <SelectValue placeholder="Filter by date" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Dates</SelectItem>
                 <SelectItem value="today">Today</SelectItem>
                 <SelectItem value="tomorrow">Tomorrow</SelectItem>
                 <SelectItem value="week">This Week</SelectItem>
                 <SelectItem value="month">This Month</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="icon">
+            {/* <Button variant="outline" size="icon">
               <RefreshCw className="w-4 h-4" onClick={() => fetchReservations()} />
-            </Button>
+            </Button> */}
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
               <DialogTrigger asChild>
-                <Button className="bg-orange-500 hover:bg-orange-600" onClick={()=>{
-                  //push to the dashboard/new-reservation
-                  router.push("/dashboard/new-reservation")
-                }}
-                
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Reservation
+                <Button className="h-12 px-6 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-lg hover:shadow-xl transition-all">
+                  <Plus className="w-5 h-5 mr-2" />
+                  New Reservation
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-6xl">
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Add New Reservation</DialogTitle>
+                  <DialogTitle className="text-2xl font-bold text-center">🍽️ New Reservation</DialogTitle>
                 </DialogHeader>
 
-                {/* Date & Time first */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="add-reservation-date">Date</Label>
-                    <input
-                      id="add-reservation-date"
-                      type="date"
-                      className="w-full border rounded-md px-3 py-2 mt-1 cursor-pointer"
-                      value={newDate}
-                      min={tomorrow.toISOString().substring(0, 10)}
-                      onClick={() => {
-                        const el = document.getElementById('add-reservation-date') as HTMLInputElement | null
-                        if (el && typeof (el as any).showPicker === 'function') {
-                          ;(el as any).showPicker()
-                          return
-                        }
-                        el?.focus()
-                      }}
-                      onChange={(e: any) => { setNewDate(e.target.value); setSelectedTables([]); setAvailableTables([]); }}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Time</Label>
-                    <Select value={newTime} onValueChange={(v) => { setNewTime(v); setSelectedTables([]); setAvailableTables([]); }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select time" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="18:00">6:00 PM</SelectItem>
-                        <SelectItem value="18:30">6:30 PM</SelectItem>
-                        <SelectItem value="19:00">7:00 PM</SelectItem>
-                        <SelectItem value="19:30">7:30 PM</SelectItem>
-                        <SelectItem value="20:00">8:00 PM</SelectItem>
-                        <SelectItem value="20:30">8:30 PM</SelectItem>
-                        <SelectItem value="21:00">9:00 PM</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Availability / Table selection */}
-                  <div className="col-span-2">
-                    <Label>Available Tables</Label>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <Button variant="outline" size="sm" onClick={async () => {
-                        // fetch available tables for the selected date/time
-                        if (!newDate || !newTime) return
-                        try {
-                          const qs = `?date=${encodeURIComponent(newDate)}&time=${encodeURIComponent(newTime)}&duration=60`
-                          const res = await fetch(`${API_BASE}/api/tables/available${qs}`)
-                          if (!res.ok) throw new Error(`Status ${res.status}`)
-                          const data = await res.json()
-                          // normalize: backend might return array of numbers or objects
-                          const normalized = Array.isArray(data) ? data.map((t: any) => (typeof t === 'number' ? { tableNumber: t } : t)) : []
-                          setAvailableTables(normalized)
-                        } catch (err: any) {
-                          console.error('Failed to fetch available tables', err)
-                          setAvailableTables([])
-                        }
-                      }}>Check Availability</Button>
-                      {availableTables.length === 0 && <span className="text-sm text-muted-foreground">No availability checked yet</span>}
-                    </div>
-                    {availableTables.length > 0 && (
-                      <div className="mt-3">
-                        <Label className="text-sm">Select Tables</Label>
-                        <Select
-                          value={selectedTables.map(String).join(',')}
-                          onValueChange={(v) => {
-                            // v will be the clicked item's value (string) — toggle it
-                            const num = Number(v)
-                            if (Number.isNaN(num)) return
-                            setSelectedTables((prev) => (prev.includes(num) ? prev.filter((x) => x !== num) : [...prev, num]))
-                          }}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder={
-                              selectedTables.length ? `Table ${selectedTables.join(',')}` : 'Select tables'
-                            } />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableTables.map((t: any) => {
-                              const tn = Number(t.tableNumber ?? t.number ?? t.table)
-                              const cap = Number(t.capacity ?? t.seats ?? t.maxGuests ?? 0)
-                              return (
-                                <SelectItem key={tn} value={String(tn)}>
-                                  {`Table ${tn} (${cap} seats)`}
+                <div className="space-y-6">
+                  {/* Step 1: Date & Time */}
+                  <Card className="border-2 border-orange-200 bg-orange-50 dark:bg-orange-900/20">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <CalendarIcon className="w-5 h-5 text-orange-600" />
+                        Step 1: Select Date & Time
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="add-reservation-date" className="font-semibold">Date *</Label>
+                          <input
+                            id="add-reservation-date"
+                            type="date"
+                            className="w-full border-2 border-orange-300 rounded-lg px-4 py-3 focus:border-orange-500 focus:outline-none"
+                            value={newDate}
+                            min={tomorrow.toISOString().substring(0, 10)}
+                            onChange={(e: any) => { setNewDate(e.target.value); setSelectedTables([]); setAvailableTables([]); }}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="font-semibold">Time *</Label>
+                          <Select value={newTime} onValueChange={(v) => { setNewTime(v); setSelectedTables([]); setAvailableTables([]); }}>
+                            <SelectTrigger className="border-2 border-orange-300 h-12">
+                              <SelectValue placeholder="Select time" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {generateTimeSlots().map((slot) => (
+                                <SelectItem key={slot.value} value={slot.value}>
+                                  {slot.label}
                                 </SelectItem>
-                              )
-                            })}
-                          </SelectContent>
-                        </Select>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                    )}
-                  </div>
+                    </CardContent>
+                  </Card>
 
-                  {/* Customer details after table selection */}
-                  <div className="space-y-2">
-                    <Label>Customer Name</Label>
-                    <Input placeholder="Enter customer name" value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Phone Number</Label>
-                    <Input placeholder="Enter phone number" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input placeholder="Enter email address" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
-                  </div>
-                  <div className="col-span-2 space-y-2">
-                    <Label>Special Requests</Label>
-                    <Textarea placeholder="Any special requests or notes..." value={newSpecialRequests} onChange={(e) => setNewSpecialRequests(e.target.value)} />
-                  </div>
+                  {/* Step 2: Table Selection */}
+                  <Card className="border-2 border-blue-200 bg-blue-50 dark:bg-blue-900/20">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Users className="w-5 h-5 text-blue-600" />
+                        Step 2: Check Availability & Select Tables
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <Button
+                          variant="outline"
+                          className="w-full h-12 border-2 border-blue-300 hover:bg-blue-100"
+                          onClick={async () => {
+                            if (!newDate || !newTime) {
+                              alert('Please select date and time first')
+                              return
+                            }
+                            try {
+                              const qs = `?date=${encodeURIComponent(newDate)}&time=${encodeURIComponent(newTime)}&duration=60`
+                              const res = await fetch(`${API_BASE}/api/tables/available${qs}`)
+                              if (!res.ok) throw new Error(`Status ${res.status}`)
+                              const data = await res.json()
+                              const normalized = Array.isArray(data) ? data.map((t: any) => (typeof t === 'number' ? { tableNumber: t } : t)) : []
+                              setAvailableTables(normalized)
+                            } catch (err: any) {
+                              console.error('Failed to fetch available tables', err)
+                              setAvailableTables([])
+                            }
+                          }}
+                          disabled={!newDate || !newTime}
+                        >
+                          🔍 Check Table Availability
+                        </Button>
+
+                        {availableTables.length === 0 && newDate && newTime && (
+                          <p className="text-center text-muted-foreground py-4">Click "Check Availability" to see available tables</p>
+                        )}
+
+                        {availableTables.length > 0 && (
+                          <div className="space-y-3">
+                            <Label className="font-semibold">Available Tables (Select one or more)</Label>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                              {availableTables.map((t: any) => {
+                                const tn = Number(t.tableNumber ?? t.number ?? t.table)
+                                const cap = Number(t.capacity ?? t.seats ?? t.maxGuests ?? 0)
+                                const isSelected = selectedTables.includes(tn)
+                                return (
+                                  <Button
+                                    key={tn}
+                                    variant={isSelected ? "default" : "outline"}
+                                    className={`h-16 flex flex-col ${isSelected ? 'bg-blue-600 hover:bg-blue-700' : 'border-2 border-blue-300 hover:bg-blue-100'}`}
+                                    onClick={() => {
+                                      setSelectedTables((prev) =>
+                                        prev.includes(tn) ? prev.filter((x) => x !== tn) : [...prev, tn]
+                                      )
+                                    }}
+                                  >
+                                    <span className="font-bold">Table {tn}</span>
+                                    <span className="text-xs">{cap} seats</span>
+                                  </Button>
+                                )
+                              })}
+                            </div>
+                            {selectedTables.length > 0 && (
+                              <div className="bg-green-100 border border-green-300 rounded-lg p-3">
+                                <p className="text-green-800 font-semibold">
+                                  Selected: Table {selectedTables.join(', ')} • Total Capacity: {selectedTables.reduce((acc, tn) => {
+                                    const tableObj = availableTables.find((x: any) => Number(x.tableNumber ?? x.number ?? x.table) === tn)
+                                    return acc + (Number(tableObj?.capacity ?? tableObj?.seats ?? tableObj?.maxGuests ?? 0) || 0)
+                                  }, 0)} seats
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Step 3: Customer Details */}
+                  <Card className="border-2 border-green-200 bg-green-50 dark:bg-green-900/20">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Phone className="w-5 h-5 text-green-600" />
+                        Step 3: Customer Information
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="font-semibold">Customer Name *</Label>
+                          <Input
+                            placeholder="Enter customer name"
+                            value={newCustomerName}
+                            onChange={(e) => setNewCustomerName(e.target.value)}
+                            className="border-2 border-green-300 h-12"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="font-semibold">Phone Number *</Label>
+                          <Input
+                            placeholder="Enter phone number"
+                            value={newPhone}
+                            onChange={(e) => setNewPhone(e.target.value)}
+                            className="border-2 border-green-300 h-12"
+                          />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <Label className="font-semibold">Email (Optional)</Label>
+                          <Input
+                            placeholder="Enter email address"
+                            value={newEmail}
+                            onChange={(e) => setNewEmail(e.target.value)}
+                            className="border-2 border-green-300 h-12"
+                          />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <Label className="font-semibold">Special Requests (Optional)</Label>
+                          <Textarea
+                            placeholder="Any special requests, dietary restrictions, or celebration notes..."
+                            value={newSpecialRequests}
+                            onChange={(e) => setNewSpecialRequests(e.target.value)}
+                            className="border-2 border-green-300 min-h-[80px]"
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
 
-                  <div className="mt-3 text-sm text-muted-foreground">Selected capacity: {selectedTables.reduce((acc, tn) => {
-                    const tableObj = availableTables.find((x: any) => Number(x.tableNumber ?? x.number ?? x.table) === tn)
-                    return acc + (Number(tableObj?.capacity ?? tableObj?.seats ?? tableObj?.maxGuests ?? 0) || 0)
-                  }, 0)} seats</div>
+                {/* Error Display */}
+                {createError && (
+                  <Card className="border-2 border-red-200 bg-red-50 dark:bg-red-900/20">
+                    <CardContent className="p-4">
+                      <p className="text-red-800 dark:text-red-200 font-medium">❌ {createError}</p>
+                    </CardContent>
+                  </Card>
+                )}
 
-                <div className="flex justify-end gap-2 mt-4">
-                  <Button variant="outline" onClick={() => { setShowAddDialog(false); }}>
-                    Cancel
-                  </Button>
-                  <Button className="bg-orange-500 hover:bg-orange-600" onClick={async () => {
-                    setCreateError(null)
-                    if (!newDate || !newTime || selectedTables.length === 0) {
-                      setCreateError('Please select date, time and at least one table')
-                      return
-                    }
-                    setCreating(true)
-                    try {
-                      const token = typeof window !== 'undefined' ? localStorage.getItem('adminAuth') : null
-                      const payload: any = {
-                        date: newDate,
-                        time: newTime,
-                        tableNumbers: selectedTables,
-                        customerName: newCustomerName,
-                        phone: newPhone,
-                        email: newEmail,
-                        specialRequests: newSpecialRequests,
-                        guests: selectedTables.reduce((acc, tn) => {
-                          const tableObj = availableTables.find((x: any) => Number(x.tableNumber ?? x.number ?? x.table) === tn)
-                          return acc + (Number(tableObj?.capacity ?? tableObj?.seats ?? tableObj?.maxGuests ?? 0) || 0)
-                        }, 0)
-                      }
-                      const res = await fetch(`${API_BASE}/api/reservation`, {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                        },
-                        body: JSON.stringify(payload),
-                      })
-                      if (!res.ok) {
-                        const txt = await res.text()
-                        throw new Error(`Status ${res.status} ${txt}`)
-                      }
-                      // success - refresh
-                      await fetchReservations()
-                      setShowAddDialog(false)
-                      // reset form
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowAddDialog(false);
+                      // Reset form
                       setNewDate('')
                       setNewTime('')
-                      setAvailableTables([])
                       setSelectedTables([])
+                      setAvailableTables([])
                       setNewCustomerName('')
                       setNewPhone('')
                       setNewEmail('')
                       setNewSpecialRequests('')
-                    } catch (err: any) {
-                      console.error('Failed to create reservation', err)
-                      setCreateError(err?.message || 'Failed to create')
-                    } finally {
-                      setCreating(false)
-                    }
-                  }}>
+                      setCreateError(null)
+                    }}
+                    className="px-6"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 px-8"
+                    disabled={creating || !newDate || !newTime || selectedTables.length === 0 || !newCustomerName || !newPhone}
+                    onClick={async () => {
+                      setCreateError(null)
+                      if (!newDate || !newTime || selectedTables.length === 0) {
+                        setCreateError('Please select date, time and at least one table')
+                        return
+                      }
+                      setCreating(true)
+                      try {
+                        const token = typeof window !== 'undefined' ? localStorage.getItem('adminAuth') : null
+                        const payload: any = {
+                          date: newDate,
+                          time: newTime,
+                          tableNumbers: selectedTables,
+                          customerName: newCustomerName,
+                          phone: newPhone,
+                          email: newEmail,
+                          specialRequests: newSpecialRequests,
+                          guests: selectedTables.reduce((acc, tn) => {
+                            const tableObj = availableTables.find((x: any) => Number(x.tableNumber ?? x.number ?? x.table) === tn)
+                            return acc + (Number(tableObj?.capacity ?? tableObj?.seats ?? tableObj?.maxGuests ?? 0) || 0)
+                          }, 0)
+                        }
+                        const res = await fetch(`${API_BASE}/api/reservation`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                          },
+                          body: JSON.stringify(payload),
+                        })
+                        if (!res.ok) {
+                          const txt = await res.text()
+                          throw new Error(`Status ${res.status} ${txt}`)
+                        }
+                        // success - refresh
+                        await fetchReservations()
+                        setShowAddDialog(false)
+                        // reset form
+                        setNewDate('')
+                        setNewTime('')
+                        setAvailableTables([])
+                        setSelectedTables([])
+                        setNewCustomerName('')
+                        setNewPhone('')
+                        setNewEmail('')
+                        setNewSpecialRequests('')
+                      } catch (err: any) {
+                        console.error('Failed to create reservation', err)
+                        setCreateError(err?.message || 'Failed to create')
+                      } finally {
+                        setCreating(false)
+                      }
+                    }}>
                     {creating ? 'Creating...' : 'Create Reservation'}
                   </Button>
                 </div>
-                {createError && <p className="text-sm text-red-600 mt-2">{createError}</p>}
+                {createError && <p className="text-sm text-red-600 dark:text-red-400 mt-2">{createError}</p>}
               </DialogContent>
             </Dialog>
           </div>
@@ -539,94 +683,132 @@ export function ReservationManagement() {
       </Card>
 
       {/* Reservations List */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filteredReservations.map((reservation) => (
-          <Card key={reservation.id} className="hover:shadow-lg transition-all duration-200 shadow-sm">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">#{reservation.id}</CardTitle>
-                <Badge className={getStatusColor(reservation.status)}>
-                  {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <CalendarIcon className="w-4 h-4" />
-                  <span>{reservation.date}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
-                  <span>{reservation.time}</span>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-medium">{reservation.customerName}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>{reservation.phone}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Users className="w-4 h-4 text-muted-foreground" />
-                  <span>{reservation.guests} guests</span>
-                  {reservation.tableNumbers && reservation.tableNumbers.length > 0 ? (
-                    <div className="flex flex-wrap items-center gap-2 max-w-full ml-2">
-                      {reservation.tableNumbers.map((tn) => (
-                        <Badge key={tn} variant="outline" className="whitespace-nowrap">Table {tn}</Badge>
-                      ))}
-                    </div>
-                  ) : reservation.tableNumber ? (
-                    <Badge variant="outline" className="ml-2">Table {reservation.tableNumber}</Badge>
-                  ) : null}
-                </div>
-              </div>
-
-              {reservation.occasion && (
-                <div className="p-2 bg-blue-50 rounded border-l-4 border-blue-400">
-                  <p className="text-sm font-medium text-blue-800">{reservation.occasion}</p>
-                </div>
-              )}
-
-              {reservation.specialRequests && (
-                <div className="p-2 bg-yellow-50 rounded border-l-4 border-yellow-400">
-                  <p className="text-xs text-black">
-                    {reservation.specialRequests.length > 50
-                      ? `${reservation.specialRequests.substring(0, 50)}...`
-                      : reservation.specialRequests}
-                  </p>
-                </div>
-              )}
-
-              <div className="flex gap-2 pt-2">
-                <Button variant="outline" size="sm" className="flex-1 bg-transparent" onClick={() => openDetails(reservation.id)}>
-                  <Eye className="w-4 h-4 mr-2" />
-                  View Details
-                </Button>
-                <Button size="sm" variant="outline">
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {filteredReservations.length === 0 && (
+      {loading ? (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <div className="flex items-center justify-center space-x-2">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span>Loading reservations...</span>
+            </div>
+          </CardContent>
+        </Card>
+      ) : loadError ? (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <div className="text-red-500 mb-4">
+              <CalendarIcon className="w-12 h-12 mx-auto mb-2" />
+              <h3 className="text-lg font-medium">Failed to load reservations</h3>
+              <p className="text-sm text-muted-foreground">{loadError}</p>
+            </div>
+            <Button onClick={fetchReservations} variant="outline">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      ) : filteredReservations.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
             <CalendarIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">No reservations found</h3>
             <p className="text-muted-foreground">
-              {searchTerm || statusFilter !== "all"
-                ? "Try adjusting your search or filters"
-                : "Reservations will appear here when customers book tables"}
+              {statusFilter !== "all" || dateFilter !== "all" || tableFilter !== "all"
+                ? "Try adjusting your filters"
+                : "No reservations for the selected period"}
             </p>
           </CardContent>
         </Card>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredReservations.map((reservation) => (
+            <Card key={reservation.id} className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-bold">
+                    #{reservation.id}
+                  </CardTitle>
+                  <Badge className={`${getStatusColor(reservation.status)} shadow-sm font-semibold`}>
+                    {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <CalendarIcon className="w-4 h-4" />
+                    <span>{reservation.date}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    <span>{reservation.time}</span>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-medium">{reservation.customerName}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>{reservation.phone}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                    <span>{reservation.guests} guests</span>
+                    {reservation.tableNumbers && reservation.tableNumbers.length > 0 ? (
+                      <div className="flex flex-wrap items-center gap-2 max-w-full ml-2">
+                        {reservation.tableNumbers.map((tn) => (
+                          <Badge key={tn} variant="outline" className="whitespace-nowrap">Table {tn}</Badge>
+                        ))}
+                      </div>
+                    ) : reservation.tableNumber ? (
+                      <Badge variant="outline" className="ml-2">Table {reservation.tableNumber}</Badge>
+                    ) : null}
+                  </div>
+                </div>
+
+                {reservation.occasion && (
+                  <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded border-l-4 border-blue-400">
+                    <p className="text-sm font-medium text-blue-800 dark:text-blue-200">{reservation.occasion}</p>
+                  </div>
+                )}
+
+                {reservation.specialRequests && (
+                  <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border-l-4 border-yellow-400">
+                    <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                      {reservation.specialRequests.length > 50
+                        ? `${reservation.specialRequests.substring(0, 50)}...`
+                        : reservation.specialRequests}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 bg-transparent hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 transition-colors"
+                    onClick={() => openDetails(reservation.id)}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    View Details
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-300 transition-colors"
+                    onClick={() => {
+                      setSelectedReservation(reservation)
+                      setShowEditDialog(true)
+                    }}
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
       {/* Centralized Details Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -636,7 +818,7 @@ export function ReservationManagement() {
           </DialogHeader>
           <div className="space-y-6">
             {detailLoading && <p>Loading...</p>}
-            {detailError && <p className="text-red-600">{detailError}</p>}
+            {detailError && <p className="text-red-600 dark:text-red-400">{detailError}</p>}
             {!detailLoading && selectedReservationDetail && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-2 space-y-4">
@@ -666,19 +848,19 @@ export function ReservationManagement() {
                   {selectedReservationDetail.specialRequests && (
                     <div>
                       <Label className="text-sm font-medium">Special Requests</Label>
-                      <p className="mt-1 p-2 bg-yellow-50 rounded border-l-4 border-yellow-400 text-sm text-black">{selectedReservationDetail.specialRequests}</p>
+                      <p className="mt-1 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border-l-4 border-yellow-400 text-sm text-yellow-800 dark:text-yellow-200">{selectedReservationDetail.specialRequests}</p>
                     </div>
                   )}
 
                   {selectedReservationDetail.notes && (
                     <div>
                       <Label className="text-sm font-medium">Internal Notes</Label>
-                      <p className="mt-1 p-2 bg-gray-50 rounded border-l-4 border-gray-400 text-sm">{selectedReservationDetail.notes}</p>
+                      <p className="mt-1 p-2 bg-gray-50 dark:bg-gray-800 rounded border-l-4 border-gray-400 text-sm">{selectedReservationDetail.notes}</p>
                     </div>
                   )}
                 </div>
 
-                <div className="md:col-span-1 p-4 bg-gray-50 rounded border text-black">
+                <div className="md:col-span-1 p-4 bg-gray-50 dark:bg-gray-800 rounded border">
                   <Label className="text-sm font-medium">Payment Summary</Label>
                   <div className="mt-3 text-sm">
                     {!selectedReservationDetail.payment ? (
@@ -723,6 +905,143 @@ export function ReservationManagement() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Close</Button>
             <Button className="bg-green-600 text-white">Mark as Paid</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Reservation Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Reservation #{selectedReservation?.id}</DialogTitle>
+          </DialogHeader>
+
+          {selectedReservation && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Customer Name</Label>
+                  <Input
+                    value={selectedReservation.customerName}
+                    onChange={(e) => setSelectedReservation({ ...selectedReservation, customerName: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Phone</Label>
+                  <Input
+                    value={selectedReservation.phone}
+                    onChange={(e) => setSelectedReservation({ ...selectedReservation, phone: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input
+                    value={selectedReservation.email}
+                    onChange={(e) => setSelectedReservation({ ...selectedReservation, email: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Guests</Label>
+                  <Input
+                    type="number"
+                    value={selectedReservation.guests}
+                    onChange={(e) => setSelectedReservation({ ...selectedReservation, guests: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Date</Label>
+                  <Input
+                    type="date"
+                    value={selectedReservation.date}
+                    onChange={(e) => setSelectedReservation({ ...selectedReservation, date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Time</Label>
+                  <Select
+                    value={selectedReservation.time}
+                    onValueChange={(value) => setSelectedReservation({ ...selectedReservation, time: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {generateTimeSlots().map((slot) => (
+                        <SelectItem key={slot.value} value={slot.value}>
+                          {slot.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select
+                    value={selectedReservation.status}
+                    onValueChange={(value) => setSelectedReservation({ ...selectedReservation, status: value as any })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="confirmed">Confirmed</SelectItem>
+                      <SelectItem value="seated">Seated</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                      <SelectItem value="no-show">No Show</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Special Requests</Label>
+                  <Textarea
+                    value={selectedReservation.specialRequests || ''}
+                    onChange={(e) => setSelectedReservation({ ...selectedReservation, specialRequests: e.target.value })}
+                    placeholder="Any special requests or notes..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-orange-500 hover:bg-orange-600"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`${API_BASE}/api/reservation/${selectedReservation.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          customerName: selectedReservation.customerName,
+                          phone: selectedReservation.phone,
+                          email: selectedReservation.email,
+                          date: selectedReservation.date,
+                          time: selectedReservation.time,
+                          guests: selectedReservation.guests,
+                          status: selectedReservation.status,
+                          specialRequests: selectedReservation.specialRequests
+                        })
+                      })
+
+                      if (!res.ok) throw new Error(`Failed to update: ${res.status}`)
+
+                      // Refresh reservations and close dialog
+                      await fetchReservations()
+                      setShowEditDialog(false)
+                      setSelectedReservation(null)
+                    } catch (err: any) {
+                      console.error('Failed to update reservation:', err)
+                      alert('Failed to update reservation: ' + (err.message || 'Unknown error'))
+                    }
+                  }}
+                >
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -401,8 +401,8 @@ export function StaffManagement() {
                         <p className="text-sm text-muted-foreground font-medium">{member.role}</p>
                       </div>
                     </div>
-                    <Badge 
-                      className={`${getStatusColor(member.status)} font-semibold`} 
+                    <Badge
+                      className={`${getStatusColor(member.status)} font-semibold`}
                       variant="secondary"
                     >
                       {member.status}
@@ -556,13 +556,12 @@ export function StaffManagement() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
-                              index === 0
+                            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${index === 0
                                 ? "bg-gradient-to-br from-yellow-400 to-yellow-600 text-white shadow-lg"
                                 : index === 1
                                   ? "bg-gradient-to-br from-gray-300 to-gray-500 text-white shadow-md"
                                   : "bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-md"
-                            }`}
+                              }`}
                           >
                             {index + 1}
                           </div>
@@ -615,7 +614,7 @@ export function StaffManagement() {
                           </div>
                         </div>
                         <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
-                          <div 
+                          <div
                             className="h-full transition-all duration-300 bg-gradient-to-r from-primary to-primary/70"
                             style={{ width: `${stats.efficiency}%` }}
                           />
@@ -727,7 +726,7 @@ export function StaffManagement() {
                               </p>
                             </div>
                           </div>
-                          <Badge 
+                          <Badge
                             variant={alert.severity === "high" ? "destructive" : "secondary"}
                             className="flex-shrink-0"
                           >
@@ -968,111 +967,111 @@ export function StaffManagement() {
                       Add Staff
                     </Button>
                   </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New Staff Member</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name *</Label>
-                    <Input
-                      id="name"
-                      placeholder="Enter full name"
-                      value={newStaff.name}
-                      onChange={(e) => setNewStaff((prev) => ({ ...prev, name: e.target.value }))}
-                    />
-                  </div>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New Staff Member</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Full Name *</Label>
+                        <Input
+                          id="name"
+                          placeholder="Enter full name"
+                          value={newStaff.name}
+                          onChange={(e) => setNewStaff((prev) => ({ ...prev, name: e.target.value }))}
+                        />
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="role">Role *</Label>
-                    <Select
-                      value={newStaff.role}
-                      onValueChange={(value) => setNewStaff((prev) => ({ ...prev, role: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Chef">Chef</SelectItem>
-                        <SelectItem value="Waiter">Waiter</SelectItem>
-                        <SelectItem value="Kitchen Assistant">Kitchen Assistant</SelectItem>
-                        <SelectItem value="Cashier">Cashier</SelectItem>
-                        <SelectItem value="Manager">Manager</SelectItem>
-                        <SelectItem value="Cleaner">Cleaner</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="role">Role *</Label>
+                        <Select
+                          value={newStaff.role}
+                          onValueChange={(value) => setNewStaff((prev) => ({ ...prev, role: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Chef">Chef</SelectItem>
+                            <SelectItem value="Waiter">Waiter</SelectItem>
+                            <SelectItem value="Kitchen Assistant">Kitchen Assistant</SelectItem>
+                            <SelectItem value="Cashier">Cashier</SelectItem>
+                            <SelectItem value="Manager">Manager</SelectItem>
+                            <SelectItem value="Cleaner">Cleaner</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="department">Department *</Label>
-                    <Select
-                      value={newStaff.department}
-                      onValueChange={(value) => setNewStaff((prev) => ({ ...prev, department: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select department" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Kitchen">Kitchen</SelectItem>
-                        <SelectItem value="Service">Service</SelectItem>
-                        <SelectItem value="Management">Management</SelectItem>
-                        <SelectItem value="Cleaning">Cleaning</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="department">Department *</Label>
+                        <Select
+                          value={newStaff.department}
+                          onValueChange={(value) => setNewStaff((prev) => ({ ...prev, department: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select department" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Kitchen">Kitchen</SelectItem>
+                            <SelectItem value="Service">Service</SelectItem>
+                            <SelectItem value="Management">Management</SelectItem>
+                            <SelectItem value="Cleaning">Cleaning</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="shift">Shift *</Label>
-                    <Select
-                      value={newStaff.shift}
-                      onValueChange={(value) => setNewStaff((prev) => ({ ...prev, shift: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select shift" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Morning (9 AM - 5 PM)">Morning (9 AM - 5 PM)</SelectItem>
-                        <SelectItem value="Evening (5 PM - 1 AM)">Evening (5 PM - 1 AM)</SelectItem>
-                        <SelectItem value="Full Day (9 AM - 9 PM)">Full Day (9 AM - 9 PM)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="shift">Shift *</Label>
+                        <Select
+                          value={newStaff.shift}
+                          onValueChange={(value) => setNewStaff((prev) => ({ ...prev, shift: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select shift" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Morning (9 AM - 5 PM)">Morning (9 AM - 5 PM)</SelectItem>
+                            <SelectItem value="Evening (5 PM - 1 AM)">Evening (5 PM - 1 AM)</SelectItem>
+                            <SelectItem value="Full Day (9 AM - 9 PM)">Full Day (9 AM - 9 PM)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number *</Label>
-                    <Input
-                      id="phone"
-                      placeholder="Enter phone number"
-                      value={newStaff.phone}
-                      onChange={(e) => setNewStaff((prev) => ({ ...prev, phone: e.target.value }))}
-                    />
-                  </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone Number *</Label>
+                        <Input
+                          id="phone"
+                          placeholder="Enter phone number"
+                          value={newStaff.phone}
+                          onChange={(e) => setNewStaff((prev) => ({ ...prev, phone: e.target.value }))}
+                        />
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Enter email address"
-                      value={newStaff.email}
-                      onChange={(e) => setNewStaff((prev) => ({ ...prev, email: e.target.value }))}
-                    />
-                  </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email *</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="Enter email address"
+                          value={newStaff.email}
+                          onChange={(e) => setNewStaff((prev) => ({ ...prev, email: e.target.value }))}
+                        />
+                      </div>
 
-                  <div className="flex gap-2 pt-4">
-                    <Button onClick={handleAddStaff} className="flex-1">
-                      Add Staff Member
-                    </Button>
-                    <Button variant="outline" onClick={() => setIsAddingStaff(false)} className="flex-1 bg-transparent">
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardContent>
-      </Card>
+                      <div className="flex gap-2 pt-4">
+                        <Button onClick={handleAddStaff} className="flex-1">
+                          Add Staff Member
+                        </Button>
+                        <Button variant="outline" onClick={() => setIsAddingStaff(false)} className="flex-1 bg-transparent">
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Quick Actions */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
