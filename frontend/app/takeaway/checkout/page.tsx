@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ShoppingBag, Clock, User, CreditCard, Wallet, QrCode } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { FullPageLoader } from "@/components/ui/loader"
+import { BackButton } from "@/components/ui/back-button"
 
 export default function TakeawayCheckoutPage() {
   const router = useRouter()
@@ -91,33 +93,31 @@ export default function TakeawayCheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-8">
       {/* Header */}
-      <header className="bg-card border-b border-border p-4">
-        <div className="max-w-md mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">P</span>
-            </div>
+      <div className="bg-card border-b py-6 px-4 shadow-sm">
+        <div className="max-w-md mx-auto">
+          <BackButton className="mb-4" fallbackRoute="/takeaway/menu" />
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="font-sans font-bold text-lg text-foreground">Checkout</h1>
-              <p className="text-xs text-muted-foreground">Complete your takeaway order</p>
+              <h1 className="text-3xl font-bold mb-1">🛒 Checkout</h1>
+              <p className="text-muted-foreground">Complete your takeaway order</p>
             </div>
+            <Badge variant="secondary" className="font-semibold">Takeaway</Badge>
           </div>
-          <Badge variant="secondary">Takeaway</Badge>
         </div>
-      </header>
+      </div>
 
-      <main className="max-w-md mx-auto p-4 space-y-6">
+      <main className="max-w-md mx-auto p-4 space-y-6 -mt-4">
         {/* Order Summary */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5" />
+        <Card className="shadow-lg border-2">
+          <CardHeader className="bg-muted/30">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <ShoppingBag className="w-6 h-6 text-orange-600" />
               Order Summary
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-6">
             {cartItems.map((item) => (
               <div key={item.id} className="flex justify-between items-center">
                 <div className="flex-1">
@@ -153,29 +153,29 @@ export default function TakeawayCheckoutPage() {
         </Card>
 
         {/* Pickup Time */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                <Clock className="w-5 h-5 text-primary" />
+        <Card className="shadow-lg border-2 border-green-200 bg-green-50">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-green-600 rounded-full flex items-center justify-center shadow-md">
+                <Clock className="w-7 h-7 text-white" />
               </div>
               <div>
-                <p className="font-medium">Pickup Time</p>
-                <p className="text-sm text-muted-foreground">Ready in 30 minutes</p>
+                <p className="font-bold text-lg text-green-900">Pickup Time</p>
+                <p className="text-green-700 font-medium">Ready in 30 minutes</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Customer Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5" />
+        <Card className="shadow-lg border-2">
+          <CardHeader className="bg-muted/30">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <User className="w-6 h-6 text-orange-600" />
               Customer Information
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name *</Label>
               <Input
@@ -210,48 +210,54 @@ export default function TakeawayCheckoutPage() {
         </Card>
 
         {/* Payment Method */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="w-5 h-5" />
+        <Card className="shadow-lg border-2">
+          <CardHeader className="bg-muted/30">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <CreditCard className="w-6 h-6 text-orange-600" />
               Payment Method
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-              <div className="flex items-center space-x-3 p-3 border rounded-lg">
+          <CardContent className="pt-6">
+            <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3">
+              <div className="flex items-center space-x-3 p-4 border-2 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all cursor-pointer">
                 <RadioGroupItem value="upi" id="upi" />
-                <div className="flex items-center gap-2 flex-1">
-                  <QrCode className="w-5 h-5 text-primary" />
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                    <QrCode className="w-5 h-5 text-purple-600" />
+                  </div>
                   <Label htmlFor="upi" className="flex-1 cursor-pointer">
                     <div>
-                      <p className="font-medium">UPI Payment</p>
+                      <p className="font-semibold">UPI Payment</p>
                       <p className="text-sm text-muted-foreground">Pay using UPI apps</p>
                     </div>
                   </Label>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-3 p-3 border rounded-lg">
+              <div className="flex items-center space-x-3 p-4 border-2 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all cursor-pointer">
                 <RadioGroupItem value="card" id="card" />
-                <div className="flex items-center gap-2 flex-1">
-                  <CreditCard className="w-5 h-5 text-primary" />
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <CreditCard className="w-5 h-5 text-blue-600" />
+                  </div>
                   <Label htmlFor="card" className="flex-1 cursor-pointer">
                     <div>
-                      <p className="font-medium">Credit/Debit Card</p>
+                      <p className="font-semibold">Credit/Debit Card</p>
                       <p className="text-sm text-muted-foreground">Visa, Mastercard, RuPay</p>
                     </div>
                   </Label>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-3 p-3 border rounded-lg">
+              <div className="flex items-center space-x-3 p-4 border-2 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all cursor-pointer">
                 <RadioGroupItem value="wallet" id="wallet" />
-                <div className="flex items-center gap-2 flex-1">
-                  <Wallet className="w-5 h-5 text-primary" />
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <Wallet className="w-5 h-5 text-green-600" />
+                  </div>
                   <Label htmlFor="wallet" className="flex-1 cursor-pointer">
                     <div>
-                      <p className="font-medium">Digital Wallet</p>
+                      <p className="font-semibold">Digital Wallet</p>
                       <p className="text-sm text-muted-foreground">Paytm, PhonePe, Google Pay</p>
                     </div>
                   </Label>
@@ -262,23 +268,41 @@ export default function TakeawayCheckoutPage() {
         </Card>
 
         {/* Important Notes */}
-        <Card className="border-amber-200 bg-amber-50">
-          <CardContent className="p-4">
-            <h4 className="font-medium text-amber-800 mb-2">Pickup Instructions:</h4>
-            <ul className="text-sm text-amber-700 space-y-1">
-              <li>• Show this order confirmation at the counter</li>
-              <li>• Arrive within 15 minutes of ready time</li>
-              <li>• Call us if you're running late</li>
-              <li>• No refunds for online payments</li>
+        <Card className="border-2 border-amber-300 bg-amber-50 shadow-lg">
+          <CardContent className="p-5">
+            <h4 className="font-bold text-amber-900 mb-3 text-lg">📋 Pickup Instructions:</h4>
+            <ul className="text-sm text-amber-800 space-y-2">
+              <li className="flex items-start gap-2">
+                <span className="text-amber-600 font-bold">•</span>
+                <span>Show this order confirmation at the counter</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-amber-600 font-bold">•</span>
+                <span>Arrive within 15 minutes of ready time</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-amber-600 font-bold">•</span>
+                <span>Call us if you're running late</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-amber-600 font-bold">•</span>
+                <span>No refunds for online payments</span>
+              </li>
             </ul>
           </CardContent>
         </Card>
 
         {/* Pay Button */}
-                <Button className="w-full h-12 text-base font-medium" onClick={handlePayment} disabled={isProcessing || cartItems.length===0}>
-          {isProcessing ? "Processing Payment..." : `Pay ₹${total}`}
+        <Button 
+          className="w-full h-14 text-lg font-bold bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-lg" 
+          onClick={handlePayment} 
+          disabled={isProcessing || cartItems.length===0}
+        >
+          {isProcessing ? "Processing Payment..." : `💳 Pay ₹${total}`}
         </Button>
       </main>
+
+      {isProcessing && <FullPageLoader text="Processing your payment..." />}
     </div>
   )
 }

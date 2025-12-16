@@ -1,0 +1,152 @@
+[
+    {
+        "name": "Margherita Pizza",
+        "description": "Classic pizza with fresh tomatoes, mozzarella cheese, and basil leaves",
+        "price": 299,
+        "category": "Main Course",
+        "isAvailable": true,
+        "isVeg": true,
+        "isSpicy": false,
+        "isPopular": true,
+        "prepTime": "20 min",
+        "ingredients": [
+            "Tomatoes",
+            "Mozzarella",
+            "Basil",
+            "Pizza Dough"
+        ],
+        "allergens": [
+            "Gluten",
+            "Dairy"
+        ],
+        "calories": 250,
+        "rating": 4.5,
+        "popularity": 85,
+        "cost": 150,
+        "tags": [
+            "Italian",
+            "Classic"
+        ]
+    },
+    {
+        "name": "Chicken Biryani",
+        "description": "Aromatic basmati rice cooked with tender chicken pieces and traditional spices",
+        "price": 399,
+        "category": "Main Course",
+        "isAvailable": true,
+        "isVeg": false,
+        "isSpicy": true,
+        "isPopular": true,
+        "prepTime": "45 min",
+        "ingredients": [
+            "Basmati Rice",
+            "Chicken",
+            "Onions",
+            "Spices",
+            "Yogurt"
+        ],
+        "allergens": [
+            "Dairy"
+        ],
+        "calories": 450,
+        "rating": 4.7,
+        "popularity": 92,
+        "cost": 200,
+        "tags": [
+            "Indian",
+            "Spicy",
+            "Rice"
+        ]
+    },
+    {
+        "name": "Caesar Salad",
+        "description": "Fresh romaine lettuce with parmesan cheese, croutons and caesar dressing",
+        "price": 199,
+        "category": "Starters",
+        "isAvailable": true,
+        "isVeg": true,
+        "isSpicy": false,
+        "isPopular": false,
+        "prepTime": "10 min",
+        "ingredients": [
+            "Romaine Lettuce",
+            "Parmesan",
+            "Croutons",
+            "Caesar Dressing"
+        ],
+        "allergens": [
+            "Dairy",
+            "Gluten"
+        ],
+        "calories": 180,
+        "rating": 4.2,
+        "popularity": 65,
+        "cost": 80,
+        "tags": [
+            "Healthy",
+            "Fresh"
+        ]
+    },
+    {
+        "name": "Masala Chai",
+        "description": "Traditional Indian spiced tea with milk and aromatic spices",
+        "price": 49,
+        "category": "Beverages",
+        "isAvailable": true,
+        "isVeg": true,
+        "isSpicy": false,
+        "isPopular": true,
+        "prepTime": "5 min",
+        "ingredients": [
+            "Tea",
+            "Milk",
+            "Cardamom",
+            "Ginger",
+            "Cinnamon"
+        ],
+        "allergens": [
+            "Dairy"
+        ],
+        "calories": 80,
+        "rating": 4.6,
+        "popularity": 88,
+        "cost": 15,
+        "tags": [
+            "Hot",
+            "Traditional",
+            "Spiced"
+        ]
+    },
+    {
+        "name": "Chocolate Brownie",
+        "description": "Rich and fudgy chocolate brownie served warm with vanilla ice cream",
+        "price": 149,
+        "category": "Desserts",
+        "isAvailable": true,
+        "isVeg": true,
+        "isSpicy": false,
+        "isPopular": true,
+        "prepTime": "15 min",
+        "ingredients": [
+            "Chocolate",
+            "Butter",
+            "Sugar",
+            "Eggs",
+            "Flour"
+        ],
+        "allergens": [
+            "Gluten",
+            "Dairy",
+            "Eggs"
+        ],
+        "calories": 320,
+        "rating": 4.8,
+        "popularity": 78,
+        "cost": 60,
+        "tags": [
+            "Sweet",
+            "Chocolate",
+            "Warm"
+        ]
+    }
+]

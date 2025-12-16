@@ -5,8 +5,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { TableAssignmentModal } from "./table-assignment-modal"
 import { QRGenerator } from "./qr-generator"
-import { Users, Clock, QrCode, ExternalLink } from "lucide-react"
-import { sessionManager } from "@/lib/session-manager"
+import { Users, Clock, QrCode, ExternalLink, CheckCircle2, UserCheck, CalendarClock, Trash2, Percent } from "lucide-react"
+
 
 interface Table {
   number: number
@@ -20,6 +20,15 @@ interface Table {
   sessionId?: string
 }
 
+// Configuration constants
+const DEFAULT_TABLE_CAPACITY = 4
+const REFRESH_INTERVAL = 30000 // 30 seconds
+const SESSION_TIME_FORMAT = {
+  hour: "2-digit" as const,
+  minute: "2-digit" as const,
+  hour12: true
+}
+
 export function TableAssignmentPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [showQRCode, setShowQRCode] = useState<number | null>(null)
@@ -27,8 +36,26 @@ export function TableAssignmentPage() {
   const [tables, setTables] = useState<Table[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
   const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3001'
+
+  // Currency formatter - configurable via environment variable
+  const formatCurrency = (amount: number | undefined) => {
+    if (amount === undefined || amount === null) return '₹0'
+    const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL ?? '₹'
+    const locale = process.env.NEXT_PUBLIC_CURRENCY_LOCALE ?? 'en-IN'
+
+    try {
+      return new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency: currency === '₹' ? 'INR' : 'USD',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      }).format(amount)
+    } catch (e) {
+      return `${currency}${amount}`
+    }
+  }
 
   useEffect(() => {
     const fetchTables = async () => {
@@ -37,11 +64,11 @@ export function TableAssignmentPage() {
         const res = await fetch(`${API_BASE}/api/tables`)
         if (!res.ok) throw new Error(`Status ${res.status}`)
         const data = await res.json()
-        
+
         // Normalize server data into Table[] shape expected by component
         const normalized: Table[] = (Array.isArray(data) ? data : []).map((t: any) => ({
           number: Number(t.number),
-          capacity: Number(t.capacity || 4),
+          capacity: Number(t.capacity || t.seats || t.maxGuests || DEFAULT_TABLE_CAPACITY),
           status: t.status || 'available',
           customerName: t.customerName || undefined,
           guestCount: t.guestCount || undefined,
@@ -50,7 +77,6 @@ export function TableAssignmentPage() {
           amount: t.amount || undefined,
           sessionId: t.sessionId || undefined,
         }))
-        console.log('Fetched tables with sessions:', normalized[8].sessionId)
         setTables(normalized)
         setError(null)
       } catch (err: any) {
@@ -60,8 +86,12 @@ export function TableAssignmentPage() {
         setLoading(false)
       }
     }
-    
+
     fetchTables()
+
+    // Auto-refresh tables every 30 seconds
+    const interval = setInterval(fetchTables, REFRESH_INTERVAL)
+    return () => clearInterval(interval)
   }, [API_BASE])
 
   const handleAssignTable = async (tableNumber: number, customerName: string, mobileNumber: string) => {
@@ -85,14 +115,14 @@ export function TableAssignmentPage() {
         prev.map((table) =>
           table.number === tableNumber
             ? {
-                ...table,
-                status: "occupied" as const,
-                customerName,
-                sessionTime: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                orderCount: 0,
-                amount: 0,
-                sessionId: session.sessionId,
-              }
+              ...table,
+              status: "occupied" as const,
+              customerName,
+              sessionTime: new Date().toLocaleTimeString([], SESSION_TIME_FORMAT),
+              orderCount: 0,
+              amount: 0,
+              sessionId: session.sessionId,
+            }
             : table,
         ),
       )
@@ -100,7 +130,8 @@ export function TableAssignmentPage() {
       setShowQRCode(tableNumber)
     } catch (err: any) {
       console.error('Failed to assign table:', err)
-      alert(`Failed to assign table: ${err.message}`)
+      const errorMessage = err?.message || 'Unknown error occurred'
+      alert(`Failed to assign table: ${errorMessage}`)
     }
   }
 
@@ -132,45 +163,76 @@ export function TableAssignmentPage() {
         const txt = await tableRes.text()
         throw new Error(`Status ${tableRes.status} ${txt}`)
       }
-      
+
       // Update local state
       setTables((prev) =>
         prev.map((table) =>
           table.number === tableNumber
             ? {
-                ...table,
-                status: "cleaning" as const,
-                customerName: undefined,
-                guestCount: undefined,
-                sessionTime: undefined,
-                orderCount: undefined,
-                amount: undefined,
-                sessionId: undefined,
-              }
+              ...table,
+              status: "cleaning" as const,
+              customerName: undefined,
+              guestCount: undefined,
+              sessionTime: undefined,
+              orderCount: undefined,
+              amount: undefined,
+              sessionId: undefined,
+            }
             : table,
         ),
       )
     } catch (err: any) {
       console.error('Failed to end session:', err)
-      alert(`Failed to end session: ${err.message}`)
+      const errorMessage = err?.message || 'Unknown error occurred'
+      alert(`Failed to end session: ${errorMessage}`)
     }
   }
 
   const openTableUrl = (tableNumber: number) => {
-    const tableUrl = `${window.location.origin}/table/${tableNumber}`
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+    const tableUrl = `${baseUrl}/table/${tableNumber}`
     window.open(tableUrl, "_blank")
+  }
+
+  const refreshTables = async () => {
+    setError(null)
+    try {
+      setLoading(true)
+      const res = await fetch(`${API_BASE}/api/tables`)
+      if (!res.ok) throw new Error(`Status ${res.status}`)
+      const data = await res.json()
+
+      const normalized: Table[] = (Array.isArray(data) ? data : []).map((t: any) => ({
+        number: Number(t.number),
+        capacity: Number(t.capacity || t.seats || t.maxGuests || DEFAULT_TABLE_CAPACITY),
+        status: t.status || 'available',
+        customerName: t.customerName || undefined,
+        guestCount: t.guestCount || undefined,
+        sessionTime: t.sessionTime || undefined,
+        orderCount: t.orderCount || undefined,
+        amount: t.amount || undefined,
+        sessionId: t.sessionId || undefined,
+      }))
+
+      setTables(normalized)
+    } catch (err: any) {
+      console.error('Failed to refresh tables', err)
+      setError(err?.message || 'Failed to refresh tables')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "available":
-        return "border-green-500 dark:border-green-600"
+        return "border-green-500 dark:border-green-600 bg-green-50/50 dark:bg-green-950/20"
       case "occupied":
-        return "border-blue-500 dark:border-blue-600"
+        return "border-blue-500 dark:border-blue-600 bg-blue-50/50 dark:bg-blue-950/20"
       case "cleaning":
-        return "border-gray-500 dark:border-gray-600"
+        return "border-gray-500 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-950/20"
       case "reserved":
-        return "border-amber-500 dark:border-amber-600"
+        return "border-amber-500 dark:border-amber-600 bg-amber-50/50 dark:bg-amber-950/20"
       default:
         return "border-border"
     }
@@ -186,168 +248,304 @@ export function TableAssignmentPage() {
 
     return (
       <div className="flex items-center gap-2">
-        <div className={`w-2.5 h-2.5 rounded-full ${colors[status as keyof typeof colors]}`}></div>
+        <div className={`w-3 h-3 rounded-full ${colors[status as keyof typeof colors]}`}></div>
         <span className="text-sm font-semibold capitalize">{status}</span>
       </div>
     )
   }
 
   const availableTables = tables.filter((table) => table.status === "available")
+  const occupiedTables = tables.filter((table) => table.status === "occupied")
+  const reservedTables = tables.filter((table) => table.status === "reserved")
+  const cleaningTables = tables.filter((table) => table.status === "cleaning")
+  const occupancyRate = tables.length > 0 ? Math.round((occupiedTables.length / tables.length) * 100) : 0
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Table Assignment</h1>
-          <p className="text-muted-foreground">Assign customers to tables and manage dining sessions</p>
-        </div>
-        <Button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white w-full sm:w-auto shadow-lg font-bold"
-        >
-          Assign New Table
-        </Button>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Available</p>
+                <p className="text-3xl font-bold">{availableTables.length}</p>
+                <p className="text-xs text-muted-foreground">Ready to assign</p>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 className="w-6 h-6 text-green-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Occupied</p>
+                <p className="text-3xl font-bold">{occupiedTables.length}</p>
+                <p className="text-xs text-muted-foreground">Active sessions</p>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <UserCheck className="w-6 h-6 text-blue-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Reserved</p>
+                <p className="text-3xl font-bold">{reservedTables.length}</p>
+                <p className="text-xs text-muted-foreground">Upcoming bookings</p>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                <CalendarClock className="w-6 h-6 text-amber-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-gray-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Cleaning</p>
+                <p className="text-3xl font-bold">{cleaningTables.length}</p>
+                <p className="text-xs text-muted-foreground">Being prepared</p>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-gray-500/10 flex items-center justify-center flex-shrink-0">
+                <Trash2 className="w-6 h-6 text-gray-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-1">Occupancy</p>
+                <p className="text-3xl font-bold">{occupancyRate}%</p>
+                <p className="text-xs text-muted-foreground">Current rate</p>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                <Percent className="w-6 h-6 text-purple-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Quick Actions */}
+      <Card className="shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="text-sm">
+                <span className="text-muted-foreground">Total Tables: </span>
+                <span className="font-bold text-lg">{tables.length}</span>
+              </div>
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button
+                onClick={refreshTables}
+                variant="outline"
+                className="flex-1 sm:flex-none"
+                disabled={loading}
+              >
+                {loading ? 'Refreshing...' : 'Refresh'}
+              </Button>
+              <Button
+                onClick={() => setIsModalOpen(true)}
+                className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white flex-1 sm:flex-none shadow-lg font-bold"
+              >
+                Assign New Table
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* QR Code Display */}
       {showQRCode && (
         <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-card border-2 p-6 rounded-lg max-w-md w-full">
-            <QRGenerator
-              tableNumber={showQRCode}
-              customerName={tables.find((t) => t.number === showQRCode)?.customerName || ""}
-              sessionId={tables.find((t) => t.number === showQRCode)?.sessionId || ""}
-            />
-            <Button onClick={() => setShowQRCode(null)} className="w-full mt-4" variant="outline">
-              Close
-            </Button>
-          </div>
+          <Card className="border-2 max-w-md w-full shadow-2xl">
+            <CardContent className="p-6">
+              <QRGenerator
+                tableNumber={showQRCode}
+                customerName={tables.find((t) => t.number === showQRCode)?.customerName || ""}
+                sessionId={tables.find((t) => t.number === showQRCode)?.sessionId || ""}
+              />
+              <Button onClick={() => setShowQRCode(null)} className="w-full mt-4" variant="outline">
+                Close
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       )}
 
       {/* Loading State */}
       {loading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading tables...</p>
-          </div>
-        </div>
+        <Card className="shadow-sm">
+          <CardContent className="p-12">
+            <div className="flex flex-col items-center justify-center text-center space-y-3">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+              <p className="text-muted-foreground">Loading tables...</p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Error State */}
       {error && (
-        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-          <p className="text-destructive font-medium">Error loading tables</p>
-          <p className="text-sm text-muted-foreground mt-1">{error}</p>
-        </div>
+        <Card className="border-destructive/50 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-destructive/10 rounded-full">
+                <svg className="w-5 h-5 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-destructive font-semibold">Error loading tables</p>
+                <p className="text-sm text-muted-foreground mt-1">{error}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Tables Grid */}
       {!loading && !error && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
           {tables.map((table) => (
-          <Card key={table.number} className={`${getStatusColor(table.status)} border-2 min-h-[400px] flex flex-col`}>
-            <CardContent className="p-6 lg:p-8 flex-1 flex flex-col">
-              <div className="space-y-5 flex-1 flex flex-col">
-                {/* Table Header */}
-                <div className="flex items-center justify-between">
-                  <h3 className="text-2xl font-semibold">Table {table.number}</h3>
-                  {getStatusBadge(table.status)}
-                </div>
-
-                {/* Capacity */}
-                <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  <span className="font-medium text-base">Capacity: {table.capacity}</span>
-                </div>
-
-                {/* Available Table */}
-                {table.status === "available" && (
-                  <div className="space-y-4 flex-1 flex flex-col justify-center">
-                    <p className="text-center text-muted-foreground py-4">Ready for new customers</p>
-                    <Button
-                      onClick={() => {
-                        setSelectedTableForModal(table)
-                        setIsModalOpen(true)
-                      }}
-                      className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold shadow-lg"
-                    >
-                      Assign Customer
-                    </Button>
+            <Card key={table.number} className={`${getStatusColor(table.status)} border-2 flex flex-col hover:shadow-lg transition-all duration-200`}>
+              <CardContent className="p-6 flex-1 flex flex-col">
+                <div className="space-y-4 flex-1 flex flex-col">
+                  {/* Table Header */}
+                  <div className="flex items-center justify-between pb-3 border-b">
+                    <h3 className="text-xl font-bold">Table {table.number}</h3>
+                    {getStatusBadge(table.status)}
                   </div>
-                )}
 
-                {/* Occupied Table */}
-                {table.status === "occupied" && (
-                  <div className="space-y-4 flex-1 flex flex-col">
-                    <div className="space-y-3 flex-1">
-                      <h4 className="font-medium text-lg">{table.customerName}</h4>
-                      <div className="flex items-center gap-4 text-sm flex-wrap">
-                        <div className="flex items-center gap-1.5">
-                          <Users className="w-4 h-4" />
-                          <span>{table.guestCount} guests</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-4 h-4" />
-                          <span>{table.sessionTime}</span>
-                        </div>
-                      </div>
-                      <div className="flex justify-between text-sm bg-muted p-3 rounded-lg border">
-                        <span>Orders: {table.orderCount}</span>
-                        <span>Amount: ₹{table.amount}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs bg-muted p-2.5 rounded border">
-                        <QrCode className="w-4 h-4" />
-                        <span className="font-mono">{table.sessionId}</span>
-                      </div>
-                    </div>
+                  {/* Capacity */}
+                  <div className="flex items-center gap-2 text-sm">
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Capacity: <span className="font-semibold text-foreground">{table.capacity}</span></span>
+                  </div>
 
-                    <div className="flex flex-col gap-2 mt-auto">
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="flex-1 bg-transparent">
-                          View Orders
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => openTableUrl(table.number)}>
-                          <ExternalLink className="w-4 h-4" />
-                        </Button>
+                  {/* Available Table */}
+                  {table.status === "available" && (
+                    <div className="space-y-4 flex-1 flex flex-col justify-center">
+                      <div className="text-center py-8">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-3">
+                          <Users className="w-8 h-8 text-green-600 dark:text-green-500" />
+                        </div>
+                        <p className="text-sm text-muted-foreground">Ready for new customers</p>
                       </div>
                       <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleEndSession(table.number)}
-                        className="w-full font-bold"
+                        onClick={() => {
+                          setSelectedTableForModal(table)
+                          setIsModalOpen(true)
+                        }}
+                        className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold shadow-md"
                       >
-                        End Session
+                        Assign Customer
                       </Button>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Cleaning Table */}
-                {table.status === "cleaning" && (
-                  <div className="space-y-4 flex-1 flex flex-col justify-center">
-                    <p className="text-center text-muted-foreground py-4">Table being cleaned</p>
-                    <Button variant="outline" className="w-full bg-transparent" disabled>
-                      Cleaning in Progress
-                    </Button>
-                  </div>
-                )}
+                  {/* Occupied Table */}
+                  {table.status === "occupied" && (
+                    <div className="space-y-4 flex-1 flex flex-col">
+                      <div className="space-y-3 flex-1">
+                        <h4 className="font-semibold text-base">{table.customerName}</h4>
+                        <div className="flex items-center gap-3 text-sm flex-wrap">
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Users className="w-4 h-4" />
+                            <span>{table.guestCount} guests</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Clock className="w-4 h-4" />
+                            <span>{table.sessionTime}</span>
+                          </div>
+                        </div>
+                        <div className="flex justify-between text-sm bg-muted/50 p-3 rounded-lg border">
+                          <span className="text-muted-foreground">Orders: <span className="font-semibold text-foreground">{table.orderCount}</span></span>
+                          <span className="text-muted-foreground">Amount: <span className="font-semibold text-foreground">{formatCurrency(table.amount)}</span></span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs bg-muted/50 p-2.5 rounded-lg border">
+                          <QrCode className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-mono text-muted-foreground truncate">{table.sessionId}</span>
+                        </div>
+                      </div>
 
-                {/* Reserved Table */}
-                {table.status === "reserved" && (
-                  <div className="space-y-4 flex-1 flex flex-col justify-center">
-                    <p className="text-center text-muted-foreground py-4">Reserved for upcoming booking</p>
-                    <Button variant="outline" className="w-full bg-transparent" disabled>
-                      Reserved
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                      <div className="flex flex-col gap-2 mt-auto pt-2">
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => {
+                              const ordersUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/dashboard/orders?table=${table.number}`
+                              window.open(ordersUrl, "_blank")
+                            }}
+                          >
+                            View Orders
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => openTableUrl(table.number)}>
+                            <ExternalLink className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleEndSession(table.number)}
+                          className="w-full font-semibold"
+                        >
+                          End Session
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cleaning Table */}
+                  {table.status === "cleaning" && (
+                    <div className="space-y-4 flex-1 flex flex-col justify-center">
+                      <div className="text-center py-8">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-900/30 mb-3">
+                          <Trash2 className="w-8 h-8 text-gray-600 dark:text-gray-500" />
+                        </div>
+                        <p className="text-sm text-muted-foreground">Table being cleaned</p>
+                      </div>
+                      <Button variant="outline" className="w-full" disabled>
+                        Cleaning in Progress
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Reserved Table */}
+                  {table.status === "reserved" && (
+                    <div className="space-y-4 flex-1 flex flex-col justify-center">
+                      <div className="text-center py-8">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 mb-3">
+                          <CalendarClock className="w-8 h-8 text-amber-600 dark:text-amber-500" />
+                        </div>
+                        <p className="text-sm text-muted-foreground">Reserved for upcoming booking</p>
+                      </div>
+                      <Button variant="outline" className="w-full" disabled>
+                        Reserved
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
 

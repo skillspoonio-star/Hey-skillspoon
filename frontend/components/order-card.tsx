@@ -97,43 +97,43 @@ export function OrderCard({ order, onStatusUpdate, onCallWaiter }: OrderCardProp
   return (
     <Card
       className={cn(
-        "transition-all duration-200 hover:shadow-md",
+        "transition-all duration-200 hover:shadow-md min-w-[320px]",
         order.priority === "high" && "border-destructive/50 shadow-destructive/10",
       )}
     >
       <CardHeader className="pb-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
             {(order.orderType=='dine-in')?
-            <h4 className="font-semibold truncate max-w-[10rem] sm:max-w-[14rem]">Table {order.tableNumber}</h4>:
+            <h4 className="font-semibold text-base">Table {order.tableNumber}</h4>:
             (order.orderType=='delivery')?
-            <h4 className="font-semibold truncate max-w-[10rem] sm:max-w-[14rem]">#DLV {order.tableNumber}</h4>
+            <h4 className="font-semibold text-base">#DLV{order.tableNumber}</h4>
             :
-            <h4 className="font-semibold truncate max-w-[10rem] sm:max-w-[14rem]">#TK {order.tableNumber}</h4>
+            <h4 className="font-semibold text-base">#TK{order.tableNumber}</h4>
             }
-            <Badge variant={getStatusColor(order.status)} className="capitalize">
+            <Badge variant={getStatusColor(order.status)} className="capitalize text-xs">
               {order.status}
             </Badge>
             {order.priority && (
-              <Badge variant={getPriorityColor(order.priority)}>
+              <Badge variant={getPriorityColor(order.priority)} className="text-xs">
                 {order.priority === "high" && <AlertTriangle className="w-3 h-3 mr-1" />}
                 {order.priority}
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 sm:mt-0">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
             <Clock className="w-3 h-3" />
-            <span className="break-words">{formatTime(order.timestamp)}</span>
+            <span className="whitespace-nowrap">{formatTime(order.timestamp)}</span>
           </div>
         </div>
 
         {/* Customer Info */}
         {order.customerName && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0 flex-wrap">
-            <User className="w-3 h-3" />
+          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0 flex-wrap mt-2">
+            <User className="w-3 h-3 flex-shrink-0" />
             <span className="truncate">{order.customerName}</span>
             {order.orderType && (
-              <Badge variant="outline" className="ml-2 mt-1 sm:mt-0 flex-shrink-0">
+              <Badge variant="outline" className="text-xs flex-shrink-0">
                 {order.orderType}
               </Badge>
             )}
@@ -145,14 +145,14 @@ export function OrderCard({ order, onStatusUpdate, onCallWaiter }: OrderCardProp
         {/* Order Items */}
         <div className="space-y-2">
           {order.items.map((item, index) => (
-            <div key={index} className="flex justify-between items-center text-sm">
-              <span>
-                {item.quantity}x {item.name}
+            <div key={index} className="flex justify-between items-start gap-2 text-sm">
+              <span className="flex-1 min-w-0">
+                <span className="font-medium">{item.quantity}x</span> <span className="break-words">{item.name}</span>
                 {item.specialInstructions && (
-                  <span className="text-xs text-muted-foreground block">Note: {item.specialInstructions}</span>
+                  <span className="text-xs text-muted-foreground block mt-1 break-words">Note: {item.specialInstructions}</span>
                 )}
               </span>
-              <span className="font-medium">₹{item.price * item.quantity}</span>
+              <span className="font-medium flex-shrink-0">₹{item.price * item.quantity}</span>
             </div>
           ))}
         </div>
@@ -172,13 +172,13 @@ export function OrderCard({ order, onStatusUpdate, onCallWaiter }: OrderCardProp
           </div>
         </div>
 
-        {/* Estimated Time */}
+        {/* Estimated Time
         {order.estimatedTime && order.status !== "served" && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Clock className="w-3 h-3" />
             <span>Est. {order.estimatedTime} minutes</span>
           </div>
-        )}
+        )} */}
 
         {/* Customer Phone */}
         {order.customerPhone && (
@@ -189,17 +189,17 @@ export function OrderCard({ order, onStatusUpdate, onCallWaiter }: OrderCardProp
         )}
 
         {/* Action Button Container */}
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           {/* Call Waiter Button */}
           {onCallWaiter && order.status !== "served" && (
             <Button
               onClick={() => onCallWaiter(order.id, order.tableNumber)}
               variant="outline"
               size="sm"
-              className="flex-1"
+              className="flex-1 w-full"
             >
               <Bell className="w-4 h-4 mr-2" />
-              Call Waiter
+              <span className="truncate">Call Waiter</span>
             </Button>
           )}
 
@@ -207,14 +207,14 @@ export function OrderCard({ order, onStatusUpdate, onCallWaiter }: OrderCardProp
           {nextStatus && (
             <Button
               onClick={() => onStatusUpdate(order.id, nextStatus)}
-              className="flex-1"
+              className="flex-1 w-full"
               size="sm"
               variant={
                 order.status === "pending" ? "destructive" : order.status === "preparing" ? "default" : "secondary"
               }
             >
               {getNextStatusIcon(order.status)}
-              <span className="ml-2">{getNextStatusLabel(order.status)}</span>
+              <span className="ml-2 truncate">{getNextStatusLabel(order.status)}</span>
             </Button>
           )}
         </div>
