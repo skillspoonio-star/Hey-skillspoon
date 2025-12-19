@@ -129,7 +129,7 @@ export default function ReservationsPage() {
 
   const subtotal = selectedTables.reduce((s, id) => {
     const t = availableTables.find((x) => x.id === id)
-    return s + (t ? Number(t.reservationPrice || 0) : 0)
+    return s + (t ? Number(t.reservationPrice || 100) : 100)
   }, 0)
 
   const taxAmount = Math.round((subtotal * taxPercent) / 100)
@@ -155,14 +155,42 @@ export default function ReservationsPage() {
         const data = await res.json()
         if (!mounted) return
 
-        // Enhanced table data with mock features
-        const enhancedTables = Array.isArray(data) ? data.map((d: any) => ({
-          id: d.number ?? d.id,
-          capacity: d.capacity ?? 0,
-          reservationPrice: typeof d.reservationPrice !== 'undefined' ? Number(d.reservationPrice) : 100,
-          location: d.location || (d.id <= 5 ? 'Window Side' : d.id <= 10 ? 'Garden View' : 'Main Hall'),
-          features: d.features || (d.capacity >= 6 ? ['Large Table', 'Family Friendly'] : ['Intimate Setting'])
-        })) : []
+        // Enhanced table data with mock features and proper pricing
+        const enhancedTables = Array.isArray(data) ? data.map((d: any) => {
+          const tableId = d.number ?? d.id
+          const capacity = d.capacity ?? 2
+
+          // Calculate reservation price based on table capacity and location
+          let basePrice = 100 // Base reservation fee
+
+          // Price based on capacity (more realistic pricing)
+          if (capacity <= 2) basePrice = 120
+          else if (capacity <= 4) basePrice = 180
+          else if (capacity <= 6) basePrice = 250
+          else basePrice = 320
+
+          // Location premium
+          const location = d.location || (tableId <= 5 ? 'Window Side' : tableId <= 10 ? 'Garden View' : 'Main Hall')
+          if (location === 'Window Side') basePrice += 80 // Premium for window view
+          else if (location === 'Garden View') basePrice += 50 // Premium for garden view
+
+          // Add some variation based on table ID for realism
+          const variation = (tableId % 3) * 20 // Adds 0, 20, or 40 to create variety
+          basePrice += variation
+
+          // Use provided price or calculated price, ensure minimum of 100
+          const finalPrice = (typeof d.reservationPrice !== 'undefined' && d.reservationPrice > 0)
+            ? Math.max(Number(d.reservationPrice), 100)
+            : basePrice
+
+          return {
+            id: tableId,
+            capacity,
+            reservationPrice: finalPrice,
+            location,
+            features: d.features || (capacity >= 6 ? ['Large Table', 'Family Friendly'] : ['Intimate Setting', 'Cozy'])
+          }
+        }) : []
 
         setAvailableTables(enhancedTables)
       } catch (err: any) {
@@ -724,8 +752,13 @@ export default function ReservationsPage() {
                                     </div>
                                   </div>
                                   <div className="text-right">
-                                    <div className="font-semibold text-lg">{currency}{table.reservationPrice}</div>
+                                    <div className="font-semibold text-lg text-primary">{currency}{table.reservationPrice || 100}</div>
                                     <div className="text-xs text-muted-foreground">reservation fee</div>
+                                    {(table.reservationPrice || 100) >= 200 && (
+                                      <Badge variant="secondary" className="text-xs mt-1">
+                                        Premium
+                                      </Badge>
+                                    )}
                                   </div>
                                 </div>
                               </CardContent>

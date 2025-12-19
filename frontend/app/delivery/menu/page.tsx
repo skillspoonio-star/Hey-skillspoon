@@ -23,18 +23,18 @@ export default function DeliveryMenuPage() {
 
   useEffect(() => {
     let mounted = true
-    ;(async () => {
-      try {
-        setIsLoading(true)
-        const items = await fetchMenuItems()
-        if (!mounted) return
-        setItemsLoaded(items)
-      } catch (err) {
-        console.error('Failed to load menu items', err)
-      } finally {
-        if (mounted) setIsLoading(false)
-      }
-    })()
+      ; (async () => {
+        try {
+          setIsLoading(true)
+          const items = await fetchMenuItems()
+          if (!mounted) return
+          setItemsLoaded(items)
+        } catch (err) {
+          console.error('Failed to load menu items', err)
+        } finally {
+          if (mounted) setIsLoading(false)
+        }
+      })()
 
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("delivery:cart")
@@ -62,7 +62,7 @@ export default function DeliveryMenuPage() {
   )
 
   const add = (id: number) => {
-  const m = itemsLoaded.find((x) => x.id === id)!
+    const m = itemsLoaded.find((x) => x.id === id)!
     setCart((prev) => {
       const idx = prev.findIndex((l) => l.id === id)
       if (idx >= 0) {
@@ -158,9 +158,9 @@ export default function DeliveryMenuPage() {
                 <Card key={i.id} className="group hover:shadow-lg transition-all duration-300 overflow-hidden">
                   <div className="relative">
                     <div className="aspect-video bg-muted overflow-hidden">
-                      <img 
-                        src={i.image || "https://placehold.co/400x300/e2e8f0/64748b?text=No+Image"} 
-                        alt={i.name} 
+                      <img
+                        src={i.image || "https://placehold.co/400x300/e2e8f0/64748b?text=No+Image"}
+                        alt={i.name}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                         onError={(e) => {
                           e.currentTarget.src = "https://placehold.co/400x300/e2e8f0/64748b?text=No+Image"
@@ -184,12 +184,12 @@ export default function DeliveryMenuPage() {
                         <h3 className="font-bold text-lg mb-1 line-clamp-1">{i.name}</h3>
                         <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">{i.description}</p>
                       </div>
-                      
+
                       <div className="flex items-center justify-between pt-2 border-t">
                         <div className="text-2xl font-bold text-orange-600">₹{i.price}</div>
                         {cartQty === 0 ? (
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold shadow-md"
                             onClick={() => add(i.id)}
                           >
@@ -198,19 +198,19 @@ export default function DeliveryMenuPage() {
                           </Button>
                         ) : (
                           <div className="flex items-center gap-2 bg-muted rounded-lg px-2 py-1">
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-8 w-8 p-0 hover:bg-muted-foreground/20" 
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 hover:bg-muted-foreground/20"
                               onClick={() => sub(i.id)}
                             >
                               <Minus className="w-4 h-4" />
                             </Button>
                             <div className="w-8 text-center font-bold">{cartQty}</div>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-8 w-8 p-0 hover:bg-muted-foreground/20" 
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 hover:bg-muted-foreground/20"
                               onClick={() => add(i.id)}
                             >
                               <Plus className="w-4 h-4" />
@@ -244,9 +244,9 @@ export default function DeliveryMenuPage() {
                         <div className="text-[10px] text-orange-100">Subtotal</div>
                       </div>
                     </div>
-                    <Button 
+                    <Button
                       size="sm"
-                      onClick={() => router.push("/delivery/checkout")} 
+                      onClick={() => router.push("/delivery/checkout")}
                       className="bg-white text-orange-600 hover:bg-orange-50 dark:bg-white dark:text-orange-600 dark:hover:bg-orange-50 font-bold text-sm px-4 shadow-lg w-full sm:w-auto h-9"
                       aria-label="Proceed to checkout"
                     >
