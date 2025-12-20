@@ -323,6 +323,7 @@ export default function HomePage() {
                 className="shadow-sm text-xs md:text-sm px-2 py-0.5 animate-pulse"
               >
                 {restaurantInfo.isOpen ? "Open Now" : "Closed"}
+                {/* hh */}
               </Badge>
             </div>
           </div>
