@@ -16,7 +16,8 @@ const menuItemsRouter = require('./routes/menuItems');
   const analyticsRouter = require('./routes/analytics');
   const razorpayRouter = require('./routes/razorpay');
   const paymentsRouter = require('./routes/payments');
-  const paymentRequestsRouter = require('./routes/paymentRequests');function createApp() {
+  const paymentRequestsRouter = require('./routes/paymentRequests');
+  const restaurantRouter = require('./routes/restaurant');function createApp() {
   const app = express();
   app.use(cors());
   app.use(bodyParser.json());
@@ -48,6 +49,9 @@ const menuItemsRouter = require('./routes/menuItems');
 
   // Deliveries
   app.use('/api/deliveries', deliveriesRouter);
+
+  // Restaurant information
+  app.use('/api/restaurant', restaurantRouter);
 
   // Order counts
   app.use('/api/order-count', orderCountRouter);

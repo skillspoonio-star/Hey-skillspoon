@@ -13,11 +13,12 @@ interface VoiceInterfaceProps {
   onOrderUpdate: (order: any) => void
   orders: any[]
   tableNumber?: number
+  serverAddOrder?: (items: { itemId?: number; name?: string; quantity: number; price: number }[]) => Promise<any | null>
 }
 
 type VoiceState = "idle" | "listening" | "processing" | "speaking"
 
-export function VoiceInterface({ onOrderUpdate, orders }: VoiceInterfaceProps) {
+export function VoiceInterface({ onOrderUpdate, orders, tableNumber, serverAddOrder }: VoiceInterfaceProps) {
   const [voiceState, setVoiceState] = useState<VoiceState>("idle")
   const [transcript, setTranscript] = useState("")
   const [response, setResponse] = useState("")
@@ -48,7 +49,7 @@ export function VoiceInterface({ onOrderUpdate, orders }: VoiceInterfaceProps) {
           setTranscript("")
         }
 
-  recognitionRef.current.onresult = (event: any) => {
+        recognitionRef.current.onresult = (event: any) => {
           const current = event.resultIndex
           const transcript = event.results[current][0].transcript
           setTranscript(transcript)
@@ -58,7 +59,7 @@ export function VoiceInterface({ onOrderUpdate, orders }: VoiceInterfaceProps) {
           }
         }
 
-  recognitionRef.current.onerror = (event: any) => {
+        recognitionRef.current.onerror = (event: any) => {
           console.error("Speech recognition error:", event.error)
           setVoiceState("idle")
         }
@@ -119,13 +120,32 @@ export function VoiceInterface({ onOrderUpdate, orders }: VoiceInterfaceProps) {
       } else if (
         lowerCommand.includes("done") ||
         lowerCommand.includes("finish") ||
-        lowerCommand.includes("complete")
+        lowerCommand.includes("complete") ||
+        lowerCommand.includes("submit")
       ) {
         if (orders.length > 0) {
-          const tableNumber = 12 // In real app, this would be dynamic
-          addOrder(tableNumber, orders)
-          responseText =
-            "Perfect! Your order has been sent to the kitchen. You can track its progress in the Order tab."
+          // Submit to server if function provided
+          if (serverAddOrder && tableNumber) {
+            try {
+              const itemsToSubmit = orders.map(order => ({
+                itemId: order.itemId || order.id,
+                name: order.name || order.item,
+                quantity: order.quantity || 1,
+                price: order.price || 0
+              }))
+              await serverAddOrder(itemsToSubmit)
+              responseText =
+                "Perfect! Your order has been sent to the kitchen. You can track its progress in the Order tab."
+            } catch (error) {
+              console.error('Failed to submit order:', error)
+              responseText = "Sorry, there was an error submitting your order. Please try again or use the Order tab."
+            }
+          } else {
+            // Fallback to local order manager
+            addOrder(tableNumber || 12, orders)
+            responseText =
+              "Perfect! Your order has been added. You can track it in the Order tab."
+          }
         } else {
           responseText = "You haven't ordered anything yet. Please add some items first."
         }

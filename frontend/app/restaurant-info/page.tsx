@@ -26,7 +26,7 @@ import { useRouter } from "next/navigation"
 export default function RestaurantInfoPage() {
   const router = useRouter()
   const [isFavorite, setIsFavorite] = useState(false)
-  
+
   // const [reviews, setReviews] = useState([])
   const [rating, setRating] = useState(0)
   const [totalReviews, setTotalReviews] = useState(0)
@@ -90,7 +90,7 @@ export default function RestaurantInfoPage() {
   const status = getCurrentStatus()
   const [reviews, setReviews] = useState<any[]>([])
 
-useEffect(() => {
+  useEffect(() => {
     async function fetchReviews() {
       try {
         const base = process.env.NEXT_PUBLIC_BACKEND_URL;
