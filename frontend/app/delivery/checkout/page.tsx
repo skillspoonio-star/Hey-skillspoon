@@ -63,16 +63,16 @@ export default function DeliveryCheckoutPage() {
 
   const createDeliveryOrder = async (paymentId?: string, paymentSignature?: string) => {
     const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
-    
+
     // Validate cart has items
     if (!cart || cart.length === 0) {
       throw new Error("Cart is empty. Please add items before placing order.")
     }
 
     const deliveryPayload = {
-      items: cart.map((l: any) => ({ 
-        itemId: Number(l.id), 
-        quantity: Number(l.qty) 
+      items: cart.map((l: any) => ({
+        itemId: Number(l.id),
+        quantity: Number(l.qty)
       })),
       customerName: name,
       customerPhone: phone,
@@ -142,9 +142,9 @@ export default function DeliveryCheckoutPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            items: cart.map((l: any) => ({ 
-              itemId: Number(l.id), 
-              quantity: Number(l.qty) 
+            items: cart.map((l: any) => ({
+              itemId: Number(l.id),
+              quantity: Number(l.qty)
             })),
             tip,
             promo
@@ -154,20 +154,20 @@ export default function DeliveryCheckoutPage() {
         if (!orderRes.ok) {
           const errorData = await orderRes.json().catch(() => null);
           throw new Error(
-            errorData?.message || 
+            errorData?.message ||
             `Failed to create payment order (${orderRes.status})`
           );
         }
 
         const { order, amounts } = await orderRes.json()
-        
+
         try {
           // Handle payment
           const { paymentId, signature } = await handleRazorpayPayment(order.id, order.amount)
-          
+
           // Create delivery order with payment details
           const orderId = await createDeliveryOrder(paymentId, signature)
-          
+
           if (typeof window !== "undefined") {
             localStorage.removeItem('delivery:cart')
           }
@@ -181,7 +181,7 @@ export default function DeliveryCheckoutPage() {
           } else {
             // Other payment errors
             throw new Error(
-              'Payment failed: ' + 
+              'Payment failed: ' +
               (paymentError?.message || 'Please try again or choose a different payment method.')
             )
           }
@@ -190,7 +190,7 @@ export default function DeliveryCheckoutPage() {
         // For COD, directly create delivery order
         try {
           const orderId = await createDeliveryOrder()
-          
+
           if (typeof window !== "undefined") {
             localStorage.removeItem('delivery:cart')
           }
@@ -198,7 +198,7 @@ export default function DeliveryCheckoutPage() {
           router.push("/delivery/confirmation?orderId=" + orderId)
         } catch (codError: any) {
           throw new Error(
-            'Failed to create COD order: ' + 
+            'Failed to create COD order: ' +
             (codError?.message || 'Please try again.')
           )
         }
@@ -376,10 +376,10 @@ export default function DeliveryCheckoutPage() {
                 </div>
                 <div className="grid grid-cols-4 gap-2">
                   {[0, 20, 50, 100].map((v) => (
-                    <Button 
-                      key={v} 
-                      size="sm" 
-                      variant={tip === v ? "default" : "outline"} 
+                    <Button
+                      key={v}
+                      size="sm"
+                      variant={tip === v ? "default" : "outline"}
                       onClick={() => setTip(v)}
                       className={`h-10 font-semibold ${tip === v ? 'bg-orange-600 hover:bg-orange-700' : ''}`}
                     >

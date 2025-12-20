@@ -1,298 +1,282 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Search, Plus, Minus, ShoppingCart, Clock, Star, Leaf } from "lucide-react"
+import { Search, Plus, Minus } from "lucide-react"
+import { fetchMenuItems, type MenuItem } from "@/lib/menu-data"
 import { useRouter } from "next/navigation"
 import { InlineLoader } from "@/components/ui/loader"
 import { BackButton } from "@/components/ui/back-button"
-import { fetchMenuItems, type MenuItem } from '@/lib/menu-data'
 
-type CartItem = MenuItem & { quantity?: number }
+type CartLine = { id: number; name: string; price: number; qty: number }
 
 export default function TakeawayMenuPage() {
   const router = useRouter()
-  const [searchQuery, setSearchQuery] = useState("")
-  const [cart, setCart] = useState<CartItem[]>([])
-  const [selectedCategory, setSelectedCategory] = useState("all")
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [query, setQuery] = useState("")
+  const [cart, setCart] = useState<CartLine[]>([])
+  const [vegOnly, setVegOnly] = useState(false)
+  const [category, setCategory] = useState<string>("all")
+  const [itemsLoaded, setItemsLoaded] = useState<MenuItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     let mounted = true
-    ;(async () => {
-      try {
-        setIsLoading(true)
-        const items = await fetchMenuItems()
-        if (!mounted) return
-        setMenuItems(items)
-      } catch (err) {
-        console.error('Failed to load menu items', err)
-      } finally {
-        if (mounted) setIsLoading(false)
+      ; (async () => {
+        try {
+          setIsLoading(true)
+          const items = await fetchMenuItems()
+          if (!mounted) return
+          setItemsLoaded(items)
+        } catch (err) {
+          console.error('Failed to load menu items', err)
+        } finally {
+          if (mounted) setIsLoading(false)
+        }
+      })()
+
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("takeaway_cart")
+      if (saved) {
+        const savedCart = JSON.parse(saved)
+        // Convert from takeaway format to delivery format
+        const convertedCart = savedCart.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          qty: item.quantity || 1
+        }))
+        setCart(convertedCart)
       }
-    })()
+    }
+
     return () => {
       mounted = false
     }
   }, [])
 
-  const categories = [
-    { id: "all", name: "All Items", count: menuItems.length },
-    { id: "popular", name: "Popular", count: menuItems.filter((item) => item.isPopular).length },
-    { id: "starters", name: "Starters", count: menuItems.filter((item) => item.category === "starters").length },
-    { id: "mains", name: "Main Course", count: menuItems.filter((item) => item.category === "mains").length },
-    { id: "biryani", name: "Biryani", count: menuItems.filter((item) => item.category === "biryani").length },
-    { id: "breads", name: "Breads", count: menuItems.filter((item) => item.category === "breads").length },
-    { id: "beverages", name: "Beverages", count: menuItems.filter((item) => item.category === "beverages").length },
-    { id: "desserts", name: "Desserts", count: menuItems.filter((item) => item.category === "desserts").length },
-  ]
+  const items = useMemo(
+    () =>
+      itemsLoaded.filter((m) => {
+        const s = query.toLowerCase()
+        const matchesSearch =
+          m.name.toLowerCase().includes(s) ||
+          m.description.toLowerCase().includes(s) ||
+          m.category.toLowerCase().includes(s)
+        const matchesVeg = vegOnly ? !!m.isVeg : true
+        const matchesCategory = category === "all" ? true : m.category.toLowerCase() === category.toLowerCase()
+        return matchesSearch && matchesVeg && matchesCategory
+      }),
+    [query, vegOnly, category, itemsLoaded],
+  )
 
-  const filteredItems = menuItems.filter((item) => {
-    const matchesSearch =
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    let matchesCategory = true
-    if (selectedCategory === "all") {
-      matchesCategory = true
-    } else if (selectedCategory === "popular") {
-      matchesCategory = !!item.isPopular
-    } else {
-      matchesCategory = item.category === selectedCategory
-    }
-    
-    return matchesSearch && matchesCategory
-  })
-
-  const addToCart = (item: MenuItem) => {
+  const add = (id: number) => {
+    const m = itemsLoaded.find((x) => x.id === id)!
     setCart((prev) => {
-      const existingItem = prev.find((cartItem) => cartItem.id === item.id)
-      if (existingItem) {
-        return prev.map((cartItem) =>
-          cartItem.id === item.id ? { ...cartItem, quantity: (cartItem.quantity || 1) + 1 } : cartItem,
-        )
+      const idx = prev.findIndex((l) => l.id === id)
+      if (idx >= 0) {
+        const copy = [...prev]
+        copy[idx] = { ...copy[idx], qty: copy[idx].qty + 1 }
+        return copy
       }
-      return [...prev, { ...item, quantity: 1 }]
+      return [...prev, { id, name: m.name, price: m.price, qty: 1 }]
     })
   }
 
-  const removeFromCart = (itemId: number) => {
-    setCart((prev) => {
-      return prev
-        .map((cartItem) => {
-          if (cartItem.id === itemId) {
-            const newQuantity = (cartItem.quantity || 1) - 1
-            return newQuantity > 0 ? { ...cartItem, quantity: newQuantity } : null
-          }
-          return cartItem
-        })
-        .filter(Boolean) as MenuItem[]
-    })
+  const sub = (id: number) => {
+    setCart((prev) => prev.flatMap((l) => (l.id === id ? (l.qty > 1 ? [{ ...l, qty: l.qty - 1 }] : []) : [l])))
   }
 
-  const getItemQuantity = (itemId: number) => {
-    const item = cart.find((cartItem) => cartItem.id === itemId)
-    return item?.quantity || 0
-  }
+  const subtotal = cart.reduce((s, l) => s + l.price * l.qty, 0)
 
-  const getTotalItems = () => {
-    return cart.reduce((total, item) => total + (item.quantity || 0), 0)
-  }
-
-  const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + item.price * (item.quantity || 0), 0)
-  }
-
-  // Persist cart to localStorage before routing to checkout
-  const proceedToCheckout = () => {
-    try {
-      if (cart.length === 0) return
-      localStorage.setItem('takeaway_cart', JSON.stringify(cart))
-      // navigate
-      router.push('/takeaway/checkout')
-    } catch (err) {
-      console.error('Failed to persist cart', err)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // Convert to takeaway format for storage
+      const takeawayCart = cart.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.qty
+      }))
+      localStorage.setItem("takeaway_cart", JSON.stringify(takeawayCart))
     }
-  }
+  }, [cart])
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <header className="bg-card border-b border-border p-4 sticky top-0 z-40">
-        <div className="max-w-md mx-auto">
-          <BackButton className="mb-3" fallbackRoute="/takeaway" />
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">P</span>
+    <div className="min-h-screen bg-background">
+      {/* Hero Header */}
+      <div className="bg-card border-b py-8 px-4 shadow-sm">
+        <div className="max-w-6xl mx-auto">
+          <BackButton className="mb-4" fallbackRoute="/takeaway" />
+          <h1 className="text-4xl font-bold mb-2">🍽️ Our Menu</h1>
+          <p className="text-muted-foreground">Delicious food for takeaway</p>
+        </div>
+      </div>
+
+      <main className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6 pb-32">
+        {/* Filters Card */}
+        <Card className="shadow-lg border-2">
+          <CardContent className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="relative">
+                <Search className="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                <Input
+                  className="pl-10 h-12 text-base"
+                  placeholder="Search dishes..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
               </div>
               <div>
-                <h1 className="font-sans font-bold text-lg text-foreground">Takeaway Menu</h1>
-                <p className="text-xs text-muted-foreground">Spice Garden Restaurant</p>
+                <select
+                  className="w-full h-12 rounded-lg border bg-background px-4 text-base focus:outline-none"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  aria-label="Filter by category"
+                >
+                  <option value="all">🍽️ All categories</option>
+                  {Array.from(new Set(itemsLoaded.map((m: MenuItem) => m.category))).map((c: string) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Button
+                  variant={vegOnly ? "default" : "outline"}
+                  className={`w-full h-12 text-base font-semibold ${vegOnly ? 'bg-green-600 hover:bg-green-700' : 'hover:bg-muted'}`}
+                  onClick={() => setVegOnly((v) => !v)}
+                >
+                  🥬 {vegOnly ? "Showing Veg Only" : "Veg Only"}
+                </Button>
               </div>
             </div>
-            <Badge variant="secondary">Takeaway Only</Badge>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search dishes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-md mx-auto p-4">
-        {/* Categories */}
-        <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="mb-6">
-          <TabsList className="grid w-full grid-cols-5 mb-4">
-            <TabsTrigger value="all" className="text-xs">
-              All
-            </TabsTrigger>
-            <TabsTrigger value="popular" className="text-xs">
-              Popular
-            </TabsTrigger>
-            <TabsTrigger value="starters" className="text-xs">
-              Starters
-            </TabsTrigger>
-            <TabsTrigger value="mains" className="text-xs">
-              Mains
-            </TabsTrigger>
-            <TabsTrigger value="biryani" className="text-xs">
-              Biryani
-            </TabsTrigger>
-          </TabsList>
-
-          <div className="flex gap-2 overflow-x-auto pb-2 whitespace-nowrap">
-            {categories.slice(5).map((category) => (
-              <Button
-                key={category.id}
-                variant={selectedCategory === category.id ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(category.id)}
-                className="whitespace-nowrap text-xs"
-              >
-                {category.name} ({category.count})
-              </Button>
-            ))}
-          </div>
-        </Tabs>
-
-        {/* Menu Items */}
         {isLoading ? (
-          <InlineLoader text="Loading menu items..." size="md" />
+          <div className="flex justify-center py-20">
+            <InlineLoader text="Loading delicious menu..." size="md" />
+          </div>
+        ) : items.length === 0 ? (
+          <Card className="shadow-lg">
+            <CardContent className="p-12 text-center">
+              <div className="text-6xl mb-4">🔍</div>
+              <h3 className="text-xl font-semibold mb-2">No items found</h3>
+              <p className="text-muted-foreground">Try adjusting your search or filters</p>
+            </CardContent>
+          </Card>
         ) : (
-          <div className="space-y-4">
-            {filteredItems.map((item) => (
-            <Card key={item.id} className="overflow-hidden">
-              <CardContent className="p-0">
-                <div className="flex">
-                  <div className="flex-1 p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        {item.isVeg && <Leaf className="w-4 h-4 text-green-600" />}
-                        {item.isPopular && (
-                          <Badge variant="secondary" className="text-xs">
-                            Popular
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {/* rating is optional on server menu, guard access */}
-                        {'rating' in item ? (
-                          <>
-                            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                            <span className="text-xs text-muted-foreground">{(item as any).rating}</span>
-                          </>
-                        ) : null}
-                      </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {items.map((i) => {
+              const cartQty = cart.find((l) => l.id === i.id)?.qty || 0
+              return (
+                <Card key={i.id} className="group hover:shadow-lg transition-all duration-300 overflow-hidden">
+                  <div className="relative">
+                    <div className="aspect-video bg-muted overflow-hidden">
+                      <img
+                        src={i.image || "https://placehold.co/400x300/e2e8f0/64748b?text=No+Image"}
+                        alt={i.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        onError={(e) => {
+                          e.currentTarget.src = "https://placehold.co/400x300/e2e8f0/64748b?text=No+Image"
+                        }}
+                      />
                     </div>
-
-                    <h3 className="font-semibold text-foreground mb-1">{item.name}</h3>
-                    <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{item.description}</p>
-
-                    <div className="flex items-center justify-between">
+                    {i.isVeg && (
+                      <div className="absolute top-3 left-3 bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg">
+                        🥬 VEG
+                      </div>
+                    )}
+                    {cartQty > 0 && (
+                      <div className="absolute top-3 right-3 bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shadow-lg">
+                        {cartQty}
+                      </div>
+                    )}
+                  </div>
+                  <CardContent className="p-5">
+                    <div className="space-y-3">
                       <div>
-                        <p className="font-bold text-lg text-foreground">₹{item.price}</p>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Clock className="w-3 h-3" />
-                          <span>{(item as any).prepTime ?? item.preparationTime ?? ''}</span>
-                        </div>
+                        <h3 className="font-bold text-lg mb-1 line-clamp-1">{i.name}</h3>
+                        <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">{i.description}</p>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        {getItemQuantity(item.id) > 0 ? (
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => removeFromCart(item.id)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Minus className="w-3 h-3" />
-                            </Button>
-                            <span className="font-medium min-w-[20px] text-center">{getItemQuantity(item.id)}</span>
-                            <Button size="sm" onClick={() => addToCart(item)} className="h-8 w-8 p-0">
-                              <Plus className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button size="sm" onClick={() => addToCart(item)}>
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <div className="text-2xl font-bold text-orange-600">₹{i.price}</div>
+                        {cartQty === 0 ? (
+                          <Button
+                            size="sm"
+                            className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold shadow-md"
+                            onClick={() => add(i.id)}
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
                             Add
                           </Button>
+                        ) : (
+                          <div className="flex items-center gap-2 bg-muted rounded-lg px-2 py-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 hover:bg-muted-foreground/20"
+                              onClick={() => sub(i.id)}
+                            >
+                              <Minus className="w-4 h-4" />
+                            </Button>
+                            <div className="w-8 text-center font-bold">{cartQty}</div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 hover:bg-muted-foreground/20"
+                              onClick={() => add(i.id)}
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </div>
-                  </div>
-
-                  <div className="w-24 h-24 m-4 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                    <img
-                      src={item.image || "https://placehold.co/200x200/e2e8f0/64748b?text=No+Image"}
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = "https://placehold.co/200x200/e2e8f0/64748b?text=No+Image"
-                      }}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         )}
 
-        {!isLoading && filteredItems.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">No items found matching your search.</p>
+        {/* Fixed Bottom Cart Bar */}
+        {cart.length > 0 && (
+          <div className="fixed inset-x-0 bottom-0 z-50 bg-gradient-to-t from-background/80 to-transparent pt-2 pb-safe backdrop-blur-sm">
+            <div className="mx-auto max-w-6xl px-4 pb-1">
+              <Card className="border border-orange-500 bg-gradient-to-r from-orange-500 to-amber-500 dark:from-orange-600 dark:to-amber-600 shadow-lg">
+                <CardContent className="p-2 sm:p-3">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+                    <div className="flex items-center gap-3 text-white">
+                      <div className="text-center">
+                        <div className="text-xl font-bold">{cart.reduce((s, l) => s + l.qty, 0)}</div>
+                        <div className="text-[10px] text-orange-100">Items</div>
+                      </div>
+                      <div className="h-8 w-px bg-white/30"></div>
+                      <div className="text-center">
+                        <div className="text-xl font-bold">₹{subtotal}</div>
+                        <div className="text-[10px] text-orange-100">Subtotal</div>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => router.push("/takeaway/checkout")}
+                      className="bg-white text-orange-600 hover:bg-orange-50 dark:bg-white dark:text-orange-600 dark:hover:bg-orange-50 font-bold text-sm px-4 shadow-lg w-full sm:w-auto h-9"
+                      aria-label="Proceed to checkout"
+                    >
+                      Checkout →
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
       </main>
-
-      {/* Cart Footer */}
-          {getTotalItems() > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background/95 to-transparent backdrop-blur-sm border-t border-border/50 p-2 z-50">
-          <div className="max-w-md mx-auto">
-            <Button 
-              className="w-full h-10 text-sm font-semibold bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 dark:from-orange-600 dark:to-amber-600 dark:hover:from-orange-700 dark:hover:to-amber-700 text-white shadow-lg" 
-              onClick={proceedToCheckout}
-            >
-              <ShoppingCart className="w-3.5 h-3.5 mr-1.5" />
-              Checkout • {getTotalItems()} items • ₹{getTotalPrice()}
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

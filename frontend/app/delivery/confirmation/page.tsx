@@ -19,36 +19,36 @@ export default function DeliveryConfirmationPage() {
 
   useEffect(() => {
     let mounted = true
-    ;(async () => {
-      try {
-        const items = await fetchMenuItems()
-        if (!mounted) return
-        setMenuItems(items)
-      } catch (err) {
-        console.error('Failed to load menu items', err)
-      }
-    })()
+      ; (async () => {
+        try {
+          const items = await fetchMenuItems()
+          if (!mounted) return
+          setMenuItems(items)
+        } catch (err) {
+          console.error('Failed to load menu items', err)
+        }
+      })()
     return () => { mounted = false }
   }, [])
 
   useEffect(() => {
     if (!orderIdFromQuery) return
     let mounted = true
-    ;(async () => {
-      try {
-        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
-        const res = await fetch(`${base}/api/orders/${orderIdFromQuery}`)
-        if (!res.ok) {
-          console.error('Failed to fetch delivery order', res.status)
-          return
+      ; (async () => {
+        try {
+          const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+          const res = await fetch(`${base}/api/orders/${orderIdFromQuery}`)
+          if (!res.ok) {
+            console.error('Failed to fetch delivery order', res.status)
+            return
+          }
+          const o = await res.json()
+          if (!mounted) return
+          setOrderDetails(o)
+        } catch (err) {
+          console.error('Error fetching order details', err)
         }
-        const o = await res.json()
-        if (!mounted) return
-        setOrderDetails(o)
-      } catch (err) {
-        console.error('Error fetching order details', err)
-      }
-    })()
+      })()
     return () => { mounted = false }
   }, [orderIdFromQuery])
 
@@ -76,7 +76,7 @@ export default function DeliveryConfirmationPage() {
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
               <CheckCircle className="w-10 h-10 text-green-600" />
             </div>
-            
+
             <div className="space-y-2">
               <h2 className="text-3xl font-bold text-green-700">Order Placed!</h2>
               <p className="text-green-700">Your delivery order has been placed successfully.</p>
@@ -110,14 +110,14 @@ export default function DeliveryConfirmationPage() {
           </div>
 
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <Button 
-              onClick={() => router.push('/delivery/menu')} 
+            <Button
+              onClick={() => router.push('/delivery/menu')}
               className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold"
             >
               Order More
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => router.push('/')}
               className="flex-1"
             >

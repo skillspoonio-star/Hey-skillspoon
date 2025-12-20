@@ -56,7 +56,7 @@ export default function HomePage() {
     avgWaitTime: "15 min"
   })
 
-  const restaurantInfo = {
+  const [restaurantInfo, setRestaurantInfo] = useState({
     name: "Spice Garden Restaurant",
     rating: 4.5,
     reviews: 1250,
@@ -64,7 +64,7 @@ export default function HomePage() {
     phone: "+91 98765 43210",
     isOpen: true,
     openHours: "11:00 AM - 11:00 PM",
-  }
+  })
 
 
 
@@ -103,8 +103,30 @@ export default function HomePage() {
 
 
 
-  // Simulate loading
+  // Load restaurant info and simulate loading
   useEffect(() => {
+    const loadRestaurantInfo = async () => {
+      try {
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+        const response = await fetch(`${base}/api/restaurant/info`)
+        if (response.ok) {
+          const data = await response.json()
+          setRestaurantInfo({
+            name: data.name,
+            rating: data.rating,
+            reviews: data.totalReviews,
+            address: data.address,
+            phone: data.phone,
+            isOpen: data.isOpen,
+            openHours: "11:00 AM - 11:00 PM", // You can format this from openingHours data
+          })
+        }
+      } catch (error) {
+        console.error('Failed to load restaurant info:', error)
+      }
+    }
+
+    loadRestaurantInfo()
     const timer = setTimeout(() => setIsLoading(false), 1500)
     return () => clearTimeout(timer)
   }, [])
@@ -291,7 +313,7 @@ export default function HomePage() {
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
               </div>
               <div>
-                <h1 className="font-sans font-bold text-xl md:text-2xl text-foreground">Hey Paytm</h1>
+                <h1 className="font-sans font-bold text-xl md:text-2xl text-foreground">Spice Garden Restaurant</h1>
                 <p className="text-xs md:text-sm text-muted-foreground">Voice Dining Experience</p>
               </div>
             </div>
@@ -301,6 +323,7 @@ export default function HomePage() {
                 className="shadow-sm text-xs md:text-sm px-2 py-0.5 animate-pulse"
               >
                 {restaurantInfo.isOpen ? "Open Now" : "Closed"}
+                {/* hh */}
               </Badge>
             </div>
           </div>

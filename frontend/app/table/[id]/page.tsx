@@ -7,6 +7,7 @@ import { MenuBrowser } from "@/components/menu-browser"
 import { OrderSummary } from "@/components/order-summary"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Menu, ShoppingCart, Mic, Bell, X } from "lucide-react"
 import { realTimeSync } from "@/lib/real-time-sync"
 import { sessionManager, type TableSession } from "@/lib/session-manager"
@@ -23,7 +24,7 @@ export default function TablePage() {
   const [showNotification, setShowNotification] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
-  
+
   useEffect(() => {
     if (tableNumber && !isNaN(tableNumber)) {
       const loadServerSession = async () => {
@@ -69,7 +70,7 @@ export default function TablePage() {
   }, [tableNumber])
 
   // serverAddOrder posts the current items to backend session API
-  const serverAddOrder = async (items: { name: string; quantity: number; price: number }[]) => {
+  const serverAddOrder = async (items: { itemId?: number; name?: string; quantity: number; price: number }[]) => {
     if (!session) throw new Error('No active session')
     const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
     try {
@@ -187,19 +188,105 @@ export default function TablePage() {
   }
 
   if (!session) {
+    const handleStartSession = async () => {
+      setIsLoading(true)
+      try {
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+        const res = await fetch(`${base}/api/sessions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tableNumber,
+            customerName: 'Guest',
+            guestCount: 1,
+          }),
+        })
+
+        if (res.ok) {
+          const newSession = await res.json()
+          setSession({
+            sessionId: newSession.sessionId,
+            tableNumber: newSession.tableNumber,
+            customerName: newSession.customerName,
+            guestCount: newSession.guestCount || 1,
+            startTime: new Date(newSession.createdAt || Date.now()),
+            orders: [],
+            totalAmount: 0,
+            status: 'active',
+            phoneNumber: newSession.mobile || '',
+          })
+        } else {
+          alert('Failed to start session. Please try again.')
+        }
+      } catch (error) {
+        console.error('Error starting session:', error)
+        alert('Failed to start session. Please try again.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-md mx-auto">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+        <Card className="max-w-lg mx-auto border-2 shadow-2xl">
           <CardContent className="p-8 text-center">
-            <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center mb-4">
-              <span className="text-2xl">🍽️</span>
+            <div className="w-20 h-20 mx-auto bg-gradient-to-br from-orange-400 to-amber-500 rounded-full flex items-center justify-center mb-6 shadow-lg animate-pulse">
+              <span className="text-4xl">🍽️</span>
             </div>
-            <h2 className="text-xl font-semibold mb-2">Table {tableNumber} Not Assigned</h2>
-            <p className="text-muted-foreground mb-4">
-              Please wait for a staff member to assign you to this table before you can start ordering.
+            <h2 className="text-3xl font-bold mb-3 bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+              Welcome to Table {tableNumber}!
+            </h2>
+            <p className="text-muted-foreground mb-6 text-lg">
+              Ready to start your dining experience? Let's get you set up!
             </p>
-            <Button variant="outline" onClick={() => window.location.reload()}>
-              Refresh
+
+            <div className="bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/20 dark:to-amber-900/20 rounded-lg p-6 mb-6">
+              <h3 className="font-semibold text-lg mb-3 text-orange-900 dark:text-orange-400">What you can do:</h3>
+              <div className="space-y-3 text-left">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center flex-shrink-0 shadow">
+                    <Mic className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Voice Ordering</p>
+                    <p className="text-xs text-muted-foreground">Order using your voice - just speak naturally!</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center flex-shrink-0 shadow">
+                    <Menu className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Browse Menu</p>
+                    <p className="text-xs text-muted-foreground">Explore our delicious offerings</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center flex-shrink-0 shadow">
+                    <ShoppingCart className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Track Orders</p>
+                    <p className="text-xs text-muted-foreground">See your order status in real-time</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              className="w-full h-14 text-lg font-bold bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-lg mb-3"
+              onClick={handleStartSession}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Starting Session...' : '🚀 Start Ordering'}
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => window.location.href = '/'}
+            >
+              Back to Home
             </Button>
           </CardContent>
         </Card>
@@ -208,17 +295,20 @@ export default function TablePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background md:pb-0 pb-20">
       {/* Header */}
-      <header className="bg-card border-b border-border p-4">
-        <div className="flex items-center justify-between max-w-md mx-auto">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">P</span>
+      <header className="bg-card border-b py-6 px-4 shadow-sm">
+        <div className="max-w-md md:max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                <span className="text-primary font-bold text-lg">P</span>
+              </div>
+              <div>
+                <h1 className="font-sans font-bold text-xl">Hey Paytm</h1>
+                <p className="text-xs text-muted-foreground">Voice Dining Experience</p>
+              </div>
             </div>
-            <h1 className="font-sans font-bold text-xl text-foreground">Hey Paytm</h1>
-          </div>
-          <div className="flex items-center gap-2">
             <div className="relative">
               <Button
                 variant="ghost"
@@ -226,35 +316,51 @@ export default function TablePage() {
                 onClick={() => setShowNotification(!showNotification)}
                 className="relative"
               >
-                <Bell className="w-4 h-4" />
+                <Bell className="w-5 h-5" />
                 {notifications.length > 0 && (
-                  <div className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center">
+                  <div className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center animate-pulse shadow-lg">
                     {notifications.length}
                   </div>
                 )}
               </Button>
             </div>
-            <div className="text-sm text-muted-foreground">Table {tableNumber}</div>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-sm font-medium">Table {tableNumber}</span>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Session: {session?.sessionId?.slice(0, 8) || 'Active'}
+            </div>
           </div>
         </div>
       </header>
 
       {showNotification && notifications.length > 0 && (
-        <div className="fixed top-20 left-4 right-4 z-50 max-w-md mx-auto">
-          <Card className="bg-blue-50 border-blue-200">
+        <div className="fixed top-20 left-4 right-4 z-50 max-w-md mx-auto animate-in slide-in-from-top duration-300">
+          <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 border-2 border-blue-200 dark:border-blue-800 shadow-xl">
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h4 className="font-medium text-blue-900 mb-2">Order Updates</h4>
-                  <div className="space-y-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <h4 className="font-semibold text-blue-900 dark:text-blue-100">Order Updates</h4>
+                  </div>
+                  <div className="space-y-2">
                     {notifications.slice(0, 2).map((notification, index) => (
-                      <p key={index} className="text-sm text-blue-800">
+                      <p key={index} className="text-sm text-blue-800 dark:text-blue-200 bg-white/50 dark:bg-black/20 p-2 rounded">
                         {notification}
                       </p>
                     ))}
                   </div>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setShowNotification(false)} className="h-6 w-6 p-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowNotification(false)}
+                  className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900"
+                >
                   <X className="w-4 h-4" />
                 </Button>
               </div>
@@ -263,20 +369,108 @@ export default function TablePage() {
         </div>
       )}
 
-      {/* Main Content */}
-      <main className="max-w-md mx-auto p-4">
+      {/* Desktop View - Hidden on Mobile */}
+      <div className="hidden md:block max-w-4xl mx-auto p-6">
+        <Tabs value={currentView} onValueChange={(v) => setCurrentView(v as any)}>
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsTrigger value="voice" className="flex items-center gap-2">
+              <Mic className="w-4 h-4" />
+              Voice Ordering
+            </TabsTrigger>
+            <TabsTrigger value="menu" className="flex items-center gap-2">
+              <Menu className="w-4 h-4" />
+              Browse Menu
+            </TabsTrigger>
+            <TabsTrigger value="order" className="flex items-center gap-2 relative">
+              <ShoppingCart className="w-4 h-4" />
+              My Order
+              {(currentOrder.length > 0 || (session && session.orders.length > 0)) && (
+                <span className="ml-1 bg-orange-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center font-bold">
+                  {currentOrder.length}
+                </span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="voice">
+            <VoiceInterface
+              onOrderUpdate={(newOrder) => addOrIncrementItem(newOrder)}
+              orders={currentOrder}
+              tableNumber={tableNumber}
+              serverAddOrder={serverAddOrder}
+            />
+          </TabsContent>
+
+          <TabsContent value="menu">
+            <MenuBrowser
+              onAddToOrder={(item) => {
+                const normalized = {
+                  id: Date.now(),
+                  item: item.name || item.item || item.name,
+                  name: item.name || item.item || item.name,
+                  itemId: (item as any).itemId || item.id,
+                  quantity: item.quantity || 1,
+                  price: Number(item.price || 0),
+                }
+                addOrIncrementItem(normalized)
+              }}
+              tableNumber={tableNumber}
+              serverAddOrder={serverAddOrder}
+              currentOrder={currentOrder}
+              onChangeQuantity={(item: any, delta: number) => {
+                if (delta > 0) {
+                  const normalized = {
+                    id: Date.now(),
+                    item: item.name || item.item || item.name,
+                    name: item.name || item.item || item.name,
+                    itemId: (item as any).itemId || item.id,
+                    quantity: delta,
+                    price: Number(item.price || 0),
+                  }
+                  addOrIncrementItem(normalized)
+                  return
+                }
+
+                setCurrentOrder((prev) => {
+                  const idx = prev.findIndex((p) => Number(p.itemId) === Number(item.itemId))
+                  if (idx === -1) return prev
+                  const currentQty = Number(prev[idx].quantity || 0)
+                  const newQty = currentQty + delta
+                  if (newQty <= 0) {
+                    return prev.filter((_, i) => i !== idx)
+                  }
+                  return prev.map((p, i) => (i === idx ? { ...p, quantity: newQty } : p))
+                })
+              }}
+            />
+          </TabsContent>
+
+          <TabsContent value="order">
+            <OrderSummary
+              currentOrder={currentOrder}
+              onUpdateCurrentOrder={setCurrentOrder}
+              session={session}
+              tableNumber={tableNumber}
+              serverAddOrder={serverAddOrder}
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Mobile View - Hidden on Desktop */}
+      <main className="md:hidden max-w-md mx-auto p-4 pb-20">
         {currentView === "voice" && (
           <VoiceInterface
             onOrderUpdate={(newOrder) => addOrIncrementItem(newOrder)}
             orders={currentOrder}
             tableNumber={tableNumber}
+            serverAddOrder={serverAddOrder}
           />
         )}
 
         {currentView === "menu" && (
           <MenuBrowser
             onAddToOrder={(item) => {
-              // normalize and merge into currentOrder
               const normalized = {
                 id: Date.now(),
                 item: item.name || item.item || item.name,
@@ -286,14 +480,11 @@ export default function TablePage() {
                 price: Number(item.price || 0),
               }
               addOrIncrementItem(normalized)
-              // switch to order view so user sees the added item
-              // setCurrentView("order")
             }}
             tableNumber={tableNumber}
             serverAddOrder={serverAddOrder}
             currentOrder={currentOrder}
             onChangeQuantity={(item: any, delta: number) => {
-              // increment
               if (delta > 0) {
                 const normalized = {
                   id: Date.now(),
@@ -307,12 +498,11 @@ export default function TablePage() {
                 return
               }
 
-              // decrement
               setCurrentOrder((prev) => {
                 const idx = prev.findIndex((p) => Number(p.itemId) === Number(item.itemId))
                 if (idx === -1) return prev
                 const currentQty = Number(prev[idx].quantity || 0)
-                const newQty = currentQty + delta // delta is negative
+                const newQty = currentQty + delta
                 if (newQty <= 0) {
                   return prev.filter((_, i) => i !== idx)
                 }
@@ -333,37 +523,46 @@ export default function TablePage() {
         )}
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40">
+      {/* Bottom Navigation - Mobile Only */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg z-40">
         <div className="max-w-md mx-auto flex">
           <Button
-            variant={currentView === "voice" ? "default" : "ghost"}
-            className="flex-1 rounded-none h-16 flex-col gap-1"
+            variant="ghost"
+            className={`flex-1 rounded-none h-16 flex-col gap-1 transition-all ${currentView === "voice"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
             onClick={() => setCurrentView("voice")}
           >
             <Mic className="w-5 h-5" />
-            <span className="text-xs">Voice</span>
+            <span className="text-xs font-medium">Voice</span>
           </Button>
 
           <Button
-            variant={currentView === "menu" ? "default" : "ghost"}
-            className="flex-1 rounded-none h-16 flex-col gap-1"
+            variant="ghost"
+            className={`flex-1 rounded-none h-16 flex-col gap-1 transition-all ${currentView === "menu"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
             onClick={() => setCurrentView("menu")}
           >
             <Menu className="w-5 h-5" />
-            <span className="text-xs">Menu</span>
+            <span className="text-xs font-medium">Menu</span>
           </Button>
 
           <Button
-            variant={currentView === "order" ? "default" : "ghost"}
-            className="flex-1 rounded-none h-16 flex-col gap-1 relative"
+            variant="ghost"
+            className={`flex-1 rounded-none h-16 flex-col gap-1 relative transition-all ${currentView === "order"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
             onClick={() => setCurrentView("order")}
           >
             <ShoppingCart className="w-5 h-5" />
-            <span className="text-xs">Order</span>
+            <span className="text-xs font-medium">Order</span>
             {(currentOrder.length > 0 || (session && session.orders.length > 0)) && (
-              <div className="absolute -top-1 -right-1 bg-accent text-accent-foreground rounded-full w-5 h-5 text-xs flex items-center justify-center">
-                {currentOrder.length }
+              <div className="absolute top-2 right-4 bg-orange-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center font-bold shadow-lg">
+                {currentOrder.length}
               </div>
             )}
           </Button>

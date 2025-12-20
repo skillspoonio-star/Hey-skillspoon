@@ -6,7 +6,7 @@ import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, S
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme-toggle'
-import { Bell, LogOut, Activity, Store, ShoppingBag, Truck, CalendarCheck, ChefHat, TableIcon, ClipboardList, CreditCard, BarChart3, ListTree, Boxes, Users } from 'lucide-react'
+import { Bell, LogOut, Activity, Store, ShoppingBag, Truck, CalendarCheck, ChefHat, TableIcon, ClipboardList, CreditCard, BarChart3, ListTree, Boxes, Users, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -70,6 +70,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { key: 'menu', label: 'Menu Management', icon: ListTree },
     { key: 'inventory', label: 'Inventory', icon: Boxes },
     { key: 'staff', label: 'Staff', icon: Users },
+    { key: 'restaurant-settings', label: 'Restaurant Settings', icon: Settings },
   ]
 
   const handleLogout = () => {
