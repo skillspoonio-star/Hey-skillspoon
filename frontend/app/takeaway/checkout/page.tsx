@@ -156,8 +156,8 @@ export default function TakeawayCheckoutPage() {
           router.push("/takeaway/confirmation?orderId=" + orderId)
         } catch (paymentError: any) {
           // Check if user cancelled payment
-          if (paymentError?.message?.includes('closed')) {
-            error('Payment was cancelled. You can retry payment or choose Cash on Pickup.', 'Payment Cancelled')
+          if (paymentError?.message?.includes('cancelled by user') || paymentError?.message?.includes('closed')) {
+            error('Payment failed. Please try again or choose Cash on Pickup.', 'Payment Failed')
           } else {
             error(
               'Payment failed: ' +
@@ -186,7 +186,7 @@ export default function TakeawayCheckoutPage() {
       console.error('Error placing order:', err)
       error(err?.message || 'Error placing order. Please try again.', 'Order Error')
     } finally {
-      setIsSubmitting(false)
+      setIsProcessing(false)
     }
   }
 

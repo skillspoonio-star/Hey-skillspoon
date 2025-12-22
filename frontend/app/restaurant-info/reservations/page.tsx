@@ -466,7 +466,7 @@ export default function ReservationsPage() {
         modal: {
           ondismiss: function () {
             // Handle payment cancellation
-            error('Payment was cancelled. You can retry payment or choose to pay at the restaurant.', 'Payment Cancelled')
+            error('Payment failed. Please try again or choose to pay at the restaurant.', 'Payment Failed')
             setIsSubmitting(false)
           }
         }

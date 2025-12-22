@@ -22,9 +22,11 @@ import {
   Navigation,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useToast } from "@/components/providers/toast-provider"
 
 export default function RestaurantInfoPage() {
   const router = useRouter()
+  const { success, error, info } = useToast()
   const [isFavorite, setIsFavorite] = useState(false)
   const [restaurantData, setRestaurantData] = useState({
     name: "",
@@ -37,6 +39,7 @@ export default function RestaurantInfoPage() {
     phone: "",
     email: "",
     website: "",
+    locationLink: "",
     hours: {},
     amenities: [
       { icon: <Wifi className="w-4 h-4" />, name: "Free WiFi" },
@@ -70,6 +73,7 @@ export default function RestaurantInfoPage() {
             phone: data.phone || "",
             email: data.email || "",
             website: data.website || "",
+            locationLink: data.locationLink || "",
             hours: formatHours(data.openingHours || {}),
             photos: data.images || [],
             specialties: data.features || [],
@@ -95,6 +99,23 @@ export default function RestaurantInfoPage() {
       }
     })
     return formatted
+  }
+
+  // Handle directions click
+  const handleGetDirections = () => {
+    if (restaurantData.locationLink) {
+      // Open the location link in a new tab
+      window.open(restaurantData.locationLink, '_blank')
+      success('Opening directions in a new tab', 'Directions')
+    } else if (restaurantData.address) {
+      // Fallback to Google Maps search with address
+      const encodedAddress = encodeURIComponent(restaurantData.address)
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank')
+      info('Opening Google Maps with restaurant address', 'Directions')
+    } else {
+      // Show a message if no location data is available
+      error('Location information is not available. Please contact the restaurant for directions.', 'No Location Data')
+    }
   }
 
   const getCurrentStatus = () => {
@@ -200,9 +221,9 @@ export default function RestaurantInfoPage() {
           <Button
             variant="secondary"
             size="sm"
-            className="absolute top-4 md:top-6 right-4 md:right-6 backdrop-blur-sm bg-white/90 hover:bg-white shadow-lg"
+            className="absolute dark:text-black top-4 md:top-6 right-4 md:right-6 backdrop-blur-sm bg-white/90 hover:bg-white shadow-lg"
           >
-            <Camera className="w-4 h-4 mr-2" />
+            <Camera className="w-4 h-4 mr-2 dark:text-black" />
             View Photos
           </Button>
         </div>
@@ -258,7 +279,8 @@ export default function RestaurantInfoPage() {
             </Button>
             <Button
               variant="outline"
-              className="h-12 md:h-14 text-base md:text-lg bg-transparent hover:bg-green-50 border-green-200 shadow-md"
+              className="h-12 md:h-14 text-base md:text-lg bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 dark:from-blue-950/20 dark:to-indigo-950/20 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 border-blue-200 dark:border-blue-800 shadow-md hover:shadow-lg transition-all duration-200 text-blue-700 dark:text-blue-300"
+              onClick={handleGetDirections}
             >
               <Navigation className="w-4 h-4 md:w-5 md:h-5 mr-2" />
               Get Directions

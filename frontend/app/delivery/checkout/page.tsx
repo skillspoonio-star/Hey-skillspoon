@@ -178,8 +178,8 @@ export default function DeliveryCheckoutPage() {
           router.push("/delivery/confirmation?orderId=" + orderId)
         } catch (paymentError: any) {
           // Check if user cancelled payment
-          if (paymentError?.message?.includes('closed')) {
-            error('Payment was cancelled. You can retry payment or choose Cash on Delivery.', 'Payment Cancelled')
+          if (paymentError?.message?.includes('cancelled by user') || paymentError?.message?.includes('closed')) {
+            error('Payment failed. Please try again or choose Cash on Delivery.', 'Payment Failed')
           } else {
             error(
               'Payment failed: ' +

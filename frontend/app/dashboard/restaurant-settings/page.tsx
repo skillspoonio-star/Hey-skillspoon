@@ -29,10 +29,10 @@ interface RestaurantInfo {
     name: string
     description: string
     address: string
-    location: string
     phone: string
     email: string
     website: string
+    locationLink: string
     openingHours: {
         monday: { open: string; close: string; closed: boolean }
         tuesday: { open: string; close: string; closed: boolean }
@@ -59,10 +59,10 @@ export default function RestaurantSettingsPage() {
         name: "",
         description: "",
         address: "",
-        location: "",
         phone: "",
         email: "",
         website: "",
+        locationLink: "",
         openingHours: {
             monday: { open: "11:00", close: "23:00", closed: false },
             tuesday: { open: "11:00", close: "23:00", closed: false },
@@ -265,7 +265,7 @@ export default function RestaurantSettingsPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-50/50 via-background to-orange-50/30 dark:from-gray-900 dark:via-background dark:to-gray-900">
-            <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+            <div className="w-full px-6 py-8 space-y-8">
                 {/* Header Section */}
                 <div className="text-center space-y-4">
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg mb-4">
@@ -386,20 +386,6 @@ export default function RestaurantSettingsPage() {
                                     />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="location" className="text-sm font-medium">Google Maps Location</Label>
-                                    <Input
-                                        id="location"
-                                        value={restaurantInfo.location}
-                                        onChange={(e) => setRestaurantInfo(prev => ({ ...prev, location: e.target.value }))}
-                                        placeholder="Enter Google Maps URL or coordinates"
-                                        className="h-11 border-2 focus:border-orange-500 transition-colors"
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        Paste Google Maps share link or coordinates (e.g., 28.6139,77.2090)
-                                    </p>
-                                </div>
-
                                 <div className="flex items-center space-x-3 p-4 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/10 border border-green-200 dark:border-green-800">
                                     <Switch
                                         id="isOpen"
@@ -415,128 +401,133 @@ export default function RestaurantSettingsPage() {
                         </Card>
                     </TabsContent>
 
-                    <TabsContent value="hours" className="space-y-6">
-                        <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-                            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/20 dark:to-blue-900/10 rounded-t-lg">
-                                <CardTitle className="flex items-center gap-3 text-xl">
-                                    <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                                        <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                                    </div>
-                                    Operating Hours
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-6 space-y-4">
-                                {Object.entries(restaurantInfo.openingHours).map(([day, hours]) => (
-                                    <div key={day} className="flex items-center gap-4 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                                        <div className="w-28 capitalize font-medium text-sm">{day}</div>
-                                        <Switch
-                                            checked={!hours.closed}
-                                            onCheckedChange={(checked) =>
-                                                setRestaurantInfo(prev => ({
-                                                    ...prev,
-                                                    openingHours: {
-                                                        ...prev.openingHours,
-                                                        [day]: { ...hours, closed: !checked }
-                                                    }
-                                                }))
-                                            }
-                                            className="data-[state=checked]:bg-blue-600"
-                                        />
-                                        {!hours.closed ? (
-                                            <div className="flex items-center gap-3 flex-1">
-                                                <Input
-                                                    type="time"
-                                                    value={hours.open}
-                                                    onChange={(e) =>
-                                                        setRestaurantInfo(prev => ({
-                                                            ...prev,
-                                                            openingHours: {
-                                                                ...prev.openingHours,
-                                                                [day]: { ...hours, open: e.target.value }
-                                                            }
-                                                        }))
-                                                    }
-                                                    className="w-32 h-9 border-2 focus:border-blue-500 transition-colors"
-                                                />
-                                                <span className="text-muted-foreground font-medium">to</span>
-                                                <Input
-                                                    type="time"
-                                                    value={hours.close}
-                                                    onChange={(e) =>
-                                                        setRestaurantInfo(prev => ({
-                                                            ...prev,
-                                                            openingHours: {
-                                                                ...prev.openingHours,
-                                                                [day]: { ...hours, close: e.target.value }
-                                                            }
-                                                        }))
-                                                    }
-                                                    className="w-32 h-9 border-2 focus:border-blue-500 transition-colors"
-                                                />
-                                            </div>
-                                        ) : (
-                                            <span className="text-muted-foreground font-medium flex-1">Closed</span>
-                                        )}
-                                    </div>
-                                ))}
-                            </CardContent>
-                        </Card>
+                    <TabsContent value="hours" className="w-full space-y-6">
 
-                        <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-                            <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-950/20 dark:to-purple-900/10 rounded-t-lg">
-                                <CardTitle className="flex items-center gap-3 text-xl">
-                                    <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                                        <Phone className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                        {/* ================= HOURS & CONTACT (FULL WIDTH LIKE BASIC INFO) ================= */}
+                        <div className="w-full">
+                            <Card className="w-full border-0 shadow-lg bg-card/50 backdrop-blur-sm">
+
+                                {/* Section Header (same style as Basic Info) */}
+                                <CardHeader className="rounded-t-lg bg-gradient-to-r from-orange-600/20 to-orange-500/10">
+                                    <CardTitle className="flex items-center gap-3 text-xl">
+                                        <div className="p-2 rounded-lg bg-orange-600/20">
+                                            <Clock className="w-5 h-5 text-orange-500" />
+                                        </div>
+                                        Hours & Contact
+                                    </CardTitle>
+                                </CardHeader>
+
+                                <CardContent className="p-6 space-y-8">
+
+                                    {/* ================= CONTACT INFO ================= */}
+                                    <div className="space-y-6">
+                                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                                            <Phone className="w-5 h-5 text-purple-500" />
+                                            Contact Information
+                                        </h3>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <Input
+                                                placeholder="Phone Number"
+                                                value={restaurantInfo.phone}
+                                                onChange={(e) =>
+                                                    setRestaurantInfo(prev => ({ ...prev, phone: e.target.value }))
+                                                }
+                                            />
+                                            <Input
+                                                placeholder="Email Address"
+                                                value={restaurantInfo.email}
+                                                onChange={(e) =>
+                                                    setRestaurantInfo(prev => ({ ...prev, email: e.target.value }))
+                                                }
+                                            />
+                                            <Input
+                                                placeholder="Website"
+                                                value={restaurantInfo.website}
+                                                onChange={(e) =>
+                                                    setRestaurantInfo(prev => ({ ...prev, website: e.target.value }))
+                                                }
+                                            />
+                                            <Input
+                                                placeholder="Location Link"
+                                                value={restaurantInfo.locationLink}
+                                                onChange={(e) =>
+                                                    setRestaurantInfo(prev => ({ ...prev, locationLink: e.target.value }))
+                                                }
+                                            />
+                                        </div>
                                     </div>
-                                    Contact Information
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-6 space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="phone" className="text-sm font-medium flex items-center gap-2">
-                                            <Phone className="w-4 h-4" />
-                                            Phone Number
-                                        </Label>
-                                        <Input
-                                            id="phone"
-                                            value={restaurantInfo.phone}
-                                            onChange={(e) => setRestaurantInfo(prev => ({ ...prev, phone: e.target.value }))}
-                                            placeholder="Enter phone number"
-                                            className="h-11 border-2 focus:border-purple-500 transition-colors"
-                                        />
+
+                                    {/* ================= OPERATING HOURS ================= */}
+                                    <div className="space-y-4">
+                                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                                            <Clock className="w-5 h-5 text-blue-500" />
+                                            Operating Hours
+                                        </h3>
+
+                                        {Object.entries(restaurantInfo.openingHours).map(([day, hours]) => (
+                                            <div
+                                                key={day}
+                                                className="flex flex-col md:flex-row md:items-center gap-4 p-4 rounded-lg bg-muted/30 w-full"
+                                            >
+                                                <div className="md:w-28 capitalize font-medium">{day}</div>
+
+                                                <Switch
+                                                    checked={!hours.closed}
+                                                    onCheckedChange={(checked) =>
+                                                        setRestaurantInfo(prev => ({
+                                                            ...prev,
+                                                            openingHours: {
+                                                                ...prev.openingHours,
+                                                                [day]: { ...hours, closed: !checked }
+                                                            }
+                                                        }))
+                                                    }
+                                                />
+
+                                                {!hours.closed ? (
+                                                    <div className="flex flex-col sm:flex-row gap-3 flex-1">
+                                                        <Input
+                                                            type="time"
+                                                            value={hours.open}
+                                                            onChange={(e) =>
+                                                                setRestaurantInfo(prev => ({
+                                                                    ...prev,
+                                                                    openingHours: {
+                                                                        ...prev.openingHours,
+                                                                        [day]: { ...hours, open: e.target.value }
+                                                                    }
+                                                                }))
+                                                            }
+                                                            className="sm:w-32"
+                                                        />
+                                                        <Input
+                                                            type="time"
+                                                            value={hours.close}
+                                                            onChange={(e) =>
+                                                                setRestaurantInfo(prev => ({
+                                                                    ...prev,
+                                                                    openingHours: {
+                                                                        ...prev.openingHours,
+                                                                        [day]: { ...hours, close: e.target.value }
+                                                                    }
+                                                                }))
+                                                            }
+                                                            className="sm:w-32"
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-muted-foreground">Closed</span>
+                                                )}
+                                            </div>
+                                        ))}
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
-                                            <Mail className="w-4 h-4" />
-                                            Email Address
-                                        </Label>
-                                        <Input
-                                            id="email"
-                                            type="email"
-                                            value={restaurantInfo.email}
-                                            onChange={(e) => setRestaurantInfo(prev => ({ ...prev, email: e.target.value }))}
-                                            placeholder="info@restaurant.com"
-                                            className="h-11 border-2 focus:border-purple-500 transition-colors"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="website" className="text-sm font-medium flex items-center gap-2">
-                                        <MapPin className="w-4 h-4" />
-                                        Website
-                                    </Label>
-                                    <Input
-                                        id="website"
-                                        value={restaurantInfo.website}
-                                        onChange={(e) => setRestaurantInfo(prev => ({ ...prev, website: e.target.value }))}
-                                        placeholder="www.restaurant.com"
-                                        className="h-11 border-2 focus:border-purple-500 transition-colors"
-                                    />
-                                </div>
-                            </CardContent>
-                        </Card>
+
+                                </CardContent>
+                            </Card>
+                        </div>
                     </TabsContent>
+
                     <TabsContent value="media" className="space-y-6">
                         <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
                             <CardHeader className="bg-gradient-to-r from-emerald-50 to-emerald-100/50 dark:from-emerald-950/20 dark:to-emerald-900/10 rounded-t-lg">
@@ -745,7 +736,7 @@ export default function RestaurantSettingsPage() {
                                         </Badge>
                                     ))}
                                 </div>
-                                <div className="flex gap-3">
+                                <div className="flex gap-3 ">
                                     <Input
                                         value={newCuisine}
                                         onChange={(e) => setNewCuisine(e.target.value)}
