@@ -43,6 +43,71 @@ const calculateOrderAmount = async (items, tip = 0, promoCode = '') => {
     };
 };
 
+// Calculate reservation amount
+const calculateReservationAmount = (subtotal, tax, tip = 0, discount = 0) => {
+    const total = subtotal + tax + tip - discount;
+    return {
+        subtotal,
+        tax,
+        tip,
+        discount,
+        total,
+        totalInPaise: total * 100 // Razorpay expects amount in paise
+    };
+};
+
+// Create a new Razorpay order for reservation
+exports.createReservationOrder = async (req, res) => {
+    try {
+        const { subtotal, tax, tip = 0, discount = 0, customerName, tableNumbers, date, time } = req.body;
+
+        if (!subtotal || !tax || !customerName || !tableNumbers || !date || !time) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required reservation data'
+            });
+        }
+
+        // Calculate final amount
+        const amounts = calculateReservationAmount(subtotal, tax, tip, discount);
+
+        // Create Razorpay order
+        const options = {
+            amount: amounts.totalInPaise,
+            currency: 'INR',
+            receipt: 'reservation_' + Date.now(),
+            notes: {
+                orderType: 'table_reservation',
+                customerName,
+                tableNumbers: Array.isArray(tableNumbers) ? tableNumbers.join(',') : tableNumbers,
+                date,
+                time,
+                tip: tip || 0
+            }
+        };
+
+        const order = await razorpayInstance.orders.create(options);
+
+        res.json({
+            success: true,
+            order: {
+                id: order.id,
+                amount: order.amount,
+                currency: order.currency,
+                receipt: order.receipt
+            },
+            amounts
+        });
+    } catch (error) {
+        console.error('Error creating Razorpay reservation order:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error creating reservation order',
+            error: error.message
+        });
+    }
+};
+
 // Create a new Razorpay order
 exports.createOrder = async (req, res) => {
     try {

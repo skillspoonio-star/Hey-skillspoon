@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -10,19 +10,46 @@ import { useRouter } from "next/navigation"
 export default function TakeawayPage() {
   const router = useRouter()
   const [selectedTime, setSelectedTime] = useState<string>("")
+  const [restaurantInfo, setRestaurantInfo] = useState({
+    name: "",
+    rating: 0,
+    reviews: 0,
+    cuisine: "",
+    address: "",
+    phone: "",
+    preparationTime: "15-30 mins",
+    isOpen: true,
+  })
 
   const timeSlots = ["Instantly", "15 mins", "30 mins", "45 mins", "1 hour", "1.5 hours", "2 hours"]
 
-  const restaurantInfo = {
-    name: "Spice Garden Restaurant",
-    rating: 4.5,
-    reviews: 1250,
-    cuisine: "Indian • North Indian • Biryani",
-    address: "123 Food Street, Sector 18, Noida",
-    phone: "+91 98765 43210",
-    preparationTime: "15-30 mins",
-    isOpen: true,
-  }
+  // Load restaurant info from API
+  useEffect(() => {
+    const loadRestaurantInfo = async () => {
+      try {
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+        const response = await fetch(`${base}/api/restaurant/info`)
+
+        if (response.ok) {
+          const data = await response.json()
+          setRestaurantInfo({
+            name: data.name || "Restaurant",
+            rating: data.rating || 0,
+            reviews: data.totalReviews || 0,
+            cuisine: data.cuisine ? data.cuisine.join(" • ") : "",
+            address: data.address || "",
+            phone: data.phone || "",
+            preparationTime: "15-30 mins",
+            isOpen: data.isOpen ?? true,
+          })
+        }
+      } catch (error) {
+        console.error('Failed to load restaurant info:', error)
+      }
+    }
+
+    loadRestaurantInfo()
+  }, [])
 
   return (
     <div className="min-h-screen bg-background">

@@ -91,7 +91,7 @@ async function createReservation(req, res) {
     const count = await Reservation.countDocuments();
     const baseId = `RES${count + 1}`;
     let publicId = baseId;
-  if (!data.payment) {
+    if (!data.payment) {
       // admin-created reservation: run the existing auth middleware inline and stop if it already responded
       let authed = false;
       await new Promise((resolve) => {
@@ -134,10 +134,12 @@ async function createReservation(req, res) {
 
       await created.save();
       return res.status(201).json(created);
-      }
+    }
+
+    // Payment path - validate subtotal
     if (subtotal != data.payment?.subtotal) {
-        res.status(400).json({ error: 'Subtotal mismatch' });
-      }
+      return res.status(400).json({ error: 'Subtotal mismatch' });
+    }
       // apply extras coming from client, but validate numeric
       const tax = data.payment?.tax && Number.isFinite(Number(data.payment.tax)) ? Number(data.payment.tax) : 0;
       const discount = data.payment?.discount && Number.isFinite(Number(data.payment.discount)) ? Number(data.payment.discount) : 0;
@@ -175,7 +177,7 @@ async function createReservation(req, res) {
         occasion: data.occasion,
         sessionMinutes: sessionMinutes,
         notes: data.notes,
-        status: data.payment.paymentStatus,
+        status: data.payment.paymentStatus === 'paid' ? 'paid' : 'pending',
         sessionId: data.sessionId || undefined,
       });
 

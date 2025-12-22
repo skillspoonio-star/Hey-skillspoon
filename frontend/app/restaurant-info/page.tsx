@@ -26,53 +26,75 @@ import { useRouter } from "next/navigation"
 export default function RestaurantInfoPage() {
   const router = useRouter()
   const [isFavorite, setIsFavorite] = useState(false)
-
-  // const [reviews, setReviews] = useState([])
-  const [rating, setRating] = useState(0)
-  const [totalReviews, setTotalReviews] = useState(0)
-
-  const restaurantData = {
-    name: "Spice Garden Restaurant",
-    rating,
-    reviews: totalReviews,
-
-    priceRange: "₹₹",
-    cuisine: ["Indian", "North Indian", "Biryani", "Vegetarian"],
-    description:
-      "Experience authentic Indian flavors in a warm, welcoming atmosphere. Our chefs use traditional recipes passed down through generations, combined with the finest ingredients to create memorable dining experiences.",
-    address: "123 Food Street, Sector 18, Noida, Uttar Pradesh 201301",
-    phone: "+91 98765 43210",
-    email: "info@spicegarden.com",
-    website: "www.spicegarden.com",
-    hours: {
-      monday: "11:00 AM - 11:00 PM",
-      tuesday: "11:00 AM - 11:00 PM",
-      wednesday: "11:00 AM - 11:00 PM",
-      thursday: "11:00 AM - 11:00 PM",
-      friday: "11:00 AM - 12:00 AM",
-      saturday: "11:00 AM - 12:00 AM",
-      sunday: "11:00 AM - 11:00 PM",
-    },
+  const [restaurantData, setRestaurantData] = useState({
+    name: "",
+    rating: 0,
+    reviews: 0,
+    priceRange: "",
+    cuisine: [],
+    description: "",
+    address: "",
+    phone: "",
+    email: "",
+    website: "",
+    hours: {},
     amenities: [
       { icon: <Wifi className="w-4 h-4" />, name: "Free WiFi" },
       { icon: <Car className="w-4 h-4" />, name: "Parking Available" },
       { icon: <CreditCard className="w-4 h-4" />, name: "Card Payments" },
       { icon: <Users className="w-4 h-4" />, name: "Family Friendly" },
     ],
-    photos: [
-      "/modern-restaurant-interior.png",
-      "/indian-food-platter.jpg",
-      "/restaurant-dining-area.png",
-      "/chef-cooking.png",
-    ],
-    specialties: [
-      "Authentic Biryani",
-      "Tandoor Specialties",
-      "Fresh Naan Bread",
-      "Traditional Curries",
-      "Vegetarian Options",
-      "Dessert Selection",
-    ],
+    photos: [],
+    specialties: [],
+    interiorImage: "",
+  })
+
+  // Load restaurant data from API
+  useEffect(() => {
+    const loadRestaurantData = async () => {
+      try {
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+        const response = await fetch(`${base}/api/restaurant/info`)
+
+        if (response.ok) {
+          const data = await response.json()
+          setRestaurantData(prev => ({
+            ...prev,
+            name: data.name || "Restaurant",
+            rating: data.rating || 0,
+            reviews: data.totalReviews || 0,
+            priceRange: data.priceRange || "₹₹",
+            cuisine: data.cuisine || [],
+            description: data.description || "",
+            address: data.address || "",
+            phone: data.phone || "",
+            email: data.email || "",
+            website: data.website || "",
+            hours: formatHours(data.openingHours || {}),
+            photos: data.images || [],
+            specialties: data.features || [],
+            interiorImage: data.interiorImage || "",
+          }))
+        }
+      } catch (error) {
+        console.error('Failed to load restaurant data:', error)
+      }
+    }
+
+    loadRestaurantData()
+  }, [])
+
+  // Helper function to format opening hours
+  const formatHours = (hours: any) => {
+    const formatted: any = {}
+    Object.entries(hours).forEach(([day, dayHours]: [string, any]) => {
+      if (dayHours && !dayHours.closed) {
+        formatted[day] = `${dayHours.open} - ${dayHours.close}`
+      } else {
+        formatted[day] = "Closed"
+      }
+    })
+    return formatted
   }
 
   const getCurrentStatus = () => {
@@ -102,11 +124,17 @@ export default function RestaurantInfoPage() {
 
         if (data.length > 0) {
           const avg = data.reduce((sum: number, r: any) => sum + r.rating, 0) / data.length
-          setRating(parseFloat(avg.toFixed(1)))
-          setTotalReviews(data.length)
+          setRestaurantData(prev => ({
+            ...prev,
+            rating: parseFloat(avg.toFixed(1)),
+            reviews: data.length
+          }))
         } else {
-          setRating(0)
-          setTotalReviews(0)
+          setRestaurantData(prev => ({
+            ...prev,
+            rating: 0,
+            reviews: 0
+          }))
         }
       } catch (err) {
         console.error("Error fetching reviews:", err)
@@ -152,7 +180,11 @@ export default function RestaurantInfoPage() {
 
       <main className="max-w-6xl mx-auto">
         <div className="relative h-64 md:h-80 lg:h-96 bg-muted overflow-hidden">
-          <img src="/indian-restaurant-interior.png" alt="Restaurant Interior" className="w-full h-full object-cover" />
+          <img
+            src={restaurantData.interiorImage || "/indian-restaurant-interior.png"}
+            alt="Restaurant Interior"
+            className="w-full h-full object-cover"
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/20 to-transparent" />
           <div className="absolute bottom-4 md:bottom-6 left-4 md:left-6 right-4 md:right-6">
             <div className="flex items-center gap-2 mb-2">
@@ -350,7 +382,7 @@ export default function RestaurantInfoPage() {
                         className="flex justify-between items-center p-3 rounded-lg hover:bg-muted/30 transition-colors"
                       >
                         <span className="font-medium capitalize text-sm md:text-base">{day}</span>
-                        <span className="text-sm md:text-base text-muted-foreground">{hours}</span>
+                        <span className="text-sm md:text-base text-muted-foreground">{String(hours)}</span>
                       </div>
                     ))}
                   </div>

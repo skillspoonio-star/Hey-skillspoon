@@ -24,7 +24,7 @@ const ReservationSchema = new mongoose.Schema({
   tableNumber: { type: Number },
   // public reservation identifier like RES1, RES2 ... (stored in `id`)
   id: { type: String, unique: true, index: true },
-  status: { type: String, enum: ['pending','confirmed','seated','completed','cancelled','no-show'], default: 'pending' },
+  status: { type: String, enum: ['pending','confirmed','seated','completed','cancelled','no-show','paid'], default: 'pending' },
   specialRequests: { type: String, default: null },
   occasion: { type: String },
   // payment details for the reservation - default to null when not provided

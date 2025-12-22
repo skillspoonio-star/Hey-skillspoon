@@ -18,6 +18,7 @@ import { Plus, Minus, Trash2, IndianRupee, CheckCircle, AlertTriangle, QrCode, R
 import { realTimeSync } from "@/lib/real-time-sync"
 import { fetchMenuItems } from "@/lib/menu-data"
 import { sessionManager, type TableSession } from "@/lib/session-manager"
+import { useToast } from "@/components/providers/toast-provider"
 
 type Line = {
   id?: number
@@ -40,6 +41,7 @@ export function OrderSummary({
   tableNumber: number
   serverAddOrder?: (items: { itemId: number; quantity: number; price: number }[]) => Promise<{ orderId: any; session: any } | null>
 }) {
+  const { success, error, info } = useToast()
   const [paymentCompleted, setPaymentCompleted] = useState(false)
   const [showThankYou, setShowThankYou] = useState(false)
   const [showBillView, setShowBillView] = useState(false)
@@ -284,7 +286,7 @@ export function OrderSummary({
         window.location.reload();
 
       } catch (e) {
-        alert("Payment request created! Please return to the home page manually.")
+        info("Payment request created! Please return to the home page manually.", "Payment Request")
       }
     } catch (err) {
       console.error("Error creating payment request:", err)
@@ -458,7 +460,7 @@ export function OrderSummary({
             <CardTitle>Previous Orders</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-              {renderPreviousOrders.map((order, idx) => (
+            {renderPreviousOrders.map((order, idx) => (
               <div key={order.id} className="border rounded-lg p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Order #{idx + 1}</span>
