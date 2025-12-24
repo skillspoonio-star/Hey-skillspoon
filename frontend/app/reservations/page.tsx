@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -16,10 +16,16 @@ import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { FullPageLoader } from "@/components/ui/loader"
+import { useToast } from "@/components/providers/toast-provider"
 
 export default function ReservationsPage() {
+  const { success, error, info } = useToast()
   const [date, setDate] = useState<Date>()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [restaurantInfo, setRestaurantInfo] = useState({
+    phone: "",
+    email: "",
+  })
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -28,6 +34,28 @@ export default function ReservationsPage() {
     time: "",
     specialRequests: "",
   })
+
+  // Load restaurant contact info
+  useEffect(() => {
+    const loadRestaurantInfo = async () => {
+      try {
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+        const response = await fetch(`${base}/api/restaurant/info`)
+
+        if (response.ok) {
+          const data = await response.json()
+          setRestaurantInfo({
+            phone: data.phone || "",
+            email: data.email || "",
+          })
+        }
+      } catch (error) {
+        console.error('Failed to load restaurant info:', error)
+      }
+    }
+
+    loadRestaurantInfo()
+  }, [])
 
   const timeSlots = [
     "11:00 AM",
@@ -51,12 +79,12 @@ export default function ReservationsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-    
+
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 2000))
-    
+
     setIsSubmitting(false)
-    alert("Reservation request submitted! We will confirm shortly.")
+    success("Reservation request submitted! We will confirm shortly.", "Request Submitted")
   }
 
   const handleInputChange = (field: string, value: string) => {
@@ -128,7 +156,7 @@ export default function ReservationsPage() {
                         type="tel"
                         value={formData.phone}
                         onChange={(e) => handleInputChange("phone", e.target.value)}
-                        placeholder="+91 98765 43210"
+                        placeholder="Enter phone number"
                         required
                       />
                     </div>
@@ -246,11 +274,11 @@ export default function ReservationsPage() {
               <CardContent className="space-y-3">
                 <div className="flex items-center gap-3">
                   <Phone className="h-4 w-4 text-orange-600" />
-                  <span>+91 98765 43210</span>
+                  <span>{restaurantInfo.phone || "Phone not available"}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Mail className="h-4 w-4 text-orange-600" />
-                  <span>reservations@restaurant.com</span>
+                  <span>{restaurantInfo.email || "Email not available"}</span>
                 </div>
               </CardContent>
             </Card>

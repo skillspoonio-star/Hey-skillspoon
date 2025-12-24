@@ -83,6 +83,12 @@ export const openRazorpayPayment = async ({
           reject(err);
         }
       },
+      modal: {
+        ondismiss: () => {
+          // User cancelled the payment by closing the modal
+          reject(new Error("Payment cancelled by user"));
+        }
+      }
     };
 
     // Create Razorpay instance safely

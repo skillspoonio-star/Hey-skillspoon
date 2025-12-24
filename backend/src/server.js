@@ -20,7 +20,10 @@ const menuItemsRouter = require('./routes/menuItems');
   const restaurantRouter = require('./routes/restaurant');function createApp() {
   const app = express();
   app.use(cors());
-  app.use(bodyParser.json());
+  
+  // Increase body parser limits for image uploads
+  app.use(bodyParser.json({ limit: '50mb' }));
+  app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 
   // Mount admin auth routes from routes/auth.js

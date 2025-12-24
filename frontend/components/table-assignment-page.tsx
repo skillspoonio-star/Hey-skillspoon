@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { TableAssignmentModal } from "./table-assignment-modal"
 import { QRGenerator } from "./qr-generator"
 import { Users, Clock, QrCode, ExternalLink, CheckCircle2, UserCheck, CalendarClock, Trash2, Percent } from "lucide-react"
+import { useToast } from "@/components/providers/toast-provider"
 
 
 interface Table {
@@ -30,6 +31,7 @@ const SESSION_TIME_FORMAT = {
 }
 
 export function TableAssignmentPage() {
+  const { success, error: showError, warning } = useToast()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [showQRCode, setShowQRCode] = useState<number | null>(null)
   const [selectedTableForModal, setSelectedTableForModal] = useState<Table | null>(null)
@@ -131,7 +133,7 @@ export function TableAssignmentPage() {
     } catch (err: any) {
       console.error('Failed to assign table:', err)
       const errorMessage = err?.message || 'Unknown error occurred'
-      alert(`Failed to assign table: ${errorMessage}`)
+      showError(`Failed to assign table: ${errorMessage}`, 'Assignment Failed')
     }
   }
 
@@ -184,7 +186,7 @@ export function TableAssignmentPage() {
     } catch (err: any) {
       console.error('Failed to end session:', err)
       const errorMessage = err?.message || 'Unknown error occurred'
-      alert(`Failed to end session: ${errorMessage}`)
+      showError(`Failed to end session: ${errorMessage}`, 'Session End Failed')
     }
   }
 

@@ -1,39 +1,22 @@
 const Restaurant = require('../models/restaurant');
+const mongoose = require('mongoose');
 
 // Get restaurant information
 async function getRestaurantInfo(req, res) {
   try {
+    // Check if mongoose is connected
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ error: 'Database connection not available' });
+    }
+
     let restaurant = await Restaurant.findOne();
     
     if (!restaurant) {
-      // Create default restaurant info if none exists
-      restaurant = new Restaurant({
-        name: "Spice Garden Restaurant",
-        description: "Experience authentic Indian flavors in a warm, welcoming atmosphere. Our chefs use traditional recipes passed down through generations, combined with the finest ingredients to create memorable dining experiences.",
-        address: "123 Food Street, Sector 18, Noida, UP 201301",
-        phone: "+91 98765 43210",
-        email: "info@spicegarden.com",
-        website: "www.spicegarden.com",
-        openingHours: {
-          monday: { open: "11:00", close: "23:00", closed: false },
-          tuesday: { open: "11:00", close: "23:00", closed: false },
-          wednesday: { open: "11:00", close: "23:00", closed: false },
-          thursday: { open: "11:00", close: "23:00", closed: false },
-          friday: { open: "11:00", close: "23:00", closed: false },
-          saturday: { open: "11:00", close: "23:00", closed: false },
-          sunday: { open: "11:00", close: "23:00", closed: false }
-        },
-        cuisine: ["Indian", "North Indian", "Biryani", "Vegetarian"],
-        priceRange: "$$",
-        rating: 4.5,
-        totalReviews: 1250,
-        images: [],
-        logo: "",
-        interiorImage: "",
-        isOpen: true,
-        features: ["Dine-in", "Takeaway", "Home Delivery", "Voice Ordering", "Online Payment"]
+      // Return empty restaurant info instead of creating default
+      return res.status(404).json({ 
+        error: 'Restaurant information not found',
+        message: 'Please configure restaurant information in settings'
       });
-      await restaurant.save();
     }
     
     res.json(restaurant);
@@ -46,6 +29,11 @@ async function getRestaurantInfo(req, res) {
 // Update restaurant information
 async function updateRestaurantInfo(req, res) {
   try {
+    // Check if mongoose is connected
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ error: 'Database connection not available' });
+    }
+
     const updateData = req.body;
     
     let restaurant = await Restaurant.findOne();

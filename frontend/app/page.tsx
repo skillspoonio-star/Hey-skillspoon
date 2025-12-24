@@ -41,8 +41,8 @@ import { useToast, ToastContainer } from "@/components/ui/toast"
 export default function HomePage() {
   const router = useRouter()
   const { success, error, info } = useToast()
-  const [selectedService, setSelectedService] = useState<string>("")
   const [isLoading, setIsLoading] = useState(true)
+  const [showDineInDialog, setShowDineInDialog] = useState(false)
 
   const [chatOpen, setChatOpen] = useState(false)
   const [chatMessage, setChatMessage] = useState("")
@@ -57,14 +57,53 @@ export default function HomePage() {
   })
 
   const [restaurantInfo, setRestaurantInfo] = useState({
-    name: "Spice Garden Restaurant",
-    rating: 4.5,
-    reviews: 1250,
-    address: "123 Food Street, Sector 18, Noida",
-    phone: "+91 98765 43210",
+    name: "",
+    rating: 0,
+    reviews: 0,
+    address: "",
+    phone: "",
     isOpen: true,
-    openHours: "11:00 AM - 11:00 PM",
+    openHours: "",
+    interiorImage: "",
   })
+
+  // Load restaurant info from API
+  useEffect(() => {
+    const loadRestaurantInfo = async () => {
+      try {
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+        const response = await fetch(`${base}/api/restaurant/info`)
+
+        if (response.ok) {
+          const data = await response.json()
+          setRestaurantInfo({
+            name: data.name || "Restaurant",
+            rating: data.rating || 0,
+            reviews: data.totalReviews || 0,
+            address: data.address || "",
+            phone: data.phone || "",
+            isOpen: data.isOpen ?? true,
+            openHours: data.openingHours ? formatOpeningHours(data.openingHours) : "",
+            interiorImage: data.interiorImage || "",
+          })
+        }
+      } catch (error) {
+        console.error('Failed to load restaurant info:', error)
+      }
+    }
+
+    loadRestaurantInfo()
+  }, [])
+
+  // Helper function to format opening hours
+  const formatOpeningHours = (hours: any) => {
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+    const todayHours = hours[today]
+    if (todayHours && !todayHours.closed) {
+      return `${todayHours.open} - ${todayHours.close}`
+    }
+    return "Closed"
+  }
 
 
 
@@ -119,6 +158,7 @@ export default function HomePage() {
             phone: data.phone,
             isOpen: data.isOpen,
             openHours: "11:00 AM - 11:00 PM", // You can format this from openingHours data
+            interiorImage: data.interiorImage || "",
           })
         }
       } catch (error) {
@@ -160,8 +200,8 @@ export default function HomePage() {
           break
         case 'escape':
           setChatOpen(false)
-          setSelectedService("")
           setShowKeyboardHelp(false)
+          setShowDineInDialog(false)
           break
         case '?':
           if (e.shiftKey) {
@@ -239,7 +279,9 @@ export default function HomePage() {
       color: "bg-primary/10 dark:bg-primary/20 text-primary border-primary/20 dark:border-primary/30",
       iconBg: "bg-white/20 dark:bg-white/10",
       buttonBg: "bg-white/50 hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/20",
-      action: () => setSelectedService("dine-in"),
+      action: () => {
+        setShowDineInDialog(true)
+      },
     },
     {
       id: "takeaway",
@@ -313,7 +355,7 @@ export default function HomePage() {
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
               </div>
               <div>
-                <h1 className="font-sans font-bold text-xl md:text-2xl text-foreground">Spice Garden Restaurant</h1>
+                <h1 className="font-sans font-bold text-xl md:text-2xl text-foreground">{restaurantInfo.name || "Restaurant"}</h1>
                 <p className="text-xs md:text-sm text-muted-foreground">Voice Dining Experience</p>
               </div>
             </div>
@@ -323,12 +365,11 @@ export default function HomePage() {
                 className="shadow-sm text-xs md:text-sm px-2 py-0.5 animate-pulse"
               >
                 {restaurantInfo.isOpen ? "Open Now" : "Closed"}
-                {/* hh */}
               </Badge>
             </div>
           </div>
 
-          {/* Live Stats Bar */}
+          {/* Live Stats Bar
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
             <div className="bg-background/50 rounded-lg p-2 backdrop-blur-sm">
               <div className="text-lg font-bold text-primary">{liveStats.activeOrders}</div>
@@ -346,7 +387,7 @@ export default function HomePage() {
               <div className="text-lg font-bold text-purple-600">{restaurantInfo.rating}★</div>
               <div className="text-xs text-muted-foreground">Rating</div>
             </div>
-          </div>
+          </div> */}
         </div>
       </header>
 
@@ -354,7 +395,7 @@ export default function HomePage() {
         <div className="text-center mb-8 md:mb-12 relative">
           <div className="absolute inset-0 -z-10 rounded-2xl overflow-hidden mb-8">
             <img
-              src="/indian-restaurant-interior.png"
+              src={restaurantInfo.interiorImage || "/indian-restaurant-interior.png"}
               alt="Restaurant Interior"
               className="w-full h-80 md:h-96 lg:h-[28rem] object-cover opacity-10"
             />
@@ -401,10 +442,10 @@ export default function HomePage() {
 
 
 
-        {/* Chef's Recommendations */}
+        {/* Today's Special */}
         <div className="mb-8 md:mb-12">
           <div className="text-center mb-6">
-            <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Chef's Recommendations</h3>
+            <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Today's Special</h3>
             <p className="text-muted-foreground">Handpicked specialties by our master chef</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -514,38 +555,6 @@ export default function HomePage() {
                 </Card>
               ))}
             </div>
-
-            {/* Dine-In Table Selection */}
-            {selectedService === "dine-in" && (
-              <Card className="border-primary/20 bg-primary/5">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-                    <Utensils className="w-5 h-5 md:w-6 md:h-6" />
-                    Select Your Table
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-4 mb-4">
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map((tableNum) => (
-                      <Button
-                        key={tableNum}
-                        variant="outline"
-                        className="h-16 md:h-20 flex flex-col items-center justify-center bg-background hover:bg-primary/10"
-                        onClick={() => router.push(`/table/${tableNum}`)}
-                      >
-                        <span className="font-bold text-sm md:text-base text-foreground">Table {tableNum}</span>
-                        <span className="text-xs text-muted-foreground">Available</span>
-                      </Button>
-                    ))}
-                  </div>
-                  <div className="text-center">
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedService("")}>
-                      Back to Services
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
               <Card className="text-center hover:shadow-md transition-shadow relative overflow-hidden">
@@ -689,105 +698,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="mt-12 md:mt-16 space-y-10 md:space-y-12">
-          <section aria-labelledby="specials-title">
-            <h3 id="specials-title" className="text-xl md:text-2xl font-bold text-foreground mb-6 md:mb-8 text-center">
-              Today&apos;s Specials
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-0">
-                  <img
-                    src="/butter-chicken-platter.jpg"
-                    alt="Butter Chicken platter"
-                    className="w-full h-48 md:h-56 object-cover rounded-t-lg"
-                  />
-                  <div className="p-4 md:p-6">
-                    <h4 className="font-semibold text-base md:text-lg mb-2">Butter Chicken</h4>
-                    <p className="text-xs md:text-sm text-muted-foreground">
-                      Creamy tomato gravy with tender chicken, served with naan.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-0">
-                  <img
-                    src="/veg-biryani-in-handi.jpg"
-                    alt="Veg Biryani in handi"
-                    className="w-full h-48 md:h-56 object-cover rounded-t-lg"
-                  />
-                  <div className="p-4 md:p-6">
-                    <h4 className="font-semibold text-base md:text-lg mb-2">Veg Biryani</h4>
-                    <p className="text-xs md:text-sm text-muted-foreground">
-                      Fragrant basmati rice with seasonal veggies and spices.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-0">
-                  <img
-                    src="/paneer-tikka-grill.jpg"
-                    alt="Paneer Tikka on grill"
-                    className="w-full h-48 md:h-56 object-cover rounded-t-lg"
-                  />
-                  <div className="p-4 md:p-6">
-                    <h4 className="font-semibold text-base md:text-lg mb-2">Paneer Tikka</h4>
-                    <p className="text-xs md:text-sm text-muted-foreground">
-                      Char-grilled paneer with peppers and tangy marinade.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </section>
 
-          {/* Dining Information */}
-          <section aria-labelledby="info-title">
-            <h3 id="info-title" className="text-xl md:text-2xl font-bold text-foreground mb-6 md:mb-8 text-center">
-              Dining Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="text-base md:text-lg">Operating Hours</CardTitle>
-                </CardHeader>
-                <CardContent className="text-xs md:text-sm text-muted-foreground">
-                  <p>Monday–Sunday</p>
-                  <p className="mt-1">11:00 AM – 11:00 PM</p>
-                  <p className="mt-2 text-foreground">Last order by 10:30 PM</p>
-                </CardContent>
-              </Card>
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="text-base md:text-lg">Facilities</CardTitle>
-                </CardHeader>
-                <CardContent className="text-xs md:text-sm text-muted-foreground">
-                  <ul className="list-disc ml-5 space-y-1">
-                    <li>Air-conditioned seating</li>
-                    <li>Family-friendly tables</li>
-                    <li>Contactless payments</li>
-                    <li>Wheelchair accessible</li>
-                  </ul>
-                </CardContent>
-              </Card>
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="text-base md:text-lg">Payments Accepted</CardTitle>
-                </CardHeader>
-                <CardContent className="text-xs md:text-sm text-muted-foreground">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="outline">UPI</Badge>
-                    <Badge variant="outline">Credit/Debit</Badge>
-                    <Badge variant="outline">Net Banking</Badge>
-                    <Badge variant="outline">Wallets</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </section>
-        </div>
 
         {/* Social Media & Newsletter */}
         <div className="mt-16 md:mt-20 mb-8">
@@ -1024,6 +935,70 @@ export default function HomePage() {
 
       {/* Toast Container */}
       <ToastContainer />
+
+      {/* Dine-In Not Available Dialog */}
+      <Dialog open={showDineInDialog} onOpenChange={setShowDineInDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Utensils className="w-5 h-5 text-primary" />
+              Dine-In Service
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-4 rounded-lg">
+              <p className="text-sm text-amber-800 dark:text-amber-200 mb-2">
+                <strong>Currently Not Available</strong>
+              </p>
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                Our dine-in table service is temporarily unavailable. Please try our other convenient options:
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Button
+                className="w-full justify-start"
+                variant="outline"
+                onClick={() => {
+                  setShowDineInDialog(false)
+                  router.push("/takeaway")
+                }}
+              >
+                <ShoppingBag className="w-4 h-4 mr-2" />
+                Self-Order Takeaway
+              </Button>
+              <Button
+                className="w-full justify-start"
+                variant="outline"
+                onClick={() => {
+                  setShowDineInDialog(false)
+                  router.push("/delivery")
+                }}
+              >
+                <Truck className="w-4 h-4 mr-2" />
+                Online Home Delivery
+              </Button>
+              <Button
+                className="w-full justify-start"
+                variant="outline"
+                onClick={() => {
+                  setShowDineInDialog(false)
+                  router.push("/restaurant-info/reservations")
+                }}
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Reserve a Table
+              </Button>
+            </div>
+
+            <div className="pt-3 border-t">
+              <p className="text-xs text-muted-foreground text-center">
+                We apologize for any inconvenience. Thank you for your understanding!
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

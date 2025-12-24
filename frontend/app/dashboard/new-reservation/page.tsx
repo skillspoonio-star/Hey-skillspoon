@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { CalendarIcon, Users } from "lucide-react"
 import { format } from "date-fns"
+import { useToast } from "@/components/providers/toast-provider"
 
 type Table = { id: number; capacity: number; reservationPrice?: number }
 
@@ -14,6 +15,7 @@ const TIME_OPTIONS = [
 ]
 
 export default function AdminNewReservationPage() {
+  const { success, error, warning } = useToast()
   // Compute tomorrow's date in YYYY-MM-DD so today is not selectable
   const tomorrow = useMemo(() => {
     const d = new Date()
@@ -27,7 +29,7 @@ export default function AdminNewReservationPage() {
     const input = dateRef.current
     if (!input) return
     if (typeof (input as any).showPicker === 'function') {
-      ;(input as any).showPicker()
+      ; (input as any).showPicker()
     } else {
       input.focus()
     }
@@ -96,7 +98,7 @@ export default function AdminNewReservationPage() {
   }
 
   const submitReservation = async () => {
-    if (!date || !time || !selectedTables.length) return alert('Choose date/time and table(s)')
+    if (!date || !time || !selectedTables.length) return warning('Choose date/time and table(s)', 'Missing Information')
     const payload = {
       customerName,
       phone,
@@ -118,7 +120,7 @@ export default function AdminNewReservationPage() {
         body: JSON.stringify(payload),
       })
       if (res.ok) {
-        alert('Reservation created successfully')
+        success('Reservation created successfully', 'Reservation Created')
         // reset form
         setSelectedTables([])
         setCustomerName('')
@@ -126,14 +128,14 @@ export default function AdminNewReservationPage() {
         setEmail('')
       } else if (res.status === 409) {
         const d = await res.json().catch(() => ({}))
-        alert(d.message || 'Some selected tables are no longer available')
+        error(d.message || 'Some selected tables are no longer available', 'Booking Conflict')
       } else {
         const d = await res.json().catch(() => ({}))
-        alert(d.message || `Failed to create reservation (status ${res.status})`)
+        error(d.message || `Failed to create reservation (status ${res.status})`, 'Reservation Failed')
       }
     } catch (err: any) {
       console.error(err)
-      alert(err?.message || 'Network error')
+      error(err?.message || 'Network error', 'Connection Error')
     }
   }
 

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Receipt, Phone, Send, QrCode, Banknote, CheckCircle, Loader2, IndianRupee } from "lucide-react"
 import { smsService } from "@/lib/sms-service"
 import type { TableSession } from "@/hooks/use-session-manager"
+import { useToast } from "@/components/providers/toast-provider"
 
 interface BillAndPaymentProps {
   session: TableSession
@@ -15,6 +16,7 @@ interface BillAndPaymentProps {
 }
 
 export function BillAndPayment({ session, onPhoneSubmit, onPaymentComplete }: BillAndPaymentProps) {
+  const { success, error, warning } = useToast()
   const [phoneNumber, setPhoneNumber] = useState("")
   const [billSent, setBillSent] = useState(false)
   const [sendingBill, setSendingBill] = useState(false)
@@ -28,7 +30,7 @@ export function BillAndPayment({ session, onPhoneSubmit, onPaymentComplete }: Bi
 
   const handleSendBill = async () => {
     if (phoneNumber.length !== 10) {
-      alert("Please enter a valid 10-digit phone number")
+      warning("Please enter a valid 10-digit phone number", "Invalid Phone Number")
       return
     }
 
@@ -46,14 +48,15 @@ export function BillAndPayment({ session, onPhoneSubmit, onPaymentComplete }: Bi
       phoneNumber: `+91${phoneNumber}`,
     }
 
-    const success = await smsService.sendBill(billData)
+    const billSuccess = await smsService.sendBill(billData)
 
     setSendingBill(false)
-    if (success) {
+    if (billSuccess) {
       setBillSent(true)
       setShowPaymentOptions(true)
+      success("Bill sent successfully to customer's phone", "Bill Sent")
     } else {
-      alert("Failed to send bill. Please try again.")
+      error("Failed to send bill. Please try again.", "Send Failed")
     }
   }
 

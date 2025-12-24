@@ -13,10 +13,12 @@ import { FullPageLoader } from "@/components/ui/loader"
 import { BackButton } from "@/components/ui/back-button"
 import { openRazorpayPayment } from "@/lib/razorpay"
 import { useTheme } from "next-themes"
+import { useToast } from "@/components/providers/toast-provider"
 
 export default function TakeawayCheckoutPage() {
   const router = useRouter()
   const { theme } = useTheme()
+  const { success, error, warning } = useToast()
   const [customerInfo, setCustomerInfo] = useState({
     name: "",
     phone: "",
@@ -114,7 +116,7 @@ export default function TakeawayCheckoutPage() {
 
       // Basic validations
       if (!customerInfo.name || !customerInfo.phone) {
-        alert("Please fill in all required fields")
+        warning("Please fill in all required fields (Name and Phone)", "Missing Information")
         return
       }
 
@@ -148,17 +150,19 @@ export default function TakeawayCheckoutPage() {
 
           // Create takeaway order with payment details
           const orderId = await createTakeawayOrder(paymentId, signature)
+          success("Payment successful! Your order has been placed.", "Order Confirmed")
 
           localStorage.removeItem('takeaway_cart')
           router.push("/takeaway/confirmation?orderId=" + orderId)
         } catch (paymentError: any) {
           // Check if user cancelled payment
-          if (paymentError?.message?.includes('closed')) {
-            throw new Error('Payment cancelled. Please try again.')
+          if (paymentError?.message?.includes('cancelled by user') || paymentError?.message?.includes('closed')) {
+            error('Payment failed. Please try again or choose Cash on Pickup.', 'Payment Failed')
           } else {
-            throw new Error(
+            error(
               'Payment failed: ' +
-              (paymentError?.message || 'Please try again or choose a different payment method.')
+              (paymentError?.message || 'Please try again or choose a different payment method.'),
+              'Payment Error'
             )
           }
         }
@@ -166,19 +170,21 @@ export default function TakeawayCheckoutPage() {
         // For COD, directly create takeaway order
         try {
           const orderId = await createTakeawayOrder()
+          success("Order placed successfully! You can pay when you pick up.", "Order Confirmed")
 
           localStorage.removeItem('takeaway_cart')
           router.push("/takeaway/confirmation?orderId=" + orderId)
         } catch (codError: any) {
-          throw new Error(
+          error(
             'Failed to create COD order: ' +
-            (codError?.message || 'Please try again.')
+            (codError?.message || 'Please try again.'),
+            'Order Error'
           )
         }
       }
     } catch (err: any) {
       console.error('Error placing order:', err)
-      alert(err?.message || 'Error placing order. Please try again.')
+      error(err?.message || 'Error placing order. Please try again.', 'Order Error')
     } finally {
       setIsProcessing(false)
     }
@@ -350,14 +356,14 @@ export default function TakeawayCheckoutPage() {
                 onClick={async () => {
                   // Check if cart is empty
                   if (!cartItems || cartItems.length === 0) {
-                    alert("Your cart is empty. Please add items before checkout.")
+                    warning("Your cart is empty. Please add items before checkout.", "Empty Cart")
                     router.push("/takeaway/menu")
                     return
                   }
 
                   // Basic validations
                   if (!customerInfo.name || !customerInfo.phone) {
-                    alert("Please complete customer information before proceeding.")
+                    warning("Please complete customer information before proceeding.", "Missing Information")
                     return
                   }
 

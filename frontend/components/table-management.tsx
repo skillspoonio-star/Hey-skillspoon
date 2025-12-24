@@ -29,6 +29,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Order } from "@/hooks/use-order-manager"
+import { useToast } from "@/components/providers/toast-provider"
 
 interface TableManagementProps {
   orders: Order[]
@@ -72,6 +73,7 @@ interface Reservation {
 }
 
 export function TableManagement({ orders }: TableManagementProps) {
+  const { success, error, warning, info } = useToast()
   const [currentTime, setCurrentTime] = useState(new Date())
   const [selectedTable, setSelectedTable] = useState<Table | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -203,21 +205,21 @@ export function TableManagement({ orders }: TableManagementProps) {
         if (table.number === tableNumber) {
           // Check if another activity is already active
           const hasActiveActivity = table.isCleaning || table.isMaintenance || table.isSetup
-          const isCurrentActivity = 
+          const isCurrentActivity =
             (taskType === 'cleaning' && table.isCleaning) ||
             (taskType === 'maintenance' && table.isMaintenance) ||
             (taskType === 'setup' && table.isSetup)
-          
+
           // If trying to start a new activity while another is active
           if (hasActiveActivity && !isCurrentActivity) {
             let activeActivity = ''
-                      
-            alert(`Table is under ${activeActivity} right now`)
+
+            warning(`Table is under ${activeActivity} right now`, 'Table Unavailable')
             return table
           }
-          
+
           const updates: Partial<Table> = {}
-          
+
           if (taskType === 'cleaning') {
             const newCleaningState = !table.isCleaning
             updates.isCleaning = newCleaningState
@@ -237,17 +239,17 @@ export function TableManagement({ orders }: TableManagementProps) {
             updates.isMaintenance = false
             updates.status = newSetupState ? 'setup' : 'available'
           }
-          
+
           const updatedTable = { ...table, ...updates }
-          
+
           // Update selectedTable if it's the same table
           if (selectedTable && selectedTable.number === tableNumber) {
             setSelectedTable(updatedTable)
           }
-          
+
           // Update backend
           updateTableInBackend(tableNumber, updates, taskType)
-          
+
           return updatedTable
         }
         return table
@@ -268,12 +270,12 @@ export function TableManagement({ orders }: TableManagementProps) {
           isSetup: updates.isSetup
         })
       })
-      
+
       if (!res.ok) {
         const txt = await res.text()
         throw new Error(`Status ${res.status} ${txt}`)
       }
-      
+
       // If starting a new activity, create activity record
       if (updates.status && updates.status !== 'available') {
         const activityData = {
@@ -283,18 +285,18 @@ export function TableManagement({ orders }: TableManagementProps) {
           notes: `Table ${taskType} started`,
           startTime: new Date().toISOString()
         }
-        
+
         const activityRes = await fetch(`${API_BASE}/api/tables/${tableNumber}/activities`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(activityData)
         })
-        
+
         if (!activityRes.ok) {
           console.error('Failed to create activity:', await activityRes.text())
         }
       }
-      
+
     } catch (err: any) {
       console.error('Failed to update table in backend:', err)
       // Don't show alert to user as frontend state is already updated
@@ -479,7 +481,7 @@ export function TableManagement({ orders }: TableManagementProps) {
           </TabsList>
         </Tabs>
 
-  <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
               <Button className="bg-orange-500 hover:bg-orange-600">
@@ -549,19 +551,19 @@ export function TableManagement({ orders }: TableManagementProps) {
           <div className="grid gap-4">
             {tables.filter(table => table.isCleaning || table.isMaintenance || table.isSetup).map((table) => (
               <Card key={table.number}>
-                  <CardContent className="p-3 md:p-4">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-4 w-full sm:w-auto">
-                        <div className="flex items-center gap-2">
+                <CardContent className="p-3 md:p-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 w-full sm:w-auto">
+                      <div className="flex items-center gap-2">
                         <span className="font-medium text-sm md:text-base">Table {table.number}</span>
                         <Badge variant="outline" className="text-xs">
                           {table.status}
                         </Badge>
                       </div>
-                          </div>
+                    </div>
 
                     <div className="flex items-center gap-4 w-full sm:w-auto">
-                        <div className="flex gap-2">
+                      <div className="flex gap-2">
                         {table.isCleaning && (
                           <Badge variant="default" className="text-xs">
                             <Sparkles className="w-3 h-3 mr-1" />
@@ -579,14 +581,14 @@ export function TableManagement({ orders }: TableManagementProps) {
                             <QrCode className="w-3 h-3 mr-1" />
                             Setup
                           </Badge>
-                          )}
-                        </div>
+                        )}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+
             {tables.filter(table => table.isCleaning || table.isMaintenance || table.isSetup).length === 0 && (
               <div className="text-center text-muted-foreground py-8">
                 No active tasks
@@ -706,12 +708,12 @@ export function TableManagement({ orders }: TableManagementProps) {
                                           headers: { 'Content-Type': 'application/json' },
                                           body: JSON.stringify({ section: value })
                                         })
-                                        
+
                                         if (!res.ok) {
                                           const txt = await res.text()
                                           throw new Error(`Status ${res.status} ${txt}`)
                                         }
-                                        
+
                                         // Update local state
                                         setTables((prev) =>
                                           prev.map((table) =>
@@ -720,12 +722,12 @@ export function TableManagement({ orders }: TableManagementProps) {
                                               : table
                                           )
                                         )
-                                        
+
                                         // Update selected table
                                         setSelectedTable({ ...selectedTable, section: value as Table['section'] })
                                       } catch (err: any) {
                                         console.error('Failed to update table section:', err)
-                                        alert(`Failed to update section: ${err.message}`)
+                                        error(`Failed to update section: ${err.message}`, 'Update Failed')
                                       }
                                     }}
                                   >
@@ -817,8 +819,8 @@ export function TableManagement({ orders }: TableManagementProps) {
                                       <QrCode className="w-4 h-4 mr-2" />
                                       {selectedTable.isSetup ? 'Mark Setup Done' : 'Start Setup'}
                                     </Button>
-                                          </div>
-                                        </div>
+                                  </div>
+                                </div>
 
                                 <div className="space-y-3">
                                   {selectedTable.isCleaning && (
@@ -830,7 +832,7 @@ export function TableManagement({ orders }: TableManagementProps) {
                                       </div>
                                     </div>
                                   )}
-                                  
+
                                   {selectedTable.isMaintenance && (
                                     <div className="p-3 border rounded-lg bg-blue-50 border-blue-200">
                                       <div className="flex items-center gap-2">
@@ -840,7 +842,7 @@ export function TableManagement({ orders }: TableManagementProps) {
                                       </div>
                                     </div>
                                   )}
-                                  
+
                                   {selectedTable.isSetup && (
                                     <div className="p-3 border rounded-lg bg-purple-50 border-purple-200">
                                       <div className="flex items-center gap-2">
@@ -850,7 +852,7 @@ export function TableManagement({ orders }: TableManagementProps) {
                                       </div>
                                     </div>
                                   )}
-                                  
+
                                   {!selectedTable.isCleaning && !selectedTable.isMaintenance && !selectedTable.isSetup && (
                                     <div className="p-3 border rounded-lg bg-gray-50 border-gray-200">
                                       <div className="flex items-center gap-2">
@@ -862,8 +864,8 @@ export function TableManagement({ orders }: TableManagementProps) {
                               </div>
 
                               <div className="flex flex-col sm:flex-row gap-2 pt-4">
-                                <Button 
-                                  variant="destructive" 
+                                <Button
+                                  variant="destructive"
                                   size="sm"
                                   onClick={() => setConfirmDelete({ open: true, table: selectedTable })}
                                 >

@@ -11,8 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Menu, ShoppingCart, Mic, Bell, X } from "lucide-react"
 import { realTimeSync } from "@/lib/real-time-sync"
 import { sessionManager, type TableSession } from "@/lib/session-manager"
+import { useToast } from "@/components/providers/toast-provider"
 
 export default function TablePage() {
+  const { success, error, warning } = useToast()
   const params = useParams()
   const tableId = params.id as string
   const tableNumber = Number.parseInt(tableId)
@@ -215,12 +217,13 @@ export default function TablePage() {
             status: 'active',
             phoneNumber: newSession.mobile || '',
           })
+          success("Session started successfully!", "Welcome")
         } else {
-          alert('Failed to start session. Please try again.')
+          error('Failed to start session. Please try again.', 'Session Error')
         }
-      } catch (error) {
-        console.error('Error starting session:', error)
-        alert('Failed to start session. Please try again.')
+      } catch (sessionError) {
+        console.error('Error starting session:', sessionError)
+        error('Failed to start session. Please try again.', 'Session Error')
       } finally {
         setIsLoading(false)
       }
