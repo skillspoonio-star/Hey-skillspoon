@@ -37,9 +37,9 @@ import {
   Leaf,
   Flame,
   Eye,
-  Copy,
 } from "lucide-react"
 import { InlineLoader } from "@/components/ui/loader"
+import { useToast } from "@/components/providers/toast-provider"
 
 // Configuration constants
 const CURRENCY_SYMBOL = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL ?? '₹'
@@ -104,6 +104,7 @@ const formatCurrency = (amount: number): string => {
 }
 
 export function MenuManagement() {
+  const { success, error, warning } = useToast()
   const [menuItems, setMenuItems] = useState<MenuItem[]>(initialMenuItems)
   const [categories, setCategories] = useState<MenuCategory[]>(DEFAULT_CATEGORIES)
   const [searchQuery, setSearchQuery] = useState("")
@@ -112,7 +113,7 @@ export function MenuManagement() {
   const [editingFormData, setEditingFormData] = useState<MenuItem | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [viewMode, setViewMode] = useState<"grid" | "list" | "analytics">("grid")
-  const [sortBy, setSortBy] = useState<"name" | "price" | "popularity" | "profit">("name")
+  const [sortBy, setSortBy] = useState<"name" | "price">("name")
   const [filterBy, setFilterBy] = useState<"all" | "available" | "unavailable" | "veg" | "non-veg">("all")
   const [isLoading, setIsLoading] = useState(true)
 
@@ -167,10 +168,6 @@ export function MenuManagement() {
       switch (sortBy) {
         case "price":
           return b.price - a.price
-        case "popularity":
-          return (b.popularity || 0) - (a.popularity || 0)
-        case "profit":
-          return (b.profit || 0) - (a.profit || 0)
         default:
           return a.name.localeCompare(b.name)
       }
@@ -218,11 +215,6 @@ export function MenuManagement() {
     setMenuItems((prev) => prev.filter((item) => item.id !== id))
   }
 
-  const duplicateItem = (item: MenuItem) => {
-    const newItem = { ...item, id: Date.now(), name: `${item.name} (Copy)` }
-    setMenuItems((prev) => [...prev, newItem])
-  }
-
   const clearAllItems = async () => {
     const confirmed = window.confirm(
       `Are you sure you want to delete ALL ${menuItems.length} menu items? This action cannot be undone.`
@@ -246,11 +238,10 @@ export function MenuManagement() {
 
       // Clear local state
       setMenuItems([])
-
-      alert('All menu items have been deleted successfully.')
+      success('All menu items have been deleted successfully.', 'Items Cleared')
     } catch (err) {
       console.error('Failed to clear all items:', err)
-      alert('Some items may not have been deleted. Please check the server.')
+      error('Some items may not have been deleted. Please check the server.', 'Clear Failed')
     }
   }
 
@@ -265,12 +256,12 @@ export function MenuManagement() {
         // Handle both array format and object with items property
         importedItems = Array.isArray(data) ? data : (data.items || data.menuItems || [])
       } else {
-        alert('Please upload a JSON file.')
+        warning('Please upload a JSON file.', 'Invalid File Type')
         return
       }
 
       if (!Array.isArray(importedItems) || importedItems.length === 0) {
-        alert('No valid menu items found in the file.')
+        warning('No valid menu items found in the file.', 'Empty File')
         return
       }
 
@@ -326,11 +317,11 @@ export function MenuManagement() {
       if (errors.length > 0) {
         const showErrors = errors.slice(0, 5).join('\n')
         const moreErrors = errors.length > 5 ? `\n... and ${errors.length - 5} more errors` : ''
-        alert(`Found ${errors.length} errors:\n${showErrors}${moreErrors}\n\nValid items will still be imported.`)
+        warning(`Found ${errors.length} errors:\n${showErrors}${moreErrors}\n\nValid items will still be imported.`, 'Import Warnings')
       }
 
       if (validItems.length === 0) {
-        alert('No valid items to import.')
+        error('No valid items to import.', 'Import Failed')
         return
       }
 
@@ -370,11 +361,11 @@ export function MenuManagement() {
         }
       }
 
-      alert(`Import completed!\nSuccessfully imported: ${successCount} items\nFailed: ${failCount} items`)
+      success(`Import completed!\nSuccessfully imported: ${successCount} items\nFailed: ${failCount} items`, 'Import Complete')
 
     } catch (err) {
       console.error('Import failed:', err)
-      alert(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      error(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`, 'Import Error')
     }
   }
 
@@ -450,9 +441,8 @@ export function MenuManagement() {
     const availableItems = menuItems.filter((item) => item.isAvailable).length
     const vegItems = menuItems.filter((item) => item.isVeg).length
     const avgPrice = menuItems.reduce((sum, item) => sum + item.price, 0) / totalItems
-    const totalProfit = menuItems.reduce((sum, item) => sum + (item.profit || 0), 0)
 
-    return { totalItems, availableItems, vegItems, avgPrice, totalProfit }
+    return { totalItems, availableItems, vegItems, avgPrice }
   }
 
   const stats = getMenuStats()
@@ -464,7 +454,7 @@ export function MenuManagement() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 overflow-hidden">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 overflow-hidden">
         <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-all duration-200 overflow-hidden">
           <CardContent className="p-4">
             <div className="flex items-start gap-2">
@@ -522,23 +512,6 @@ export function MenuManagement() {
               </div>
               <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
                 <DollarSign className="w-5 h-5 text-blue-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-all duration-200 overflow-hidden">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-2">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-muted-foreground mb-1">Total Profit</p>
-                <p className="text-2xl font-bold truncate" title={formatCurrency(stats.totalProfit || 0)}>
-                  {formatCurrency(stats.totalProfit || 0)}
-                </p>
-                <p className="text-xs text-muted-foreground">Estimated</p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-                <TrendingUp className="w-5 h-5 text-purple-500" />
               </div>
             </div>
           </CardContent>
@@ -688,8 +661,6 @@ export function MenuManagement() {
                   <SelectContent>
                     <SelectItem value="name">Name</SelectItem>
                     <SelectItem value="price">Price</SelectItem>
-                    <SelectItem value="popularity">Popularity</SelectItem>
-                    <SelectItem value="profit">Profit</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -851,12 +822,6 @@ export function MenuManagement() {
                   </div>
                 )}
 
-                {item.profit && (
-                  <div className="text-xs text-muted-foreground">
-                    Cost: {formatCurrency(item.cost || 0)} • Profit: {formatCurrency(item.profit || 0)} ({Math.round(((item.profit || 0) / item.price) * 100)}%)
-                  </div>
-                )}
-
                 <div className="flex items-center justify-between">
                   <Label htmlFor={`available-${item.id}`} className="text-sm">
                     Available
@@ -886,10 +851,7 @@ export function MenuManagement() {
                     <th className="p-4 font-medium">Item</th>
                     <th className="p-4 font-medium">Category</th>
                     <th className="p-4 font-medium">Price</th>
-                    <th className="p-4 font-medium">Cost</th>
-                    <th className="p-4 font-medium">Profit</th>
-                    <th className="p-4 font-medium">Popularity</th>
-                    <th className="p-4 font-medium">Status</th>
+                    <th className="p-4 font-medium">Availability</th>
                     <th className="p-4 font-medium">Actions</th>
                   </tr>
                 </thead>
@@ -924,19 +886,6 @@ export function MenuManagement() {
                         <Badge variant="outline">{item.category}</Badge>
                       </td>
                       <td className="p-4 font-medium">{formatCurrency(item.price)}</td>
-                      <td className="p-4">{formatCurrency(item.cost || 0)}</td>
-                      <td className="p-4 text-chart-2">{formatCurrency(item.profit || 0)}</td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 bg-muted rounded-full h-2">
-                            <div
-                              className="bg-primary h-2 rounded-full"
-                              style={{ width: `${item.popularity || 0}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-sm">{item.popularity || 0}%</span>
-                        </div>
-                      </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           {item.isAvailable ? (
@@ -949,9 +898,6 @@ export function MenuManagement() {
                       </td>
                       <td className="p-4 text-right whitespace-nowrap">
                         <div className="flex gap-1 justify-end">
-                          <Button className="flex-shrink-0" size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); duplicateItem(item); }}>
-                            <Copy className="w-3 h-3" />
-                          </Button>
                           <Button className="flex-shrink-0" size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}>
                             <Trash2 className="w-3 h-3" />
                           </Button>
@@ -991,38 +937,6 @@ export function MenuManagement() {
                       <div className="text-right">
                         <div className="font-medium">{item.popularity}%</div>
                         <div className="text-xs text-muted-foreground">popularity</div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm">
-            <CardHeader className="border-b">
-              <CardTitle className="text-lg">Most Profitable</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                {menuItems
-                  .sort((a, b) => (b.profit || 0) - (a.profit || 0))
-                  .slice(0, 5)
-                  .map((item, index) => (
-                    <div key={item.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline" className="w-8 h-8 rounded-full p-0 flex items-center justify-center">
-                          {index + 1}
-                        </Badge>
-                        <div>
-                          <span className="font-medium">{item.name}</span>
-                          <p className="text-xs text-muted-foreground">{formatCurrency(item.price)}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium text-chart-2">{formatCurrency(item.profit || 0)}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {Math.round(((item.profit || 0) / item.price) * 100)}% margin
-                        </div>
                       </div>
                     </div>
                   ))}
@@ -1152,13 +1066,13 @@ function MenuItemForm({
   const handleImageUpload = (file: File) => {
     // Validate file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image size must be less than 5MB')
+      error('Image size must be less than 5MB', 'File Too Large')
       return
     }
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select a valid image file')
+      error('Please select a valid image file', 'Invalid File Type')
       return
     }
 
@@ -1169,7 +1083,7 @@ function MenuItemForm({
       setFormData({ ...formData, image: result })
     }
     reader.onerror = () => {
-      alert('Failed to read the image file')
+      error('Failed to read the image file', 'File Read Error')
     }
     reader.readAsDataURL(file)
   }

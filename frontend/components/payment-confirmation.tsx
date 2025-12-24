@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CheckCircle, Search, AlertTriangle, Filter, Wallet, TrendingUp } from "lucide-react"
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid } from "recharts"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useToast } from "@/components/providers/toast-provider"
 
 interface CashPaymentRequest {
   _id: string
@@ -33,6 +34,7 @@ interface Payment {
 }
 
 export function PaymentConfirmation() {
+  const { success, error: showError } = useToast()
   const [cashPaymentRequests, setCashPaymentRequests] = useState<CashPaymentRequest[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -189,10 +191,10 @@ export function PaymentConfirmation() {
       // Refresh payments to include the new payment in real-time
       fetchPayments()
 
-      alert("Payment confirmed successfully!")
+      success("Payment confirmed successfully!", "Payment Confirmed")
     } catch (err) {
       console.error("Error confirming payment:", err)
-      alert(`Error: ${err instanceof Error ? err.message : "Failed to confirm payment"}`)
+      showError(`Error: ${err instanceof Error ? err.message : "Failed to confirm payment"}`, "Payment Error")
     }
   }
 

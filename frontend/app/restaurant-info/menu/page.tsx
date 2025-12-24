@@ -1,6 +1,6 @@
 "use client"
 
-import { useState,useEffect } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -54,7 +54,7 @@ export default function RestaurantMenuPage() {
   const categories = [
     { id: "popular", name: "Popular", count: menuItems.filter((item) => item.isPopular).length },
     { id: "starters", name: "Starters", count: menuItems.filter((item) => item.category === "starters").length },
-    { id: "mains", name: "Main Course", count: menuItems.filter((item) => (item.category === "mains" || item.category==="Main Course")).length },
+    { id: "mains", name: "Main Course", count: menuItems.filter((item) => (item.category === "mains" || item.category === "Main Course")).length },
     { id: "biryani", name: "Biryani", count: menuItems.filter((item) => item.category === "biryani").length },
     { id: "breads", name: "Breads", count: menuItems.filter((item) => item.category === "Breads").length },
     { id: "beverages", name: "Beverages", count: menuItems.filter((item) => item.category === "beverages").length },
@@ -81,7 +81,7 @@ export default function RestaurantMenuPage() {
               </Button>
               <div>
                 <h1 className="font-sans font-bold text-xl text-foreground">Menu</h1>
-                <p className="text-sm text-muted-foreground">Spice Garden Restaurant</p>
+                <p className="text-sm text-muted-foreground">Restaurant Menu</p>
               </div>
             </div>
             <Badge variant="secondary">View Only</Badge>
@@ -139,69 +139,69 @@ export default function RestaurantMenuPage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {filteredItems.map((item) => (
-            <Card key={item.id} className="overflow-hidden">
-              <CardContent className="p-0">
-                <div className="flex">
-                  <div className="flex-1 p-6">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        {item.isVeg && <Leaf className="w-4 h-4 text-green-600" />}
-                        {item.isPopular && (
-                          <Badge variant="secondary" className="text-xs">
-                            Popular
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm text-muted-foreground">{item.rating}</span>
-                      </div>
-                    </div>
-
-                    <h3 className="font-bold text-lg text-foreground mb-2">{item.name}</h3>
-                    <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{item.description}</p>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="font-bold text-xl text-foreground">₹{item.price}</p>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Clock className="w-4 h-4" />
-                          <span>{item.prepTime}</span>
-                        </div>
-                      </div>
-
-                      {item.calories && <p className="text-xs text-muted-foreground">{item.calories} calories</p>}
-
-                      {item.allergens && item.allergens.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {item.allergens.map((allergen) => (
-                            <Badge key={allergen} variant="outline" className="text-xs">
-                              {allergen}
+              <Card key={item.id} className="overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="flex">
+                    <div className="flex-1 p-6">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          {item.isVeg && <Leaf className="w-4 h-4 text-green-600" />}
+                          {item.isPopular && (
+                            <Badge variant="secondary" className="text-xs">
+                              Popular
                             </Badge>
-                          ))}
+                          )}
                         </div>
-                      )}
-                      <div className="pt-2">
-                        <Button
-                          variant="outline"
-                          className="bg-transparent h-8"
-                          onClick={() => (window.location.href = `/menu/${item.id}/reviews`)}
-                        >
-                          View Reviews
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                          <span className="text-sm text-muted-foreground">{item.rating}</span>
+                        </div>
+                      </div>
+
+                      <h3 className="font-bold text-lg text-foreground mb-2">{item.name}</h3>
+                      <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{item.description}</p>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="font-bold text-xl text-foreground">₹{item.price}</p>
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Clock className="w-4 h-4" />
+                            <span>{item.prepTime}</span>
+                          </div>
+                        </div>
+
+                        {item.calories && <p className="text-xs text-muted-foreground">{item.calories} calories</p>}
+
+                        {item.allergens && item.allergens.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {item.allergens.map((allergen) => (
+                              <Badge key={allergen} variant="outline" className="text-xs">
+                                {allergen}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                        <div className="pt-2">
+                          <Button
+                            variant="outline"
+                            className="bg-transparent h-8"
+                            onClick={() => (window.location.href = `/menu/${item.id}/reviews`)}
+                          >
+                            View Reviews
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="w-32 h-32 m-4 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                    <img
-                      src={item.image || "/placeholder.svg"}
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                    />
+                    <div className="w-32 h-32 m-4 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                      <img
+                        src={item.image || "/placeholder.svg"}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                   </div>
-                </div>
-              </CardContent>
+                </CardContent>
               </Card>
             ))}
           </div>

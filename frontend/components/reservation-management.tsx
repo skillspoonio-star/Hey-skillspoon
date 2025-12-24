@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { CalendarIcon, Clock, Phone, Users, CheckCircle, Eye, Edit, Plus, RefreshCw } from "lucide-react"
+import { useToast } from "@/components/providers/toast-provider"
 
 
 
@@ -51,6 +52,7 @@ interface Reservation {
 }
 
 export function ReservationManagement() {
+  const { success, error, warning } = useToast()
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [dateFilter, setDateFilter] = useState<string>("all")
@@ -470,7 +472,7 @@ export function ReservationManagement() {
                           className="w-full h-12 border-2 border-blue-300 hover:bg-blue-100"
                           onClick={async () => {
                             if (!newDate || !newTime) {
-                              alert('Please select date and time first')
+                              warning('Please select date and time first', 'Missing Information')
                               return
                             }
                             try {
@@ -1033,7 +1035,7 @@ export function ReservationManagement() {
                       setSelectedReservation(null)
                     } catch (err: any) {
                       console.error('Failed to update reservation:', err)
-                      alert('Failed to update reservation: ' + (err.message || 'Unknown error'))
+                      error('Failed to update reservation: ' + (err.message || 'Unknown error'), 'Update Failed')
                     }
                   }}
                 >

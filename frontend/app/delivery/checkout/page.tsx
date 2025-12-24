@@ -12,10 +12,12 @@ import { useTheme } from "next-themes"
 import { FullPageLoader } from "@/components/ui/loader"
 import { BackButton } from "@/components/ui/back-button"
 import { ShoppingCart, MapPin, Clock as ClockIcon, CreditCard as CreditCardIcon } from "lucide-react"
+import { useToast } from "@/components/providers/toast-provider"
 
 export default function DeliveryCheckoutPage() {
   const router = useRouter()
   const { theme } = useTheme()
+  const { success, error, warning } = useToast()
   const [cart, setCart] = useState<any[]>([])
   const [promo, setPromo] = useState("")
   const [discount, setDiscount] = useState(0)
@@ -167,6 +169,7 @@ export default function DeliveryCheckoutPage() {
 
           // Create delivery order with payment details
           const orderId = await createDeliveryOrder(paymentId, signature)
+          success("Payment successful! Your order has been placed for delivery.", "Order Confirmed")
 
           if (typeof window !== "undefined") {
             localStorage.removeItem('delivery:cart')
@@ -175,14 +178,13 @@ export default function DeliveryCheckoutPage() {
           router.push("/delivery/confirmation?orderId=" + orderId)
         } catch (paymentError: any) {
           // Check if user cancelled payment
-          if (paymentError?.message?.includes('closed')) {
-            // User closed the payment window
-            throw new Error('Payment cancelled. Please try again.')
+          if (paymentError?.message?.includes('cancelled by user') || paymentError?.message?.includes('closed')) {
+            error('Payment failed. Please try again or choose Cash on Delivery.', 'Payment Failed')
           } else {
-            // Other payment errors
-            throw new Error(
+            error(
               'Payment failed: ' +
-              (paymentError?.message || 'Please try again or choose a different payment method.')
+              (paymentError?.message || 'Please try again or choose a different payment method.'),
+              'Payment Error'
             )
           }
         }
@@ -190,6 +192,7 @@ export default function DeliveryCheckoutPage() {
         // For COD, directly create delivery order
         try {
           const orderId = await createDeliveryOrder()
+          success("Order placed successfully! You can pay when the order is delivered.", "Order Confirmed")
 
           if (typeof window !== "undefined") {
             localStorage.removeItem('delivery:cart')
@@ -197,15 +200,16 @@ export default function DeliveryCheckoutPage() {
 
           router.push("/delivery/confirmation?orderId=" + orderId)
         } catch (codError: any) {
-          throw new Error(
+          error(
             'Failed to create COD order: ' +
-            (codError?.message || 'Please try again.')
+            (codError?.message || 'Please try again.'),
+            'Order Error'
           )
         }
       }
     } catch (err: any) {
       console.error('Error placing order:', err)
-      alert(err?.message || 'Error placing order. Please try again.')
+      error(err?.message || 'Error placing order. Please try again.', 'Order Error')
     } finally {
       setIsProcessingPayment(false)
     }
@@ -431,14 +435,14 @@ export default function DeliveryCheckoutPage() {
                 onClick={async () => {
                   // Check if cart is empty
                   if (!cart || cart.length === 0) {
-                    alert("Your cart is empty. Please add items before checkout.")
+                    warning("Your cart is empty. Please add items before checkout.", "Empty Cart")
                     router.push("/delivery/menu")
                     return
                   }
 
                   // basic validations
                   if (!name || phone.length !== 10 || !address1 || !city || !stateName || pincode.length !== 6) {
-                    alert("Please complete delivery details before proceeding.")
+                    warning("Please complete all required delivery details before proceeding.", "Missing Information")
                     return
                   }
 

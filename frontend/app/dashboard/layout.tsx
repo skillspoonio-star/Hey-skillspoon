@@ -15,6 +15,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [authChecked, setAuthChecked] = useState(false)
   const [notifications, setNotifications] = useState<string[]>([])
   const [isNavigating, setIsNavigating] = useState(false)
+  const [restaurantName, setRestaurantName] = useState("")
+
+  // Load restaurant info
+  useEffect(() => {
+    const loadRestaurantInfo = async () => {
+      try {
+        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+        const response = await fetch(`${base}/api/restaurant/info`)
+
+        if (response.ok) {
+          const data = await response.json()
+          setRestaurantName(data.name || "Restaurant")
+        }
+      } catch (error) {
+        console.error('Failed to load restaurant info:', error)
+      }
+    }
+
+    loadRestaurantInfo()
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -140,7 +160,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </Button>
                 </div>
                 <div className="text-left sm:text-right">
-                  <p className="text-sm font-medium">Spice Garden Restaurant</p>
+                  <p className="text-sm font-medium">{restaurantName || "Restaurant"}</p>
                   <p className="text-xs text-muted-foreground">Online • Admin</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={handleLogout} className="rounded-full bg-transparent text-sm lg:text-base">

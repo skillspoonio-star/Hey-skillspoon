@@ -30,6 +30,7 @@ import {
   CheckCircle,
   Coffee,
 } from "lucide-react"
+import { useToast } from "@/components/providers/toast-provider"
 
 interface StaffMember {
   id: number
@@ -62,6 +63,7 @@ interface StaffAlert {
 }
 
 export function StaffManagement() {
+  const { success, error, warning } = useToast()
   const [staff, setStaff] = useState<StaffMember[]>([
     {
       id: 1,
@@ -231,7 +233,7 @@ export function StaffManagement() {
 
   const handleAddStaff = () => {
     if (!newStaff.name || !newStaff.role || !newStaff.phone || !newStaff.email) {
-      alert("Please fill in all required fields")
+      warning("Please fill in all required fields", "Missing Information")
       return
     }
 
@@ -557,10 +559,10 @@ export function StaffManagement() {
                         <div className="flex items-center gap-3">
                           <div
                             className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${index === 0
-                                ? "bg-gradient-to-br from-yellow-400 to-yellow-600 text-white shadow-lg"
-                                : index === 1
-                                  ? "bg-gradient-to-br from-gray-300 to-gray-500 text-white shadow-md"
-                                  : "bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-md"
+                              ? "bg-gradient-to-br from-yellow-400 to-yellow-600 text-white shadow-lg"
+                              : index === 1
+                                ? "bg-gradient-to-br from-gray-300 to-gray-500 text-white shadow-md"
+                                : "bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-md"
                               }`}
                           >
                             {index + 1}

@@ -26,6 +26,10 @@ const restaurantSchema = new mongoose.Schema({
     type: String,
     default: ""
   },
+  locationLink: {
+    type: String,
+    default: ""
+  },
   openingHours: {
     monday: {
       open: { type: String, default: "11:00" },

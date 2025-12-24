@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Truck, MapPin, Phone, Clock, CheckCircle, Search, XCircle } from "lucide-react"
 import { fetchMenuItems, MenuItem } from "@/lib/menu-data"
 import { InlineLoader } from "@/components/ui/loader"
+import { useToast } from "@/components/providers/toast-provider"
 
 type DeliveryOrder = {
   id: string
@@ -35,6 +36,7 @@ const formatOrderId = (deliveryNo?: number): string => {
 }
 
 export default function DeliveryManagement() {
+  const { success, error, warning } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [orders, setOrders] = useState<DeliveryOrder[]>([])
@@ -43,69 +45,69 @@ export default function DeliveryManagement() {
 
   useEffect(() => {
     let mounted = true
-    ;(async () => {
-      try {
-        setLoading(true)
-        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
-        const res = await fetch(`${base}/api/deliveries`)
-        if (!res.ok) return
-        const data = await res.json()
-        if (!mounted) return
-
-        // fetch menu to enrich item names/prices
-        let menu: MenuItem[] = []
+      ; (async () => {
         try {
-          menu = await fetchMenuItems()
-        } catch (mErr) {
-          console.warn('Failed to load menu items for enrichment', mErr)
-        }
-        const menuById = new Map(menu.map((m) => [m.id, m]))
+          setLoading(true)
+          const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+          const res = await fetch(`${base}/api/deliveries`)
+          if (!res.ok) return
+          const data = await res.json()
+          if (!mounted) return
 
-        // Sort by creation date (oldest first) to assign sequential numbers
-        const sortedData = [...data].sort((a, b) => 
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        )
+          // fetch menu to enrich item names/prices
+          let menu: MenuItem[] = []
+          try {
+            menu = await fetchMenuItems()
+          } catch (mErr) {
+            console.warn('Failed to load menu items for enrichment', mErr)
+          }
+          const menuById = new Map(menu.map((m) => [m.id, m]))
 
-        const mapped = sortedData.map((d: any, index: number) => {
-          // prefer fields from populated orderId when available
-          const order = d.orderId || null
-          const sourceItems = order?.items ?? d.items ?? []
-          const mappedItems = sourceItems.map((it: any) => {
-            const menuItem = menuById.get(Number(it.itemId))
+          // Sort by creation date (oldest first) to assign sequential numbers
+          const sortedData = [...data].sort((a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          )
+
+          const mapped = sortedData.map((d: any, index: number) => {
+            // prefer fields from populated orderId when available
+            const order = d.orderId || null
+            const sourceItems = order?.items ?? d.items ?? []
+            const mappedItems = sourceItems.map((it: any) => {
+              const menuItem = menuById.get(Number(it.itemId))
+              return {
+                itemId: Number(it.itemId),
+                name: menuItem ? menuItem.name : (it.name || `Item ${it.itemId}`),
+                quantity: it.quantity,
+                price: menuItem ? menuItem.price : (it.price ?? undefined),
+              }
+            })
+
             return {
-              itemId: Number(it.itemId),
-              name: menuItem ? menuItem.name : (it.name || `Item ${it.itemId}`),
-              quantity: it.quantity,
-              price: menuItem ? menuItem.price : (it.price ?? undefined),
+              id: d._id,
+              deliveryNo: index + 1, // Sequential number starting from 1
+              customerName: order ? (order.customerName || '') : (d.customerName || ''),
+              phone: order ? (order.customerPhone || order.customerPhone) : (d.customerPhone || ''),
+              address: d.address?.fullAddress || '',
+              items: mappedItems,
+              total: order ? (order.total ?? d.total) : (d.total ?? 0),
+              status: d.status,
+              orderStatus: order ? (order.status || null) : null,
+              placedAt: new Date(d.createdAt).toLocaleString(),
+              eta: d.eta ? `${d.eta} mins` : undefined,
+              paymentStatus: order ? (order.paymentStatus || 'unpaid') : (d.paymentStatus || 'unpaid'),
+              paymentMethod: order ? (order.paymentMethod || 'pending') : (d.paymentMethod || 'pending'),
+              tableNumber: order ? order.tableNumber : (d.tableNumber ?? null),
             }
           })
 
-          return {
-            id: d._id,
-            deliveryNo: index + 1, // Sequential number starting from 1
-            customerName: order ? (order.customerName || '') : (d.customerName || ''),
-            phone: order ? (order.customerPhone || order.customerPhone) : (d.customerPhone || ''),
-            address: d.address?.fullAddress || '',
-            items: mappedItems,
-            total: order ? (order.total ?? d.total) : (d.total ?? 0),
-            status: d.status,
-            orderStatus: order ? (order.status || null) : null,
-            placedAt: new Date(d.createdAt).toLocaleString(),
-            eta: d.eta ? `${d.eta} mins` : undefined,
-            paymentStatus: order ? (order.paymentStatus || 'unpaid') : (d.paymentStatus || 'unpaid'),
-            paymentMethod: order ? (order.paymentMethod || 'pending') : (d.paymentMethod || 'pending'),
-            tableNumber: order ? order.tableNumber : (d.tableNumber ?? null),
-          }
-        })
-        
-        // Reverse to show newest first in the UI
-        setOrders(mapped.reverse())
-      } catch (err) {
-        console.error('Failed to load deliveries', err)
-      } finally {
-        if (mounted) setLoading(false)
-      }
-    })()
+          // Reverse to show newest first in the UI
+          setOrders(mapped.reverse())
+        } catch (err) {
+          console.error('Failed to load deliveries', err)
+        } finally {
+          if (mounted) setLoading(false)
+        }
+      })()
     return () => { mounted = false }
   }, [])
 
@@ -145,7 +147,7 @@ export default function DeliveryManagement() {
     // Only allow transition if linked order is in 'ready'
     if (o.orderStatus !== 'served') {
       // Show a user-friendly popup
-      alert('Cannot update delivery status: order is not ready yet.')
+      warning('Cannot update delivery status: order is not ready yet.', 'Order Not Ready')
       return
     }
 
@@ -162,7 +164,7 @@ export default function DeliveryManagement() {
 
       if (res.status === 409) {
         const body = await res.json().catch(() => ({}))
-        alert(body.error || 'Cannot update delivery status: order is not ready yet.')
+        warning(body.error || 'Cannot update delivery status: order is not ready yet.', 'Status Update Failed')
         return
       }
 
@@ -174,7 +176,7 @@ export default function DeliveryManagement() {
       setOrders((prev) => prev.map((p) => (p.id === id ? { ...p, status: updated.status } : p)))
     } catch (err) {
       console.error('Failed to update delivery status', err)
-      alert('Failed to update delivery status. Please try again.')
+      error('Failed to update delivery status. Please try again.', 'Update Failed')
     } finally {
       setUpdatingOrderId(null)
     }
@@ -337,8 +339,8 @@ export default function DeliveryManagement() {
               <div className="space-y-1">
                 <h3 className="font-semibold text-lg">No delivery orders found</h3>
                 <p className="text-sm text-muted-foreground">
-                  {searchTerm || statusFilter !== "all" 
-                    ? "Try adjusting your search or filters" 
+                  {searchTerm || statusFilter !== "all"
+                    ? "Try adjusting your search or filters"
                     : "Delivery orders will appear here once placed"}
                 </p>
               </div>
@@ -360,7 +362,7 @@ export default function DeliveryManagement() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="text-sm flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-muted-foreground" /> 
+                  <Phone className="w-4 h-4 text-muted-foreground" />
                   <span className="font-medium">{order.customerName}</span> • {order.phone}
                 </div>
                 {order.tableNumber ? (
@@ -370,7 +372,7 @@ export default function DeliveryManagement() {
                   </div>
                 ) : null}
                 <div className="text-sm flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" /> 
+                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                   <span className="break-words">{order.address}</span>
                 </div>
                 <div className="text-sm space-y-1 pt-2 border-t">
@@ -394,8 +396,8 @@ export default function DeliveryManagement() {
                   <div className="text-lg font-bold">₹{order.total}</div>
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     onClick={() => markNext(order.id)}
                     disabled={updatingOrderId === order.id}
                     className="flex-1"
@@ -406,9 +408,9 @@ export default function DeliveryManagement() {
                       "Advance Status"
                     )}
                   </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => handlePrint(order)}
                     className="flex-1"
                   >
