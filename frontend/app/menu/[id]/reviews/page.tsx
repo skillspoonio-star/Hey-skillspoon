@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Star, ArrowLeft } from "lucide-react"
-import { menuItems } from "@/lib/menu-data"
+import { fetchMenuItems, MenuItem } from "@/lib/menu-data"
 
 type Review = {
   id: string
@@ -24,13 +24,34 @@ export default function ItemReviewsPage() {
   const params = useParams()
   const router = useRouter()
   const id = Number(params.id)
-  const item = useMemo(() => menuItems.find((m) => m.id === id), [id])
+
+  const [item, setItem] = useState<MenuItem | null>(null)
+  const [loading, setLoading] = useState(true)
 
   const [reviews, setReviews] = useState<Review[]>([])
   const [name, setName] = useState("")
   const [rating, setRating] = useState(5)
   const [comment, setComment] = useState("")
   const [canReview, setCanReview] = useState(false)
+
+  // Load menu item from API
+  useEffect(() => {
+    const loadMenuItem = async () => {
+      try {
+        setLoading(true)
+        const menuItems = await fetchMenuItems()
+        const foundItem = menuItems.find((m) => m.id === id)
+        setItem(foundItem || null)
+      } catch (error) {
+        console.error('Failed to load menu item:', error)
+        setItem(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadMenuItem()
+  }, [id])
 
   useEffect(() => {
     if (!item) return
@@ -64,6 +85,18 @@ export default function ItemReviewsPage() {
     setName("")
     setRating(5)
     setComment("")
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background p-4 max-w-2xl mx-auto">
+        <Button variant="ghost" size="sm" onClick={() => router.back()}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
+        <div className="mt-4">Loading...</div>
+      </div>
+    )
   }
 
   if (!item) {

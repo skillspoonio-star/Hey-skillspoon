@@ -96,6 +96,37 @@ const restaurantSchema = new mongoose.Schema({
     type: String,
     default: ""
   },
+  todaysSpecialImages: {
+    image1: { type: String, default: "" },
+    image2: { type: String, default: "" },
+    image3: { type: String, default: "" }
+  },
+  todaysSpecialDishes: {
+    dish1: {
+      name: { type: String, default: "Signature Butter Chicken" },
+      description: { type: String, default: "Chef's special recipe with 20+ spices" },
+      price: { type: String, default: "₹399" },
+      prepTime: { type: String, default: "25 min" },
+      isVeg: { type: Boolean, default: false },
+      rating: { type: Number, default: 4.8, min: 0, max: 5 }
+    },
+    dish2: {
+      name: { type: String, default: "Royal Paneer Makhani" },
+      description: { type: String, default: "Creamy paneer in rich tomato gravy" },
+      price: { type: String, default: "₹349" },
+      prepTime: { type: String, default: "20 min" },
+      isVeg: { type: Boolean, default: true },
+      rating: { type: Number, default: 4.7, min: 0, max: 5 }
+    },
+    dish3: {
+      name: { type: String, default: "Hyderabadi Biryani" },
+      description: { type: String, default: "Authentic dum-cooked basmati rice" },
+      price: { type: String, default: "₹449" },
+      prepTime: { type: String, default: "35 min" },
+      isVeg: { type: Boolean, default: false },
+      rating: { type: Number, default: 4.9, min: 0, max: 5 }
+    }
+  },
   isOpen: {
     type: Boolean,
     default: true

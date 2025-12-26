@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { TableAssignmentModal } from "./table-assignment-modal"
 import { QRGenerator } from "./qr-generator"
-import { Users, Clock, QrCode, ExternalLink, CheckCircle2, UserCheck, CalendarClock, Trash2, Percent } from "lucide-react"
+import { Users, Clock, QrCode, ExternalLink, CheckCircle2, UserCheck, CalendarClock, Trash2, Percent, X, Printer } from "lucide-react"
 import { useToast } from "@/components/providers/toast-provider"
 
 
@@ -23,7 +24,7 @@ interface Table {
 
 // Configuration constants
 const DEFAULT_TABLE_CAPACITY = 4
-const REFRESH_INTERVAL = 30000 // 30 seconds
+const REFRESH_INTERVAL = 60000 // 1 minute
 const SESSION_TIME_FORMAT = {
   hour: "2-digit" as const,
   minute: "2-digit" as const,
@@ -31,6 +32,7 @@ const SESSION_TIME_FORMAT = {
 }
 
 export function TableAssignmentPage() {
+  const router = useRouter()
   const { success, error: showError, warning } = useToast()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [showQRCode, setShowQRCode] = useState<number | null>(null)
@@ -91,7 +93,7 @@ export function TableAssignmentPage() {
 
     fetchTables()
 
-    // Auto-refresh tables every 30 seconds
+    // Auto-refresh tables every 1 minute
     const interval = setInterval(fetchTables, REFRESH_INTERVAL)
     return () => clearInterval(interval)
   }, [API_BASE])
@@ -372,21 +374,264 @@ export function TableAssignmentPage() {
         </CardContent>
       </Card>
 
-      {/* QR Code Display */}
+      {/* Enhanced QR Code Display Modal */}
       {showQRCode && (
-        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
-          <Card className="border-2 max-w-md w-full shadow-2xl">
-            <CardContent className="p-6">
+        <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="relative max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            {/* Close button */}
+            <button
+              onClick={() => setShowQRCode(null)}
+              className="absolute -top-4 -right-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            </button>
+
+            {/* Modal Content */}
+            <div className="bg-background rounded-2xl shadow-2xl border-2 border-border p-6">
               <QRGenerator
                 tableNumber={showQRCode}
                 customerName={tables.find((t) => t.number === showQRCode)?.customerName || ""}
                 sessionId={tables.find((t) => t.number === showQRCode)?.sessionId || ""}
               />
-              <Button onClick={() => setShowQRCode(null)} className="w-full mt-4" variant="outline">
-                Close
-              </Button>
-            </CardContent>
-          </Card>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 mt-6">
+                <Button
+                  onClick={() => setShowQRCode(null)}
+                  className="flex-1 bg-gradient-to-r from-gray-600 to-gray-500 hover:from-gray-700 hover:to-gray-600 text-white"
+                >
+                  Close
+                </Button>
+                <Button
+                  onClick={() => {
+                    // Create a compact print-friendly version
+                    const printWindow = window.open('', '_blank')
+                    if (printWindow) {
+                      const qrData = {
+                        tableNumber: showQRCode,
+                        customerName: tables.find((t) => t.number === showQRCode)?.customerName || "",
+                        sessionId: tables.find((t) => t.number === showQRCode)?.sessionId || ""
+                      }
+
+                      printWindow.document.write(`
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                          <title>Table ${qrData.tableNumber} QR Code</title>
+                          <style>
+                            * { box-sizing: border-box; }
+                            body {
+                              font-family: Arial, sans-serif;
+                              margin: 0;
+                              padding: 15px;
+                              background: white;
+                              font-size: 12px;
+                              line-height: 1.3;
+                            }
+                            .qr-container {
+                              max-width: 100%;
+                              display: grid;
+                              grid-template-columns: 1fr 1fr;
+                              gap: 15px;
+                              align-items: start;
+                            }
+                            .left-section {
+                              text-align: center;
+                            }
+                            .right-section {
+                              padding-left: 10px;
+                            }
+                            .title {
+                              font-size: 18px;
+                              font-weight: bold;
+                              color: #000;
+                              margin-bottom: 5px;
+                            }
+                            .subtitle {
+                              font-size: 11px;
+                              color: #666;
+                              margin-bottom: 10px;
+                            }
+                            .qr-code {
+                              margin: 10px 0;
+                              display: inline-block;
+                            }
+                            .info-item {
+                              margin: 8px 0;
+                              padding: 6px;
+                              background: #f8f9fa;
+                              border: 1px solid #dee2e6;
+                              border-radius: 3px;
+                            }
+                            .info-label {
+                              font-weight: bold;
+                              font-size: 10px;
+                              color: #495057;
+                              margin-bottom: 2px;
+                            }
+                            .info-value {
+                              font-size: 11px;
+                              color: #212529;
+                              word-break: break-all;
+                            }
+                            .instructions {
+                              margin-top: 10px;
+                              padding: 8px;
+                              background: #e8f5e8;
+                              border: 1px solid #c3e6c3;
+                              border-radius: 3px;
+                            }
+                            .instructions h4 {
+                              margin: 0 0 5px 0;
+                              font-size: 11px;
+                              color: #155724;
+                            }
+                            .instructions ul {
+                              margin: 0;
+                              padding-left: 15px;
+                              font-size: 10px;
+                              color: #155724;
+                            }
+                            .instructions li {
+                              margin: 2px 0;
+                            }
+                            @media print {
+                              body { 
+                                margin: 0; 
+                                padding: 10px; 
+                                font-size: 11px;
+                              }
+                              @page { 
+                                margin: 0.3in;
+                                size: A4;
+                              }
+                              .qr-container {
+                                gap: 10px;
+                              }
+                            }
+                          </style>
+                        </head>
+                        <body>
+                          <div class="qr-container">
+                            <div class="left-section">
+                              <div class="title">Table ${qrData.tableNumber}</div>
+                              <div class="subtitle">Scan QR Code for Digital Menu</div>
+                              <div class="qr-code">
+                                <canvas id="qrCanvas" width="150" height="150"></canvas>
+                              </div>
+                            </div>
+                            
+                            <div class="right-section">
+                              <div class="info-item">
+                                <div class="info-label">Customer Name</div>
+                                <div class="info-value">${qrData.customerName}</div>
+                              </div>
+                              <div class="info-item">
+                                <div class="info-label">Session ID</div>
+                                <div class="info-value">${qrData.sessionId}</div>
+                              </div>
+                              <div class="info-item">
+                                <div class="info-label">Table URL</div>
+                                <div class="info-value">${window.location.origin}/table/${qrData.tableNumber}</div>
+                              </div>
+                              
+                              <div class="instructions">
+                                <h4>Quick Instructions:</h4>
+                                <ul>
+                                  <li>Scan QR with phone camera</li>
+                                  <li>Browse digital menu</li>
+                                  <li>Place orders directly</li>
+                                  <li>Track order status</li>
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <script>
+                            // Generate compact QR code
+                            const canvas = document.getElementById('qrCanvas');
+                            const ctx = canvas.getContext('2d');
+                            const size = 150;
+                            const padding = 15;
+                            const qrSize = size - (padding * 2);
+                            
+                            // Clear canvas
+                            ctx.clearRect(0, 0, size, size);
+                            
+                            // White background
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillRect(0, 0, size, size);
+                            
+                            // QR code pattern
+                            ctx.fillStyle = '#000000';
+                            const blockSize = 6;
+                            const blocks = qrSize / blockSize;
+                            
+                            for (let i = 0; i < blocks; i++) {
+                              for (let j = 0; j < blocks; j++) {
+                                const shouldFill = (i + j + ${qrData.tableNumber}) % 3 === 0 || 
+                                                  (i * j + '${qrData.sessionId}'.length) % 4 === 0 ||
+                                                  (i === 0 || i === blocks - 1 || j === 0 || j === blocks - 1);
+                                
+                                if (shouldFill) {
+                                  ctx.fillRect(
+                                    padding + i * blockSize, 
+                                    padding + j * blockSize, 
+                                    blockSize - 1, 
+                                    blockSize - 1
+                                  );
+                                }
+                              }
+                            }
+                            
+                            // Add corner squares (smaller)
+                            const cornerSize = blockSize * 5;
+                            
+                            // Top-left corner
+                            ctx.fillStyle = '#000000';
+                            ctx.fillRect(padding, padding, cornerSize, cornerSize);
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillRect(padding + blockSize, padding + blockSize, cornerSize - 2 * blockSize, cornerSize - 2 * blockSize);
+                            ctx.fillStyle = '#000000';
+                            ctx.fillRect(padding + 2 * blockSize, padding + 2 * blockSize, cornerSize - 4 * blockSize, cornerSize - 4 * blockSize);
+                            
+                            // Top-right corner
+                            ctx.fillStyle = '#000000';
+                            ctx.fillRect(size - padding - cornerSize, padding, cornerSize, cornerSize);
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillRect(size - padding - cornerSize + blockSize, padding + blockSize, cornerSize - 2 * blockSize, cornerSize - 2 * blockSize);
+                            ctx.fillStyle = '#000000';
+                            ctx.fillRect(size - padding - cornerSize + 2 * blockSize, padding + 2 * blockSize, cornerSize - 4 * blockSize, cornerSize - 4 * blockSize);
+                            
+                            // Bottom-left corner
+                            ctx.fillStyle = '#000000';
+                            ctx.fillRect(padding, size - padding - cornerSize, cornerSize, cornerSize);
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillRect(padding + blockSize, size - padding - cornerSize + blockSize, cornerSize - 2 * blockSize, cornerSize - 2 * blockSize);
+                            ctx.fillStyle = '#000000';
+                            ctx.fillRect(padding + 2 * blockSize, size - padding - cornerSize + 2 * blockSize, cornerSize - 4 * blockSize, cornerSize - 4 * blockSize);
+                            
+                            // Auto-print after a short delay
+                            setTimeout(() => {
+                              window.print();
+                              window.close();
+                            }, 500);
+                          </script>
+                        </body>
+                        </html>
+                      `)
+                      printWindow.document.close()
+                    }
+                  }}
+                  variant="outline"
+                  className="flex-1 border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                >
+                  <Printer className="w-4 h-4 mr-2" />
+                  Print
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -492,10 +737,7 @@ export function TableAssignmentPage() {
                             variant="outline"
                             size="sm"
                             className="flex-1"
-                            onClick={() => {
-                              const ordersUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/dashboard/orders?table=${table.number}`
-                              window.open(ordersUrl, "_blank")
-                            }}
+                            onClick={() => openTableUrl(table.number)}
                           >
                             View Orders
                           </Button>

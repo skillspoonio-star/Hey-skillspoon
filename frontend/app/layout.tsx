@@ -47,9 +47,9 @@ export default function RootLayout({
           <ToastProvider>
             <Suspense fallback={null}>{children}</Suspense>
             <Analytics />
-            <div className="fixed bottom-4 right-4 z-50">
+            {/* <div className="fixed bottom-4 right-4 z-50">
               <ThemeToggle />
-            </div>
+            </div> */}
           </ToastProvider>
         </ThemeProvider>
       </body>

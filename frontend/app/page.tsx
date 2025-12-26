@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -37,6 +37,7 @@ import {
 import { useRouter } from "next/navigation"
 import { InlineLoader } from "@/components/ui/loader"
 import { useToast, ToastContainer } from "@/components/ui/toast"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function HomePage() {
   const router = useRouter()
@@ -65,6 +66,37 @@ export default function HomePage() {
     isOpen: true,
     openHours: "",
     interiorImage: "",
+    todaysSpecialImages: {
+      image1: "",
+      image2: "",
+      image3: ""
+    },
+    todaysSpecialDishes: {
+      dish1: {
+        name: "Signature Butter Chicken",
+        description: "Chef's special recipe with 20+ spices",
+        price: "₹399",
+        prepTime: "25 min",
+        isVeg: false,
+        rating: 4.8
+      },
+      dish2: {
+        name: "Royal Paneer Makhani",
+        description: "Creamy paneer in rich tomato gravy",
+        price: "₹349",
+        prepTime: "20 min",
+        isVeg: true,
+        rating: 4.7
+      },
+      dish3: {
+        name: "Hyderabadi Biryani",
+        description: "Authentic dum-cooked basmati rice",
+        price: "₹449",
+        prepTime: "35 min",
+        isVeg: false,
+        rating: 4.9
+      }
+    }
   })
 
   // Load restaurant info from API
@@ -85,6 +117,37 @@ export default function HomePage() {
             isOpen: data.isOpen ?? true,
             openHours: data.openingHours ? formatOpeningHours(data.openingHours) : "",
             interiorImage: data.interiorImage || "",
+            todaysSpecialImages: data.todaysSpecialImages || {
+              image1: "",
+              image2: "",
+              image3: ""
+            },
+            todaysSpecialDishes: data.todaysSpecialDishes || {
+              dish1: {
+                name: "Signature Butter Chicken",
+                description: "Chef's special recipe with 20+ spices",
+                price: "₹399",
+                prepTime: "25 min",
+                isVeg: false,
+                rating: 4.8
+              },
+              dish2: {
+                name: "Royal Paneer Makhani",
+                description: "Creamy paneer in rich tomato gravy",
+                price: "₹349",
+                prepTime: "20 min",
+                isVeg: true,
+                rating: 4.7
+              },
+              dish3: {
+                name: "Hyderabadi Biryani",
+                description: "Authentic dum-cooked basmati rice",
+                price: "₹449",
+                prepTime: "35 min",
+                isVeg: false,
+                rating: 4.9
+              }
+            }
           })
         }
       } catch (error) {
@@ -107,38 +170,39 @@ export default function HomePage() {
 
 
 
-  const chefRecommendations = [
+  // Dynamic chef recommendations that use uploaded images and editable dish details
+  const chefRecommendations = useMemo(() => [
     {
       id: 1,
-      name: "Signature Butter Chicken",
-      description: "Chef's special recipe with 20+ spices",
-      price: "₹399",
-      image: "/chef-special-1.jpg",
-      prepTime: "25 min",
-      isVeg: false,
-      rating: 4.8
+      name: restaurantInfo.todaysSpecialDishes.dish1.name,
+      description: restaurantInfo.todaysSpecialDishes.dish1.description,
+      price: restaurantInfo.todaysSpecialDishes.dish1.price,
+      image: restaurantInfo.todaysSpecialImages.image1 || "/chef-special-1.jpg",
+      prepTime: restaurantInfo.todaysSpecialDishes.dish1.prepTime,
+      isVeg: restaurantInfo.todaysSpecialDishes.dish1.isVeg,
+      rating: restaurantInfo.todaysSpecialDishes.dish1.rating
     },
     {
       id: 2,
-      name: "Royal Paneer Makhani",
-      description: "Creamy paneer in rich tomato gravy",
-      price: "₹349",
-      image: "/chef-special-2.jpg",
-      prepTime: "20 min",
-      isVeg: true,
-      rating: 4.7
+      name: restaurantInfo.todaysSpecialDishes.dish2.name,
+      description: restaurantInfo.todaysSpecialDishes.dish2.description,
+      price: restaurantInfo.todaysSpecialDishes.dish2.price,
+      image: restaurantInfo.todaysSpecialImages.image2 || "/chef-special-2.jpg",
+      prepTime: restaurantInfo.todaysSpecialDishes.dish2.prepTime,
+      isVeg: restaurantInfo.todaysSpecialDishes.dish2.isVeg,
+      rating: restaurantInfo.todaysSpecialDishes.dish2.rating
     },
     {
       id: 3,
-      name: "Hyderabadi Biryani",
-      description: "Authentic dum-cooked basmati rice",
-      price: "₹449",
-      image: "/chef-special-3.jpg",
-      prepTime: "35 min",
-      isVeg: false,
-      rating: 4.9
+      name: restaurantInfo.todaysSpecialDishes.dish3.name,
+      description: restaurantInfo.todaysSpecialDishes.dish3.description,
+      price: restaurantInfo.todaysSpecialDishes.dish3.price,
+      image: restaurantInfo.todaysSpecialImages.image3 || "/chef-special-3.jpg",
+      prepTime: restaurantInfo.todaysSpecialDishes.dish3.prepTime,
+      isVeg: restaurantInfo.todaysSpecialDishes.dish3.isVeg,
+      rating: restaurantInfo.todaysSpecialDishes.dish3.rating
     }
-  ]
+  ], [restaurantInfo.todaysSpecialImages, restaurantInfo.todaysSpecialDishes])
 
 
 
@@ -159,6 +223,37 @@ export default function HomePage() {
             isOpen: data.isOpen,
             openHours: "11:00 AM - 11:00 PM", // You can format this from openingHours data
             interiorImage: data.interiorImage || "",
+            todaysSpecialImages: data.todaysSpecialImages || {
+              image1: "",
+              image2: "",
+              image3: ""
+            },
+            todaysSpecialDishes: data.todaysSpecialDishes || {
+              dish1: {
+                name: "Signature Butter Chicken",
+                description: "Chef's special recipe with 20+ spices",
+                price: "₹399",
+                prepTime: "25 min",
+                isVeg: false,
+                rating: 4.8
+              },
+              dish2: {
+                name: "Royal Paneer Makhani",
+                description: "Creamy paneer in rich tomato gravy",
+                price: "₹349",
+                prepTime: "20 min",
+                isVeg: true,
+                rating: 4.7
+              },
+              dish3: {
+                name: "Hyderabadi Biryani",
+                description: "Authentic dum-cooked basmati rice",
+                price: "₹449",
+                prepTime: "35 min",
+                isVeg: false,
+                rating: 4.9
+              }
+            }
           })
         }
       } catch (error) {
@@ -359,7 +454,9 @@ export default function HomePage() {
                 <p className="text-xs md:text-sm text-muted-foreground">Voice Dining Experience</p>
               </div>
             </div>
+            
             <div className="flex items-center gap-3">
+              <ThemeToggle/>
               <Badge
                 variant={restaurantInfo.isOpen ? "default" : "destructive"}
                 className="shadow-sm text-xs md:text-sm px-2 py-0.5 animate-pulse"
