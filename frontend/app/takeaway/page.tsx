@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Clock, MapPin, Phone, Star, ShoppingBag } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function TakeawayPage() {
   const router = useRouter()
@@ -60,18 +61,32 @@ export default function TakeawayPage() {
           </svg>
         </div>
         <div className="max-w-4xl mx-auto flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-2 md:gap-3">
-            <img
-              src="/hey-paytm-logo.png"
-              alt="Hey Paytm logo"
-              className="w-10 h-10 md:w-12 md:h-12 rounded-xl shadow-lg"
-            />
-            <h1 className="font-sans font-bold text-lg md:text-xl text-foreground">Hey Paytm</h1>
-          </div>
-          <Badge variant={restaurantInfo.isOpen ? "default" : "destructive"} className="shadow-sm text-sm md:text-base">
-            {restaurantInfo.isOpen ? "Open" : "Closed"}
-          </Badge>
-        </div>
+  
+  {/* Left Side: Logo + Name */}
+  <div className="flex items-center gap-2 md:gap-3">
+    <img
+      src="/hey-paytm-logo.png"
+      alt="Hey Paytm logo"
+      className="w-10 h-10 md:w-12 md:h-12 rounded-xl shadow-lg"
+    />
+    <h1 className="font-sans font-bold text-lg md:text-xl text-foreground">
+      Hey Paytm
+    </h1>
+  </div>
+
+  {/* Right Side: Theme Toggle + Status */}
+  <div className="flex items-center gap-3">
+    <ThemeToggle />
+    <Badge
+      variant={restaurantInfo.isOpen ? "default" : "destructive"}
+      className="shadow-sm text-sm md:text-base"
+    >
+      {restaurantInfo.isOpen ? "Open" : "Closed"}
+    </Badge>
+  </div>
+
+</div>
+
       </header>
 
       <main className="max-w-4xl mx-auto p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">

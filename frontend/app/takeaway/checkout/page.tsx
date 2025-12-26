@@ -30,7 +30,7 @@ export default function TakeawayCheckoutPage() {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem('takeaway_cart')
+      const raw = localStorage.getItem('takeaway:cart')
       if (raw) setCartItems(JSON.parse(raw))
     } catch (err) {
       console.error('Failed to load cart from localStorage', err)
@@ -47,7 +47,7 @@ export default function TakeawayCheckoutPage() {
 
   // cartItems loaded from localStorage
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price * (item.quantity || item.qty), 0)
   const taxRate = Math.round(subtotal * 0.05) // 5% tax
   const packagingFee = 20
   const taxes = taxRate + packagingFee // Include packaging fee in tax field for backend compatibility
@@ -64,7 +64,7 @@ export default function TakeawayCheckoutPage() {
     const takeawayPayload = {
       items: cartItems.map((it: any) => ({
         itemId: Number(it.id),
-        quantity: Number(it.quantity)
+        quantity: Number(it.quantity || it.qty)
       })),
       customerName: customerInfo.name,
       customerPhone: customerInfo.phone,
@@ -83,7 +83,7 @@ export default function TakeawayCheckoutPage() {
       total
     }
 
-    console.log('Sending takeaway order:', takeawayPayload)
+    console.log('Sending takeaway order payload:', takeawayPayload)
 
     const res = await fetch(`${base}/api/orders`, {
       method: 'POST',
@@ -91,12 +91,16 @@ export default function TakeawayCheckoutPage() {
       body: JSON.stringify(takeawayPayload),
     })
 
+    console.log('Order creation response status:', res.status)
+
     if (!res.ok) {
       const text = await res.text()
-      throw new Error("Failed to create takeaway order: " + text)
+      console.error('Order creation failed:', text)
+      throw new Error(`Failed to create takeaway order (${res.status}): ${text}`)
     }
 
     const data = await res.json()
+    console.log('Order creation response:', data)
     return data.orderId || data.id || data._id
   }
 
@@ -120,44 +124,59 @@ export default function TakeawayCheckoutPage() {
         return
       }
 
+      console.log('Starting payment process...', { paymentMethod, cartItems: cartItems.length })
+
       if (paymentMethod === 'PAY_NOW') {
         // Create Razorpay order first
         const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+        console.log('Creating Razorpay order...', { base })
+
         const orderRes = await fetch(base + "/api/razorpay/create-order", {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             items: cartItems.map((it: any) => ({
               itemId: Number(it.id),
-              quantity: Number(it.quantity)
+              quantity: Number(it.quantity || it.qty)
             }))
           })
         })
 
+        console.log('Razorpay order response status:', orderRes.status)
+
         if (!orderRes.ok) {
+          const errorText = await orderRes.text()
+          console.error('Razorpay order creation failed:', errorText)
           const errorData = await orderRes.json().catch(() => null);
           throw new Error(
             errorData?.message ||
-            `Failed to create payment order (${orderRes.status})`
+            `Failed to create payment order (${orderRes.status}): ${errorText}`
           );
         }
 
         const { order } = await orderRes.json()
+        console.log('Razorpay order created:', order)
 
         try {
           // Handle payment
+          console.log('Opening Razorpay payment modal...')
           const { paymentId, signature } = await handleRazorpayPayment(order.id, order.amount)
+          console.log('Payment successful:', { paymentId })
 
           // Create takeaway order with payment details
+          console.log('Creating takeaway order...')
           const orderId = await createTakeawayOrder(paymentId, signature)
+          console.log('Takeaway order created:', orderId)
+
           success("Payment successful! Your order has been placed.", "Order Confirmed")
 
-          localStorage.removeItem('takeaway_cart')
+          localStorage.removeItem('takeaway:cart')
           router.push("/takeaway/confirmation?orderId=" + orderId)
         } catch (paymentError: any) {
+          console.error('Payment error:', paymentError)
           // Check if user cancelled payment
           if (paymentError?.message?.includes('cancelled by user') || paymentError?.message?.includes('closed')) {
-            error('Payment failed. Please try again or choose Cash on Pickup.', 'Payment Failed')
+            error('Payment cancelled. Please try again or choose Cash on Pickup.', 'Payment Cancelled')
           } else {
             error(
               'Payment failed: ' +
@@ -169,12 +188,16 @@ export default function TakeawayCheckoutPage() {
       } else {
         // For COD, directly create takeaway order
         try {
+          console.log('Creating COD takeaway order...')
           const orderId = await createTakeawayOrder()
+          console.log('COD order created:', orderId)
+
           success("Order placed successfully! You can pay when you pick up.", "Order Confirmed")
 
-          localStorage.removeItem('takeaway_cart')
+          localStorage.removeItem('takeaway:cart')
           router.push("/takeaway/confirmation?orderId=" + orderId)
         } catch (codError: any) {
+          console.error('COD order error:', codError)
           error(
             'Failed to create COD order: ' +
             (codError?.message || 'Please try again.'),
@@ -219,9 +242,9 @@ export default function TakeawayCheckoutPage() {
               {cartItems.map((item) => (
                 <div key={item.id} className="flex items-center justify-between text-sm">
                   <div>
-                    {item.quantity}x {item.name}
+                    {(item.quantity || item.qty)}x {item.name}
                   </div>
-                  <div>₹{item.price * item.quantity}</div>
+                  <div>₹{item.price * (item.quantity || item.qty)}</div>
                 </div>
               ))}
             </div>
@@ -352,7 +375,10 @@ export default function TakeawayCheckoutPage() {
               </div>
 
               <Button
-                className="w-full h-14 text-lg font-bold bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-lg"
+                className={`w-full h-14 text-lg font-bold shadow-lg transition-all ${isProcessing || cartItems.length === 0 || !customerInfo.name.trim() || !customerInfo.phone.trim()
+                    ? 'bg-gray-400 cursor-not-allowed opacity-50'
+                    : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600'
+                  }`}
                 onClick={async () => {
                   // Check if cart is empty
                   if (!cartItems || cartItems.length === 0) {
@@ -370,10 +396,45 @@ export default function TakeawayCheckoutPage() {
                   // Proceed with order placement
                   await handlePayment()
                 }}
-                disabled={isProcessing || cartItems.length === 0}
+                disabled={isProcessing || cartItems.length === 0 || !customerInfo.name.trim() || !customerInfo.phone.trim()}
               >
                 {isProcessing ? "Processing..." : paymentMethod === "PAY_NOW" ? "💳 Pay Now" : "📦 Place Order"}
               </Button>
+
+              {/* Validation Messages */}
+              {cartItems.length === 0 && (
+                <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                  ⚠️ Your cart is empty. Please add items to continue.
+                </div>
+              )}
+              {cartItems.length > 0 && !customerInfo.name.trim() && (
+                <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                  ⚠️ Please enter your full name.
+                </div>
+              )}
+              {cartItems.length > 0 && customerInfo.name.trim() && !customerInfo.phone.trim() && (
+                <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                  ⚠️ Please enter your phone number.
+                </div>
+              )}
+              {cartItems.length > 0 && customerInfo.name.trim() && customerInfo.phone.trim() && !isProcessing && (
+                <div className="mt-2 text-sm text-green-600 dark:text-green-400">
+                  ✅ Ready to place order!
+                </div>
+              )}
+
+              {/* Debug Info - Remove in production */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded text-xs">
+                  <p><strong>Debug Info:</strong></p>
+                  <p>Cart Items: {cartItems.length}</p>
+                  <p>Customer Name: {customerInfo.name || 'Empty'}</p>
+                  <p>Customer Phone: {customerInfo.phone || 'Empty'}</p>
+                  <p>Payment Method: {paymentMethod}</p>
+                  <p>Backend URL: {process.env.NEXT_PUBLIC_BACKEND_URL || 'Not set'}</p>
+                  <p>Razorpay Key: {process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ? 'Set' : 'Not set'}</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

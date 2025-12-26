@@ -151,7 +151,7 @@ export function MenuManagement() {
       const matchesSearch =
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.ingredients?.some((ing) => ing.toLowerCase().includes(searchQuery.toLowerCase()))
+        (item.ingredients || []).some((ing) => ing.toLowerCase().includes(searchQuery.toLowerCase()))
 
       const matchesCategory = selectedCategory === "All" || item.category === selectedCategory
 
@@ -669,10 +669,9 @@ export function MenuManagement() {
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-muted-foreground">View:</span>
               <Tabs value={viewMode} onValueChange={(value: any) => setViewMode(value)}>
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="grid">Grid</TabsTrigger>
                   <TabsTrigger value="list">List</TabsTrigger>
-                  <TabsTrigger value="analytics">Analytics</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
@@ -822,7 +821,7 @@ export function MenuManagement() {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
                   <Label htmlFor={`available-${item.id}`} className="text-sm">
                     Available
                   </Label>
@@ -830,8 +829,9 @@ export function MenuManagement() {
                     <Switch
                       id={`available-${item.id}`}
                       checked={item.isAvailable}
-                      onCheckedChange={(v) => { v; toggleAvailability(item.id); }}
-                      onClick={(e) => e.stopPropagation()}
+                      onCheckedChange={(checked) => {
+                        toggleAvailability(item.id);
+                      }}
                     />
                   </div>
                 </div>
@@ -887,13 +887,16 @@ export function MenuManagement() {
                       </td>
                       <td className="p-4 font-medium">{formatCurrency(item.price)}</td>
                       <td className="p-4">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                           {item.isAvailable ? (
                             <Badge variant="secondary">Available</Badge>
                           ) : (
                             <Badge variant="outline">Unavailable</Badge>
                           )}
-                          <Switch checked={item.isAvailable} onCheckedChange={() => toggleAvailability(item.id)} />
+                          <Switch
+                            checked={item.isAvailable}
+                            onCheckedChange={() => toggleAvailability(item.id)}
+                          />
                         </div>
                       </td>
                       <td className="p-4 text-right whitespace-nowrap">
@@ -956,39 +959,76 @@ export function MenuManagement() {
           }
         }}
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingItem ? "Edit Menu Item" : "Add New Menu Item"}</DialogTitle>
-          </DialogHeader>
-          <div>
-            <MenuItemForm
-              item={editingItem}
-              categories={categories}
-              onSave={saveItem}
-              onCancel={() => {
-                setEditingItem(null)
-                setShowAddForm(false)
-              }}
-              onChange={(data) => setEditingFormData(data)}
-            />
-
-            {/* Dialog footer: Delete (left) and Confirm (right) */}
-            <div className="flex items-center justify-between mt-4">
+        <DialogContent className="max-w-[98vw] w-[98vw] max-h-[95vh] h-[95vh] flex flex-col overflow-hidden p-0 bg-white dark:bg-slate-900">
+          {/* Professional Header */}
+          <div className="flex-shrink-0 bg-gradient-to-r from-slate-900 to-slate-800 text-white px-8 py-6">
+            <div className="flex items-center justify-between">
               <div>
-                {editingItem && (
-                  <Button variant="destructive" onClick={() => { if (editingItem) { deleteItem(editingItem.id); setEditingItem(null); } }}>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </Button>
-                )}
+                <DialogTitle className="text-2xl font-bold">
+                  {editingItem ? "Edit Menu Item" : "Create New Menu Item"}
+                </DialogTitle>
+                <p className="text-slate-300 mt-1 text-sm">
+                  {editingItem ? "Update your menu item details below" : "Add a new item to your restaurant menu"}
+                </p>
               </div>
-              <div>
-                <Button onClick={async () => {
-                  if (!editingFormData) return
-                  await saveItem(editingFormData)
-                }}>
-                  {editingItem ? 'Confirm update' : 'Add item'}
-                </Button>
+              <div className="flex items-center gap-3">
+                <div className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium">
+                  {editingItem ? "Editing Mode" : "Creation Mode"}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50 dark:bg-slate-800">
+              <MenuItemForm
+                item={editingItem}
+                categories={categories}
+                onSave={saveItem}
+                onCancel={() => {
+                  setEditingItem(null)
+                  setShowAddForm(false)
+                }}
+                onChange={(data) => setEditingFormData(data)}
+              />
+            </div>
+
+            {/* Professional Footer */}
+            <div className="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 px-8 py-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  {editingItem && (
+                    <Button
+                      variant="destructive"
+                      onClick={() => { if (editingItem) { deleteItem(editingItem.id); setEditingItem(null); } }}
+                      className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 font-medium"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Item
+                    </Button>
+                  )}
+                </div>
+                <div className="flex gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditingItem(null)
+                      setShowAddForm(false)
+                    }}
+                    className="px-8 py-3 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      if (!editingFormData) return
+                      await saveItem(editingFormData)
+                    }}
+                    className="px-10 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-lg"
+                  >
+                    {editingItem ? 'Save Changes' : 'Create Item'}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -1011,6 +1051,7 @@ function MenuItemForm({
   onCancel: () => void
   onChange?: (item: MenuItem) => void
 }) {
+  const { error } = useToast()
   const [formData, setFormData] = useState<MenuItem>(
     item || {
       id: 0,
@@ -1048,7 +1089,7 @@ function MenuItemForm({
   }, [formData, onChange])
 
   const addIngredient = (ingredient: string) => {
-    if (ingredient && !formData.ingredients?.includes(ingredient)) {
+    if (ingredient && !(formData.ingredients || []).includes(ingredient)) {
       setFormData({
         ...formData,
         ingredients: [...(formData.ingredients || []), ingredient],
@@ -1059,7 +1100,7 @@ function MenuItemForm({
   const removeIngredient = (ingredient: string) => {
     setFormData({
       ...formData,
-      ingredients: formData.ingredients?.filter((ing) => ing !== ingredient) || [],
+      ingredients: (formData.ingredients || []).filter((ing) => ing !== ingredient),
     })
   }
 
@@ -1089,235 +1130,307 @@ function MenuItemForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="name">Name *</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-          />
-        </div>
+    <div className="p-6 max-w-full overflow-hidden">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Row 1: Basic Information */}
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+            Basic Information
+          </h3>
 
-        <div>
-          <Label htmlFor="category">Category *</Label>
-          <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {categories
-                .filter((cat) => cat.isActive)
-                .map((category) => (
-                  <SelectItem key={category.id} value={category.name}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div>
-        <Label htmlFor="description">Description *</Label>
-        <Textarea
-          id="description"
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          required
-          rows={3}
-        />
-      </div>
-
-      {/* Image Section */}
-      <div className="space-y-4">
-        <Label>Item Image</Label>
-
-        {/* Current Image Preview */}
-        {formData.image && (
-          <div className="flex items-start gap-4">
-            <div className="relative">
-              <img
-                src={formData.image}
-                alt="Item preview"
-                className="w-32 h-32 object-cover rounded-lg border"
-                onError={(e) => {
-                  e.currentTarget.src = "/placeholder.svg"
-                }}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="name" className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">
+                Item Name *
+              </Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+                className="h-11 border-slate-300 dark:border-slate-600 focus:border-orange-500 focus:ring-orange-500/20"
+                placeholder="Enter item name"
               />
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0"
-                onClick={() => setFormData({ ...formData, image: "" })}
-              >
-                ×
-              </Button>
             </div>
-            <div className="flex-1 space-y-2">
-              <p className="text-sm text-muted-foreground">Current image</p>
-              <p className="text-xs text-muted-foreground break-all">{formData.image}</p>
+            <div>
+              <Label htmlFor="prepTime" className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">
+                Prep Time *
+              </Label>
+              <Input
+                id="prepTime"
+                value={formData.prepTime}
+                onChange={(e) => setFormData({ ...formData, prepTime: e.target.value })}
+                placeholder="15 min"
+                required
+                className="h-11 border-slate-300 dark:border-slate-600 focus:border-orange-500 focus:ring-orange-500/20"
+              />
             </div>
           </div>
-        )}
-
-        {/* Image Input Options */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* URL Input */}
           <div>
-            <Label htmlFor="imageUrl">Image URL</Label>
-            <Input
-              id="imageUrl"
-              type="url"
-              placeholder="https://example.com/image.jpg"
-              value={formData.image || ""}
-              onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+            <Label htmlFor="category" className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">
+              Category *
+            </Label>
+            <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+              <SelectTrigger className="h-11 w-full border-slate-300 dark:border-slate-600 focus:border-orange-500 focus:ring-orange-500/20">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent className="w-full min-w-[200px]">
+                {categories
+                  .filter((cat) => cat.isActive)
+                  .map((category) => (
+                    <SelectItem key={category.id} value={category.name} className="w-full">
+                      {category.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="mt-4">
+            <Label htmlFor="description" className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">
+              Description *
+            </Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              required
+              rows={3}
+              className="resize-none border-slate-300 dark:border-slate-600 focus:border-orange-500 focus:ring-orange-500/20"
+              placeholder="Describe your menu item..."
             />
           </div>
+        </div>
 
-          {/* File Upload */}
-          <div>
-            <Label>Upload Image</Label>
-            <div
-              className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center hover:border-muted-foreground/50 transition-colors cursor-pointer"
-              onDragOver={(e) => {
-                e.preventDefault()
-                e.currentTarget.classList.add('border-primary')
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault()
-                e.currentTarget.classList.remove('border-primary')
-              }}
-              onDrop={(e) => {
-                e.preventDefault()
-                e.currentTarget.classList.remove('border-primary')
-                const file = e.dataTransfer.files?.[0]
-                if (file) {
-                  handleImageUpload(file)
-                }
-              }}
-              onClick={() => {
-                const input = document.createElement('input')
-                input.type = 'file'
-                input.accept = 'image/*'
-                input.onchange = (e) => {
-                  const file = (e.target as HTMLInputElement).files?.[0]
-                  if (file) {
-                    handleImageUpload(file)
+        {/* Row 2: Pricing & Image */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Pricing Section */}
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              Pricing & Details
+            </h3>
+
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <Label htmlFor="price" className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">
+                  Price ({CURRENCY_SYMBOL}) *
+                </Label>
+                <Input
+                  id="price"
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: Number.parseInt(e.target.value) || 0 })}
+                  required
+                  className="h-11 border-slate-300 dark:border-slate-600 focus:border-orange-500 focus:ring-orange-500/20"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="cost" className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">
+                  Cost ({CURRENCY_SYMBOL})
+                </Label>
+                <Input
+                  id="cost"
+                  type="number"
+                  value={formData.cost || ""}
+                  onChange={(e) => setFormData({ ...formData, cost: Number.parseInt(e.target.value) || 0 })}
+                  className="h-11 border-slate-300 dark:border-slate-600 focus:border-orange-500 focus:ring-orange-500/20"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="calories" className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">
+                  Calories
+                </Label>
+                <Input
+                  id="calories"
+                  type="number"
+                  value={formData.calories || ""}
+                  onChange={(e) => setFormData({ ...formData, calories: Number.parseInt(e.target.value) || 0 })}
+                  className="h-11 border-slate-300 dark:border-slate-600 focus:border-orange-500 focus:ring-orange-500/20"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <div className="pt-2 flex flex-col justify-end">
+              <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                <Label htmlFor="isAvailable" className="text-sm font-medium text-slate-700 dark:text-slate-300">Available</Label>
+                <Switch
+                  id="isAvailable"
+                  checked={formData.isAvailable}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isAvailable: checked })}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Image Section */}
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+              Item Image
+            </h3>
+
+            {formData.image ? (
+              <div className="relative mb-4">
+                <img
+                  src={formData.image}
+                  alt="Item preview"
+                  className="w-full h-48 object-cover rounded-lg border border-slate-200 dark:border-slate-600"
+                  onError={(e) => {
+                    e.currentTarget.src = "/placeholder.svg"
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  className="absolute top-2 right-2 w-8 h-8 rounded-full p-0 bg-red-500 hover:bg-red-600"
+                  onClick={() => setFormData({ ...formData, image: "" })}
+                >
+                  ×
+                </Button>
+              </div>
+            ) : (
+              <div
+                className="w-full h-48 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg flex items-center justify-center cursor-pointer hover:border-orange-500 transition-colors mb-4 bg-slate-50 dark:bg-slate-700/50"
+                onClick={() => {
+                  const input = document.createElement('input')
+                  input.type = 'file'
+                  input.accept = 'image/*'
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0]
+                    if (file) {
+                      handleImageUpload(file)
+                    }
                   }
-                }
-                input.click()
-              }}
-            >
-              <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-sm font-medium">Click to upload or drag & drop</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Supports JPG, PNG, GIF (max 5MB)
-              </p>
+                  input.click()
+                }}
+              >
+                <div className="text-center">
+                  <Upload className="w-8 h-8 mx-auto mb-2 text-slate-400" />
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Click to upload image</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+                    JPG, PNG, GIF up to 5MB
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="imageUrl" className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">
+                Image URL
+              </Label>
+              <Input
+                id="imageUrl"
+                type="url"
+                placeholder="https://example.com/image.jpg"
+                value={formData.image || ""}
+                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                className="h-11 border-slate-300 dark:border-slate-600 focus:border-orange-500 focus:ring-orange-500/20"
+              />
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div>
-          <Label htmlFor="price">Price ({CURRENCY_SYMBOL}) *</Label>
-          <Input
-            id="price"
-            type="number"
-            value={formData.price}
-            onChange={(e) => setFormData({ ...formData, price: Number.parseInt(e.target.value) || 0 })}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="cost">Cost ({CURRENCY_SYMBOL})</Label>
-          <Input
-            id="cost"
-            type="number"
-            value={formData.cost || ""}
-            onChange={(e) => setFormData({ ...formData, cost: Number.parseInt(e.target.value) || 0 })}
-          />
-        </div>
-        <div>
-          <Label htmlFor="prepTime">Prep Time *</Label>
-          <Input
-            id="prepTime"
-            value={formData.prepTime}
-            onChange={(e) => setFormData({ ...formData, prepTime: e.target.value })}
-            placeholder="15 min"
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="calories">Calories</Label>
-          <Input
-            id="calories"
-            type="number"
-            value={formData.calories || ""}
-            onChange={(e) => setFormData({ ...formData, calories: Number.parseInt(e.target.value) || 0 })}
-          />
-        </div>
-      </div>
+        {/* Row 3: Properties & Ingredients */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Properties Section */}
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+              <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+              Properties
+            </h3>
 
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="isVeg">Vegetarian</Label>
-          <Switch
-            id="isVeg"
-            checked={formData.isVeg}
-            onCheckedChange={(checked) => setFormData({ ...formData, isVeg: checked })}
-          />
-        </div>
-        <div className="flex items-center justify-between">
-          <Label htmlFor="isSpicy">Spicy</Label>
-          <Switch
-            id="isSpicy"
-            checked={formData.isSpicy}
-            onCheckedChange={(checked) => setFormData({ ...formData, isSpicy: checked })}
-          />
-        </div>
-        <div className="flex items-center justify-between">
-          <Label htmlFor="isPopular">Popular</Label>
-          <Switch
-            id="isPopular"
-            checked={formData.isPopular}
-            onCheckedChange={(checked) => setFormData({ ...formData, isPopular: checked })}
-          />
-        </div>
-      </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-2 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Leaf className="w-4 h-4 text-green-600" />
+                  <div>
+                    <Label htmlFor="isVeg" className="text-sm font-medium text-slate-700 dark:text-slate-300">Vegetarian</Label>
+                    {/* <p className="text-xs text-slate-500 dark:text-slate-500">Suitable for vegetarians</p> */}
+                  </div>
+                </div>
+                <Switch
+                  id="isVeg"
+                  checked={formData.isVeg}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isVeg: checked })}
+                />
+              </div>
 
-      <div>
-        <Label>Ingredients</Label>
-        <div className="flex gap-2 mt-2">
-          <Input
-            placeholder="Add ingredient..."
-            onKeyPress={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault()
-                addIngredient(e.currentTarget.value)
-                e.currentTarget.value = ""
-              }
-            }}
-          />
-        </div>
-        <div className="flex flex-wrap gap-2 mt-2">
-          {formData.ingredients?.map((ingredient, index) => (
-            <Badge
-              key={index}
-              variant="secondary"
-              className="cursor-pointer"
-              onClick={() => removeIngredient(ingredient)}
-            >
-              {ingredient} ×
-            </Badge>
-          ))}
-        </div>
-      </div>
+              <div className="flex items-center justify-between gap-2 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Flame className="w-4 h-4 text-red-500" />
+                  <div>
+                    <Label htmlFor="isSpicy" className="text-sm font-medium text-slate-700 dark:text-slate-300">Spicy</Label>
+                    {/* <p className="text-xs text-slate-500 dark:text-slate-500">Contains spicy ingredients</p> */}
+                  </div>
+                </div>
+                <Switch
+                  id="isSpicy"
+                  checked={formData.isSpicy}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isSpicy: checked })}
+                />
+              </div>
 
-    </form>
+              <div className="flex items-center justify-between gap-2 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="w-4 h-4 text-orange-500" />
+                  <div>
+                    <Label htmlFor="isPopular" className="text-sm font-medium text-slate-700 dark:text-slate-300">Popular</Label>
+                    {/* <p className="text-xs text-slate-500 dark:text-slate-500">Mark as popular item</p> */}
+                  </div>
+                </div>
+                <Switch
+                  id="isPopular"
+                  checked={formData.isPopular}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isPopular: checked })}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Ingredients Section */}
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+              <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+              Ingredients
+            </h3>
+
+            <div>
+              <Label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">
+                Add Ingredients
+              </Label>
+              <Input
+                placeholder="Type ingredient name and press Enter..."
+                onKeyPress={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    addIngredient(e.currentTarget.value)
+                    e.currentTarget.value = ""
+                  }
+                }}
+                className="h-11 border-slate-300 dark:border-slate-600 focus:border-orange-500 focus:ring-orange-500/20"
+              />
+              {(formData.ingredients || []).length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {(formData.ingredients || []).map((ingredient, index) => (
+                    <Badge
+                      key={index}
+                      variant="secondary"
+                      className="cursor-pointer px-3 py-1 text-sm bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-300"
+                      onClick={() => removeIngredient(ingredient)}
+                    >
+                      {ingredient} ×
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
   )
 }

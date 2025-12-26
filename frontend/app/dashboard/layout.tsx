@@ -17,6 +17,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isNavigating, setIsNavigating] = useState(false)
   const [restaurantName, setRestaurantName] = useState("")
 
+  // Global dashboard refresh every 1 minute
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      // Force refresh the current page to get latest data
+      window.location.reload()
+    }, 60000) // 1 minute
+
+    return () => clearInterval(refreshInterval)
+  }, [])
+
   // Load restaurant info
   useEffect(() => {
     const loadRestaurantInfo = async () => {
@@ -151,14 +161,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
               </div>
               <div className="flex items-center gap-3 lg:gap-4">
-                <ThemeToggle />
-                <div>
+                {/* <ThemeToggle /> */}
+                {/* <div>
                   <Button variant="outline" size="sm" className="rounded-full bg-transparent text-sm lg:text-base">
                     <Bell className="w-4 h-4 mr-2" />
                     Notifications
                     {notifications.length > 0 && <Badge variant="destructive" className="ml-2 px-1 py-0 text-xs">{notifications.length}</Badge>}
                   </Button>
-                </div>
+                </div> */}
                 <div className="text-left sm:text-right">
                   <p className="text-sm font-medium">{restaurantName || "Restaurant"}</p>
                   <p className="text-xs text-muted-foreground">Online • Admin</p>
