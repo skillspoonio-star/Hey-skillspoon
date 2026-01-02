@@ -49,6 +49,37 @@ interface RestaurantInfo {
     images: string[]
     logo: string
     interiorImage: string
+    todaysSpecialImages: {
+        image1: string
+        image2: string
+        image3: string
+    }
+    todaysSpecialDishes: {
+        dish1: {
+            name: string
+            description: string
+            price: string
+            prepTime: string
+            isVeg: boolean
+            rating: number
+        }
+        dish2: {
+            name: string
+            description: string
+            price: string
+            prepTime: string
+            isVeg: boolean
+            rating: number
+        }
+        dish3: {
+            name: string
+            description: string
+            price: string
+            prepTime: string
+            isVeg: boolean
+            rating: number
+        }
+    }
     isOpen: boolean
     features: string[]
 }
@@ -79,6 +110,37 @@ export default function RestaurantSettingsPage() {
         images: [],
         logo: "",
         interiorImage: "",
+        todaysSpecialImages: {
+            image1: "",
+            image2: "",
+            image3: ""
+        },
+        todaysSpecialDishes: {
+            dish1: {
+                name: "Signature Butter Chicken",
+                description: "Chef's special recipe with 20+ spices",
+                price: "₹399",
+                prepTime: "25 min",
+                isVeg: false,
+                rating: 4.8
+            },
+            dish2: {
+                name: "Royal Paneer Makhani",
+                description: "Creamy paneer in rich tomato gravy",
+                price: "₹349",
+                prepTime: "20 min",
+                isVeg: true,
+                rating: 4.7
+            },
+            dish3: {
+                name: "Hyderabadi Biryani",
+                description: "Authentic dum-cooked basmati rice",
+                price: "₹449",
+                prepTime: "35 min",
+                isVeg: false,
+                rating: 4.9
+            }
+        },
         isOpen: true,
         features: []
     })
@@ -142,7 +204,7 @@ export default function RestaurantSettingsPage() {
         }
     }
 
-    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'gallery' | 'interior') => {
+    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'gallery' | 'interior' | 'todaysSpecial1' | 'todaysSpecial2' | 'todaysSpecial3') => {
         const file = event.target.files?.[0]
         if (file) {
             // Check file size (limit to 5MB)
@@ -186,13 +248,36 @@ export default function RestaurantSettingsPage() {
                             setRestaurantInfo(prev => ({ ...prev, logo: compressedImageUrl }))
                         } else if (type === 'interior') {
                             setRestaurantInfo(prev => ({ ...prev, interiorImage: compressedImageUrl }))
+                        } else if (type === 'todaysSpecial1') {
+                            setRestaurantInfo(prev => ({
+                                ...prev,
+                                todaysSpecialImages: { ...prev.todaysSpecialImages, image1: compressedImageUrl }
+                            }))
+                        } else if (type === 'todaysSpecial2') {
+                            setRestaurantInfo(prev => ({
+                                ...prev,
+                                todaysSpecialImages: { ...prev.todaysSpecialImages, image2: compressedImageUrl }
+                            }))
+                        } else if (type === 'todaysSpecial3') {
+                            setRestaurantInfo(prev => ({
+                                ...prev,
+                                todaysSpecialImages: { ...prev.todaysSpecialImages, image3: compressedImageUrl }
+                            }))
                         } else {
                             setRestaurantInfo(prev => ({
                                 ...prev,
                                 images: [...prev.images, compressedImageUrl]
                             }))
                         }
-                        success(`${type === 'logo' ? 'Logo' : type === 'interior' ? 'Interior image' : 'Gallery image'} uploaded successfully!`, 'Image Uploaded')
+                        const imageTypeNames = {
+                            'logo': 'Logo',
+                            'interior': 'Interior image',
+                            'todaysSpecial1': "Today's special dish 1 image",
+                            'todaysSpecial2': "Today's special dish 2 image",
+                            'todaysSpecial3': "Today's special dish 3 image",
+                            'gallery': 'Gallery image'
+                        }
+                        success(`${imageTypeNames[type]} uploaded successfully!`, 'Image Uploaded')
                     } catch (err) {
                         console.error('Error processing image:', err)
                         error('Failed to process image. Please try a different image.', 'Processing Failed')
@@ -658,6 +743,543 @@ export default function RestaurantSettingsPage() {
                                             Showcase your restaurant's interior and ambiance<br />
                                             Recommended: 1200x800px, Formats: JPG, PNG, WebP (Max 5MB, auto-compressed)
                                         </p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
+                            <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-950/20 dark:to-purple-900/10 rounded-t-lg">
+                                <CardTitle className="flex items-center gap-3 text-xl">
+                                    <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                                        <Star className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                                    </div>
+                                    Today's Special Dishes
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-6 space-y-8">
+                                {/* Dish 1 */}
+                                <div className="space-y-6 p-6 rounded-lg border-2 border-purple-200 dark:border-purple-800 bg-purple-50/30 dark:bg-purple-950/10">
+                                    <h4 className="text-lg font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-2">
+                                        <Star className="w-5 h-5" />
+                                        Special Dish 1
+                                    </h4>
+
+                                    {/* Image Upload Section */}
+                                    <div className="space-y-4">
+                                        <Label className="text-sm font-medium">Dish Image</Label>
+                                        <div className="flex items-center gap-6">
+                                            {restaurantInfo.todaysSpecialImages.image1 ? (
+                                                <div className="relative group">
+                                                    <img
+                                                        src={restaurantInfo.todaysSpecialImages.image1}
+                                                        alt="Today's Special Dish 1"
+                                                        className="w-48 h-32 object-cover rounded-xl border-2 border-purple-200 dark:border-purple-800 shadow-lg"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            onClick={() => setRestaurantInfo(prev => ({
+                                                                ...prev,
+                                                                todaysSpecialImages: { ...prev.todaysSpecialImages, image1: "" }
+                                                            }))}
+                                                        >
+                                                            Remove
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="w-48 h-32 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30 rounded-xl flex items-center justify-center border-2 border-dashed border-purple-300 dark:border-purple-700">
+                                                    <Star className="w-12 h-12 text-purple-500" />
+                                                </div>
+                                            )}
+                                            <div className="space-y-3">
+                                                <Label htmlFor="todays-special-1-upload" className="cursor-pointer">
+                                                    <Button
+                                                        variant="outline"
+                                                        asChild
+                                                        className="border-2 border-purple-500 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/20"
+                                                        disabled={isUploadingImage}
+                                                    >
+                                                        <span>
+                                                            {isUploadingImage ? (
+                                                                <InlineLoader size="sm" />
+                                                            ) : (
+                                                                <Upload className="w-4 h-4 mr-2" />
+                                                            )}
+                                                            {isUploadingImage ? "Processing..." : "Upload Image"}
+                                                        </span>
+                                                    </Button>
+                                                </Label>
+                                                <Input
+                                                    id="todays-special-1-upload"
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={(e) => handleImageUpload(e, 'todaysSpecial1')}
+                                                    className="hidden"
+                                                />
+                                                <p className="text-xs text-muted-foreground">
+                                                    Recommended: 1200x800px<br />
+                                                    Formats: JPG, PNG, WebP (Max 5MB)
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Dish Details Form */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="dish1-name" className="text-sm font-medium">Dish Name</Label>
+                                            <Input
+                                                id="dish1-name"
+                                                value={restaurantInfo.todaysSpecialDishes.dish1.name}
+                                                onChange={(e) => setRestaurantInfo(prev => ({
+                                                    ...prev,
+                                                    todaysSpecialDishes: {
+                                                        ...prev.todaysSpecialDishes,
+                                                        dish1: { ...prev.todaysSpecialDishes.dish1, name: e.target.value }
+                                                    }
+                                                }))}
+                                                placeholder="Enter dish name"
+                                                className="h-11 border-2 focus:border-purple-500 transition-colors"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="dish1-price" className="text-sm font-medium">Price</Label>
+                                            <Input
+                                                id="dish1-price"
+                                                value={restaurantInfo.todaysSpecialDishes.dish1.price}
+                                                onChange={(e) => setRestaurantInfo(prev => ({
+                                                    ...prev,
+                                                    todaysSpecialDishes: {
+                                                        ...prev.todaysSpecialDishes,
+                                                        dish1: { ...prev.todaysSpecialDishes.dish1, price: e.target.value }
+                                                    }
+                                                }))}
+                                                placeholder="e.g., ₹399"
+                                                className="h-11 border-2 focus:border-purple-500 transition-colors"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="dish1-prepTime" className="text-sm font-medium">Prep Time</Label>
+                                            <Input
+                                                id="dish1-prepTime"
+                                                value={restaurantInfo.todaysSpecialDishes.dish1.prepTime}
+                                                onChange={(e) => setRestaurantInfo(prev => ({
+                                                    ...prev,
+                                                    todaysSpecialDishes: {
+                                                        ...prev.todaysSpecialDishes,
+                                                        dish1: { ...prev.todaysSpecialDishes.dish1, prepTime: e.target.value }
+                                                    }
+                                                }))}
+                                                placeholder="e.g., 25 min"
+                                                className="h-11 border-2 focus:border-purple-500 transition-colors"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="dish1-rating" className="text-sm font-medium">Rating</Label>
+                                            <Input
+                                                id="dish1-rating"
+                                                type="number"
+                                                min="0"
+                                                max="5"
+                                                step="0.1"
+                                                value={restaurantInfo.todaysSpecialDishes.dish1.rating}
+                                                onChange={(e) => setRestaurantInfo(prev => ({
+                                                    ...prev,
+                                                    todaysSpecialDishes: {
+                                                        ...prev.todaysSpecialDishes,
+                                                        dish1: { ...prev.todaysSpecialDishes.dish1, rating: parseFloat(e.target.value) || 0 }
+                                                    }
+                                                }))}
+                                                className="h-11 border-2 focus:border-purple-500 transition-colors"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="dish1-description" className="text-sm font-medium">Description</Label>
+                                        <Textarea
+                                            id="dish1-description"
+                                            value={restaurantInfo.todaysSpecialDishes.dish1.description}
+                                            onChange={(e) => setRestaurantInfo(prev => ({
+                                                ...prev,
+                                                todaysSpecialDishes: {
+                                                    ...prev.todaysSpecialDishes,
+                                                    dish1: { ...prev.todaysSpecialDishes.dish1, description: e.target.value }
+                                                }
+                                            }))}
+                                            placeholder="Describe the dish..."
+                                            rows={3}
+                                            className="border-2 focus:border-purple-500 transition-colors resize-none"
+                                        />
+                                    </div>
+                                    <div className="flex items-center space-x-3">
+                                        <Switch
+                                            id="dish1-isVeg"
+                                            checked={restaurantInfo.todaysSpecialDishes.dish1.isVeg}
+                                            onCheckedChange={(checked) => setRestaurantInfo(prev => ({
+                                                ...prev,
+                                                todaysSpecialDishes: {
+                                                    ...prev.todaysSpecialDishes,
+                                                    dish1: { ...prev.todaysSpecialDishes.dish1, isVeg: checked }
+                                                }
+                                            }))}
+                                            className="data-[state=checked]:bg-green-600"
+                                        />
+                                        <Label htmlFor="dish1-isVeg" className="text-sm font-medium cursor-pointer">
+                                            Vegetarian Dish
+                                        </Label>
+                                    </div>
+                                </div>
+
+                                {/* Dish 2 */}
+                                <div className="space-y-6 p-6 rounded-lg border-2 border-purple-200 dark:border-purple-800 bg-purple-50/30 dark:bg-purple-950/10">
+                                    <h4 className="text-lg font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-2">
+                                        <Star className="w-5 h-5" />
+                                        Special Dish 2
+                                    </h4>
+
+                                    {/* Image Upload Section */}
+                                    <div className="space-y-4">
+                                        <Label className="text-sm font-medium">Dish Image</Label>
+                                        <div className="flex items-center gap-6">
+                                            {restaurantInfo.todaysSpecialImages.image2 ? (
+                                                <div className="relative group">
+                                                    <img
+                                                        src={restaurantInfo.todaysSpecialImages.image2}
+                                                        alt="Today's Special Dish 2"
+                                                        className="w-48 h-32 object-cover rounded-xl border-2 border-purple-200 dark:border-purple-800 shadow-lg"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            onClick={() => setRestaurantInfo(prev => ({
+                                                                ...prev,
+                                                                todaysSpecialImages: { ...prev.todaysSpecialImages, image2: "" }
+                                                            }))}
+                                                        >
+                                                            Remove
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="w-48 h-32 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30 rounded-xl flex items-center justify-center border-2 border-dashed border-purple-300 dark:border-purple-700">
+                                                    <Star className="w-12 h-12 text-purple-500" />
+                                                </div>
+                                            )}
+                                            <div className="space-y-3">
+                                                <Label htmlFor="todays-special-2-upload" className="cursor-pointer">
+                                                    <Button
+                                                        variant="outline"
+                                                        asChild
+                                                        className="border-2 border-purple-500 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/20"
+                                                        disabled={isUploadingImage}
+                                                    >
+                                                        <span>
+                                                            {isUploadingImage ? (
+                                                                <InlineLoader size="sm" />
+                                                            ) : (
+                                                                <Upload className="w-4 h-4 mr-2" />
+                                                            )}
+                                                            {isUploadingImage ? "Processing..." : "Upload Image"}
+                                                        </span>
+                                                    </Button>
+                                                </Label>
+                                                <Input
+                                                    id="todays-special-2-upload"
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={(e) => handleImageUpload(e, 'todaysSpecial2')}
+                                                    className="hidden"
+                                                />
+                                                <p className="text-xs text-muted-foreground">
+                                                    Recommended: 1200x800px<br />
+                                                    Formats: JPG, PNG, WebP (Max 5MB)
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Dish Details Form */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="dish2-name" className="text-sm font-medium">Dish Name</Label>
+                                            <Input
+                                                id="dish2-name"
+                                                value={restaurantInfo.todaysSpecialDishes.dish2.name}
+                                                onChange={(e) => setRestaurantInfo(prev => ({
+                                                    ...prev,
+                                                    todaysSpecialDishes: {
+                                                        ...prev.todaysSpecialDishes,
+                                                        dish2: { ...prev.todaysSpecialDishes.dish2, name: e.target.value }
+                                                    }
+                                                }))}
+                                                placeholder="Enter dish name"
+                                                className="h-11 border-2 focus:border-purple-500 transition-colors"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="dish2-price" className="text-sm font-medium">Price</Label>
+                                            <Input
+                                                id="dish2-price"
+                                                value={restaurantInfo.todaysSpecialDishes.dish2.price}
+                                                onChange={(e) => setRestaurantInfo(prev => ({
+                                                    ...prev,
+                                                    todaysSpecialDishes: {
+                                                        ...prev.todaysSpecialDishes,
+                                                        dish2: { ...prev.todaysSpecialDishes.dish2, price: e.target.value }
+                                                    }
+                                                }))}
+                                                placeholder="e.g., ₹349"
+                                                className="h-11 border-2 focus:border-purple-500 transition-colors"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="dish2-prepTime" className="text-sm font-medium">Prep Time</Label>
+                                            <Input
+                                                id="dish2-prepTime"
+                                                value={restaurantInfo.todaysSpecialDishes.dish2.prepTime}
+                                                onChange={(e) => setRestaurantInfo(prev => ({
+                                                    ...prev,
+                                                    todaysSpecialDishes: {
+                                                        ...prev.todaysSpecialDishes,
+                                                        dish2: { ...prev.todaysSpecialDishes.dish2, prepTime: e.target.value }
+                                                    }
+                                                }))}
+                                                placeholder="e.g., 20 min"
+                                                className="h-11 border-2 focus:border-purple-500 transition-colors"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="dish2-rating" className="text-sm font-medium">Rating</Label>
+                                            <Input
+                                                id="dish2-rating"
+                                                type="number"
+                                                min="0"
+                                                max="5"
+                                                step="0.1"
+                                                value={restaurantInfo.todaysSpecialDishes.dish2.rating}
+                                                onChange={(e) => setRestaurantInfo(prev => ({
+                                                    ...prev,
+                                                    todaysSpecialDishes: {
+                                                        ...prev.todaysSpecialDishes,
+                                                        dish2: { ...prev.todaysSpecialDishes.dish2, rating: parseFloat(e.target.value) || 0 }
+                                                    }
+                                                }))}
+                                                className="h-11 border-2 focus:border-purple-500 transition-colors"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="dish2-description" className="text-sm font-medium">Description</Label>
+                                        <Textarea
+                                            id="dish2-description"
+                                            value={restaurantInfo.todaysSpecialDishes.dish2.description}
+                                            onChange={(e) => setRestaurantInfo(prev => ({
+                                                ...prev,
+                                                todaysSpecialDishes: {
+                                                    ...prev.todaysSpecialDishes,
+                                                    dish2: { ...prev.todaysSpecialDishes.dish2, description: e.target.value }
+                                                }
+                                            }))}
+                                            placeholder="Describe the dish..."
+                                            rows={3}
+                                            className="border-2 focus:border-purple-500 transition-colors resize-none"
+                                        />
+                                    </div>
+                                    <div className="flex items-center space-x-3">
+                                        <Switch
+                                            id="dish2-isVeg"
+                                            checked={restaurantInfo.todaysSpecialDishes.dish2.isVeg}
+                                            onCheckedChange={(checked) => setRestaurantInfo(prev => ({
+                                                ...prev,
+                                                todaysSpecialDishes: {
+                                                    ...prev.todaysSpecialDishes,
+                                                    dish2: { ...prev.todaysSpecialDishes.dish2, isVeg: checked }
+                                                }
+                                            }))}
+                                            className="data-[state=checked]:bg-green-600"
+                                        />
+                                        <Label htmlFor="dish2-isVeg" className="text-sm font-medium cursor-pointer">
+                                            Vegetarian Dish
+                                        </Label>
+                                    </div>
+                                </div>
+
+                                {/* Dish 3 */}
+                                <div className="space-y-6 p-6 rounded-lg border-2 border-purple-200 dark:border-purple-800 bg-purple-50/30 dark:bg-purple-950/10">
+                                    <h4 className="text-lg font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-2">
+                                        <Star className="w-5 h-5" />
+                                        Special Dish 3
+                                    </h4>
+
+                                    {/* Image Upload Section */}
+                                    <div className="space-y-4">
+                                        <Label className="text-sm font-medium">Dish Image</Label>
+                                        <div className="flex items-center gap-6">
+                                            {restaurantInfo.todaysSpecialImages.image3 ? (
+                                                <div className="relative group">
+                                                    <img
+                                                        src={restaurantInfo.todaysSpecialImages.image3}
+                                                        alt="Today's Special Dish 3"
+                                                        className="w-48 h-32 object-cover rounded-xl border-2 border-purple-200 dark:border-purple-800 shadow-lg"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            onClick={() => setRestaurantInfo(prev => ({
+                                                                ...prev,
+                                                                todaysSpecialImages: { ...prev.todaysSpecialImages, image3: "" }
+                                                            }))}
+                                                        >
+                                                            Remove
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="w-48 h-32 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30 rounded-xl flex items-center justify-center border-2 border-dashed border-purple-300 dark:border-purple-700">
+                                                    <Star className="w-12 h-12 text-purple-500" />
+                                                </div>
+                                            )}
+                                            <div className="space-y-3">
+                                                <Label htmlFor="todays-special-3-upload" className="cursor-pointer">
+                                                    <Button
+                                                        variant="outline"
+                                                        asChild
+                                                        className="border-2 border-purple-500 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/20"
+                                                        disabled={isUploadingImage}
+                                                    >
+                                                        <span>
+                                                            {isUploadingImage ? (
+                                                                <InlineLoader size="sm" />
+                                                            ) : (
+                                                                <Upload className="w-4 h-4 mr-2" />
+                                                            )}
+                                                            {isUploadingImage ? "Processing..." : "Upload Image"}
+                                                        </span>
+                                                    </Button>
+                                                </Label>
+                                                <Input
+                                                    id="todays-special-3-upload"
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={(e) => handleImageUpload(e, 'todaysSpecial3')}
+                                                    className="hidden"
+                                                />
+                                                <p className="text-xs text-muted-foreground">
+                                                    Recommended: 1200x800px<br />
+                                                    Formats: JPG, PNG, WebP (Max 5MB)
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Dish Details Form */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="dish3-name" className="text-sm font-medium">Dish Name</Label>
+                                            <Input
+                                                id="dish3-name"
+                                                value={restaurantInfo.todaysSpecialDishes.dish3.name}
+                                                onChange={(e) => setRestaurantInfo(prev => ({
+                                                    ...prev,
+                                                    todaysSpecialDishes: {
+                                                        ...prev.todaysSpecialDishes,
+                                                        dish3: { ...prev.todaysSpecialDishes.dish3, name: e.target.value }
+                                                    }
+                                                }))}
+                                                placeholder="Enter dish name"
+                                                className="h-11 border-2 focus:border-purple-500 transition-colors"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="dish3-price" className="text-sm font-medium">Price</Label>
+                                            <Input
+                                                id="dish3-price"
+                                                value={restaurantInfo.todaysSpecialDishes.dish3.price}
+                                                onChange={(e) => setRestaurantInfo(prev => ({
+                                                    ...prev,
+                                                    todaysSpecialDishes: {
+                                                        ...prev.todaysSpecialDishes,
+                                                        dish3: { ...prev.todaysSpecialDishes.dish3, price: e.target.value }
+                                                    }
+                                                }))}
+                                                placeholder="e.g., ₹449"
+                                                className="h-11 border-2 focus:border-purple-500 transition-colors"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="dish3-prepTime" className="text-sm font-medium">Prep Time</Label>
+                                            <Input
+                                                id="dish3-prepTime"
+                                                value={restaurantInfo.todaysSpecialDishes.dish3.prepTime}
+                                                onChange={(e) => setRestaurantInfo(prev => ({
+                                                    ...prev,
+                                                    todaysSpecialDishes: {
+                                                        ...prev.todaysSpecialDishes,
+                                                        dish3: { ...prev.todaysSpecialDishes.dish3, prepTime: e.target.value }
+                                                    }
+                                                }))}
+                                                placeholder="e.g., 35 min"
+                                                className="h-11 border-2 focus:border-purple-500 transition-colors"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="dish3-rating" className="text-sm font-medium">Rating</Label>
+                                            <Input
+                                                id="dish3-rating"
+                                                type="number"
+                                                min="0"
+                                                max="5"
+                                                step="0.1"
+                                                value={restaurantInfo.todaysSpecialDishes.dish3.rating}
+                                                onChange={(e) => setRestaurantInfo(prev => ({
+                                                    ...prev,
+                                                    todaysSpecialDishes: {
+                                                        ...prev.todaysSpecialDishes,
+                                                        dish3: { ...prev.todaysSpecialDishes.dish3, rating: parseFloat(e.target.value) || 0 }
+                                                    }
+                                                }))}
+                                                className="h-11 border-2 focus:border-purple-500 transition-colors"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="dish3-description" className="text-sm font-medium">Description</Label>
+                                        <Textarea
+                                            id="dish3-description"
+                                            value={restaurantInfo.todaysSpecialDishes.dish3.description}
+                                            onChange={(e) => setRestaurantInfo(prev => ({
+                                                ...prev,
+                                                todaysSpecialDishes: {
+                                                    ...prev.todaysSpecialDishes,
+                                                    dish3: { ...prev.todaysSpecialDishes.dish3, description: e.target.value }
+                                                }
+                                            }))}
+                                            placeholder="Describe the dish..."
+                                            rows={3}
+                                            className="border-2 focus:border-purple-500 transition-colors resize-none"
+                                        />
+                                    </div>
+                                    <div className="flex items-center space-x-3">
+                                        <Switch
+                                            id="dish3-isVeg"
+                                            checked={restaurantInfo.todaysSpecialDishes.dish3.isVeg}
+                                            onCheckedChange={(checked) => setRestaurantInfo(prev => ({
+                                                ...prev,
+                                                todaysSpecialDishes: {
+                                                    ...prev.todaysSpecialDishes,
+                                                    dish3: { ...prev.todaysSpecialDishes.dish3, isVeg: checked }
+                                                }
+                                            }))}
+                                            className="data-[state=checked]:bg-green-600"
+                                        />
+                                        <Label htmlFor="dish3-isVeg" className="text-sm font-medium cursor-pointer">
+                                            Vegetarian Dish
+                                        </Label>
                                     </div>
                                 </div>
                             </CardContent>
