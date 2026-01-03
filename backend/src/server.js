@@ -6,21 +6,22 @@ const { connectDB } = require('./config/db');
 const authRouter = require('./routes/auth');
 const authTokenRouter = require('./routes/authToken');
 const menuItemsRouter = require('./routes/menuItems');
-  const reviewsRouter = require('./routes/reviews');
-  const ordersRouter = require('./routes/orders');
-  const reservationsRouter = require('./routes/reservations');
-    const tablesRouter = require('./routes/tables');
-  const sessionsRouter = require('./routes/sessions');
-  const deliveriesRouter = require('./routes/deliveries');
-  const orderCountRouter = require('./routes/orderCount');
-  const analyticsRouter = require('./routes/analytics');
-  const razorpayRouter = require('./routes/razorpay');
-  const paymentsRouter = require('./routes/payments');
-  const paymentRequestsRouter = require('./routes/paymentRequests');
-  const restaurantRouter = require('./routes/restaurant');function createApp() {
+const reviewsRouter = require('./routes/reviews');
+const ordersRouter = require('./routes/orders');
+const reservationsRouter = require('./routes/reservations');
+const tablesRouter = require('./routes/tables');
+const sessionsRouter = require('./routes/sessions');
+const deliveriesRouter = require('./routes/deliveries');
+const orderCountRouter = require('./routes/orderCount');
+const analyticsRouter = require('./routes/analytics');
+const razorpayRouter = require('./routes/razorpay');
+const paymentsRouter = require('./routes/payments');
+const paymentRequestsRouter = require('./routes/paymentRequests');
+const restaurantRouter = require('./routes/restaurant');
+function createApp() {
   const app = express();
   app.use(cors());
-  
+
   // Increase body parser limits for image uploads
   app.use(bodyParser.json({ limit: '50mb' }));
   app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
@@ -76,10 +77,9 @@ const menuItemsRouter = require('./routes/menuItems');
   return app;
 }
 
-async function start(port = process.env.PORT) {
+async function start() {
   await connectDB();
-  const app = createApp();
-  return app.listen(port, () => console.log(`Server running on port ${port}`));
+  return createApp();
 }
 
 module.exports = { createApp, start };
