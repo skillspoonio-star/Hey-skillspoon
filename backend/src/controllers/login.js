@@ -31,12 +31,12 @@ async function login(req, res) {
         if (!admin) return res.status(401).json({ error: 'Invalid credentials' });
 
         const isMatch = await bcrypt.compare(password, admin.password);
-    if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
+        if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
         // Generate OTP and store with TTL (configurable via OTP_TTL_SECONDS)
         const otp = generateOtp();
         const ttlSeconds = 300; // default 5 minutes
         const expiresAt = Date.now() + ttlSeconds * 1000;
-    otpStore.set(adminId, { otp, expiresAt });
+        otpStore.set(adminId, { otp, expiresAt });
         // Send OTP to admin.email via nodemailer
 
         const mailOptions = {
@@ -54,13 +54,22 @@ async function login(req, res) {
     </div>
     `
         };
-
-
-
-        // send mail (do not block on success)
-        transporter.sendMail(mailOptions).catch((err) => {
-            console.error('Failed to send OTP email:', err.message || err);
+        transporter.verify().then(() => {
+            console.log("SMTP connection OK");
+        }).catch(err => {
+            console.error("SMTP connection failed:", err);
         });
+
+
+
+        try {
+            await transporter.sendMail(mailOptions);
+            console.log("OTP email sent");
+        } catch (err) {
+            console.error("SMTP Error:", err);
+            return res.status(500).json({ error: "Failed to send OTP email" });
+        }
+
 
         return res.json({ message: 'OTP sent' });
     } catch (err) {
@@ -75,10 +84,10 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 function verifyOtp(req, res) {
     const { adminId, otp } = req.body;
-    if (!adminId || !otp) 
+    if (!adminId || !otp)
         return res.status(400).json({ error: 'adminId and otp required' });
     const record = otpStore.get(adminId);
-    if (!record) 
+    if (!record)
         return res.status(400).json({ error: 'No OTP requested' });
 
     if (Date.now() > record.expiresAt) {
@@ -86,7 +95,7 @@ function verifyOtp(req, res) {
         return res.status(400).json({ error: 'OTP expired' });
     }
 
-    if (record.otp !== otp) 
+    if (record.otp !== otp)
         return res.status(401).json({ error: 'Invalid OTP' });
 
     // OTP verified — remove it
@@ -99,7 +108,7 @@ function verifyOtp(req, res) {
         { expiresIn: "1d" }     // token expiry (adjust as needed)
     );
 
-    return res.json({ 
+    return res.json({
         message: 'OTP verified',
         token
     });
